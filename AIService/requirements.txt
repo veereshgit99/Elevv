@@ -1,0 +1,8 @@
+### ai-service/requirements.txt
+fastapi
+uvicorn
+requests
+boto3
+pydantic
+transformers
+torch
