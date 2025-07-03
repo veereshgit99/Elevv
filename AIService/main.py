@@ -6,17 +6,11 @@ from typing import Dict, Any
 import json
 import logging
 import asyncio
-import os 
 
 # Set up logging for better visibility in CloudWatch
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- FORCE TMPDIR ENVIRONMENT VARIABLE HERE ---
-os.environ['TMPDIR'] = '/tmp'
-
-# Import your FastAPI router and models
-from routes import process
 from models.request_schema import FileProcessRequest # Assuming this is the correct import path
 
 # Import your core service functions directly
@@ -27,9 +21,6 @@ from services.utils import download_file_from_url
 
 # Initialize your FastAPI app
 app = FastAPI()
-
-# Include your existing router
-app.include_router(process.router, prefix="/process", tags=["Process"])
 
 # --- Core Processing Logic Function ---
 # This function encapsulates the main steps for processing a file.

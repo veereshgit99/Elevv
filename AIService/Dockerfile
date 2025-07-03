@@ -12,6 +12,14 @@ WORKDIR /var/task
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# --- Add these lines to ensure temporary directories are correctly configured ---
+# While /tmp is usually writable on Lambda, explicitly create and set permissions (harmless redundancy)
+RUN mkdir -p /tmp && chmod 777 /tmp
+ENV TMPDIR=/tmp
+ENV HF_HOME=/tmp
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+# --- End of additions ---
+
 # Copy your application code
 # The dot '.' refers to the current build context (your AIService/ directory)
 COPY . .
