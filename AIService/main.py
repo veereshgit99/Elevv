@@ -17,31 +17,38 @@ from models.request_schema import FileProcessRequest # Assuming this is the corr
 from services.summarizer import generate_summary
 from services.emailer import send_summary_email
 from services.storage import store_summary
-from services.utils import download_file_from_url
+from services.utils import download_file_to_tmp, extract_text_content # <-- Updated Import
 
 # Initialize your FastAPI app
 app = FastAPI()
 
 # --- Core Processing Logic Function ---
-# This function encapsulates the main steps for processing a file.
-# It can be called by both the FastAPI endpoint and the Lambda SQS handler.
 async def _process_file_core(file_id: str, pre_signed_url: str, user_email: str = None):
     try:
         logger.info(f"Starting core processing for fileId: {file_id}")
-        content = download_file_from_url(pre_signed_url)
-        logger.info(f"Content downloaded for fileId: {file_id}")
+        
+        # 1. Download file to /tmp and get its type
+        file_path, content_type = download_file_to_tmp(pre_signed_url) # <-- Call new function
+        logger.info(f"File downloaded to {file_path} with Content-Type: {content_type}")
 
-        summary = generate_summary(content)
-        logger.info(f"Summary generated for fileId: {file_id}")
+        # 2. Extract text content
+        content = extract_text_content(file_path, content_type) # <-- Pass path and type
+        logger.info(f"Extracted text content for fileId: {file_id}. Length: {len(content)} characters.")
+
+        # Check if the extracted content is an error message from extract_text_content
+        if content.startswith("Cannot generate summary:"):
+            summary = content # Use the error message as the summary
+            logger.error(f"Summarization skipped for fileId {file_id} due to content extraction error: {summary}")
+        else:
+            summary = generate_summary(content)
+            logger.info(f"Summary generated for fileId: {file_id}")
 
         # Save to DynamoDB
         store_summary(file_id=file_id, summary=summary)
         logger.info(f"Summary stored for fileId: {file_id}")
 
         # Email to user
-        # In a real app, you'd fetch userEmail from your DB based on file_id
-        # For now, using the hardcoded one or the provided userEmail from request
-        target_email = user_email if user_email else "veereshkoliwad99@gmail.com" # Default or fetch from DB
+        target_email = user_email if user_email else "veereshkoliwad99@gmail.com"
         send_summary_email(to_email=target_email, summary=summary, file_id=file_id)
         logger.info(f"Summary email sent for fileId: {file_id} to {target_email}")
 
