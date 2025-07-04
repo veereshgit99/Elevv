@@ -2,7 +2,7 @@ import requests
 import mimetypes # Add this import to infer MIME type
 
 upload_url = input("Enter the S3 upload URL: ")
-file_path = "./Veeresh_Koliwad_Resume.pdf" # Or your current test file path
+file_path = "./Anmol's Resume.pdf" # Or your current test file path
 
 # Infer content type based on file extension
 # This is a good way to get the correct MIME type automatically
