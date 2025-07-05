@@ -47,10 +47,8 @@ async def _process_file_core(file_id: str, pre_signed_url: str, user_email: str 
         store_summary(file_id=file_id, summary=summary)
         logger.info(f"Summary stored for fileId: {file_id}")
 
-        # Email to user
-        target_email = user_email if user_email else "veereshkoliwad99@gmail.com"
-        send_summary_email(to_email=target_email, summary=summary, file_id=file_id)
-        logger.info(f"Summary email sent for fileId: {file_id} to {target_email}")
+        send_summary_email(to_email=user_email, summary=summary, file_id=file_id)
+        logger.info(f"Summary email sent for fileId: {file_id} to {user_email}")
 
         return {"status": "success", "summary": summary}
 
