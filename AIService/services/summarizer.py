@@ -24,7 +24,6 @@ MAX_SUMMARY_LEN = 150 # This controls the OUTPUT summary length
 MIN_SUMMARY_LEN = 40
 
 def generate_summary(text: str) -> str:
-    print(text)
     try:
         logger.info(f"Received text for summarization. Length: {len(text)} characters.")
 

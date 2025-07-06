@@ -10,13 +10,23 @@ WORKDIR /var/task
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# --- Ensure temporary directories are correctly configured ---
-# This is crucial for runtime model download and other temporary files
-RUN mkdir -p /tmp && chmod 777 /tmp
-ENV TMPDIR=/tmp
-ENV HF_HOME=/tmp
-ENV HUGGINGFACE_HUB_CACHE=/tmp
-# --- End of additions ---
+# --- PRE-DOWNLOAD HUGGING FACE MODEL (IMPLEMENT THIS NOW) ---
+# Create a dedicated directory for the Hugging Face cache within the image
+ENV HF_HOME = /usr/local/huggingface_cache # Set cache directory within the image
+RUN mkdir -p ${HF_HOME}
+# Set TMPDIR for temporary files during the build, if needed by download tools
+ENV TMPDIR = /tmp
+# Use Python to download the model files directly into the specified cache directory
+RUN python -c "from transformers import pipeline; pipeline('summarization', model='facebook/bart-large-cnn')"
+# --- END PRE-DOWNLOAD ---
+
+# --- Configure Runtime Environment Variables ---
+# These are for the running Lambda, not just during build
+ENV TMPDIR = /tmp # Still essential for other temporary files at runtime
+# Point HF_HOME to /tmp for runtime even though model is pre-downloaded,
+# in case other cache operations happen. Model will be loaded from the pre-downloaded path.
+ENV HF_HOME = /tmp
+ENV HUGGINGFACE_HUB_CACHE = /tmp
 
 # Copy your application code
 COPY . .

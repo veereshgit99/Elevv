@@ -5,8 +5,8 @@ boto3
 pydantic
 transformers
 torch
-PyMuPDF
-numpy
+PyMuPDF==1.22.3
+numpy==1.24.4
 python-docx
 beautifulsoup4
 pandas
