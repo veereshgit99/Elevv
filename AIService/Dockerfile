@@ -10,6 +10,9 @@ WORKDIR /var/task
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Add after pip install
+RUN python -m spacy download en_core_web_sm || echo "SpaCy model download skipped"
+
 # --- PRE-DOWNLOAD HUGGING FACE MODEL (IMPLEMENT THIS NOW) ---
 # Create a dedicated directory for the Hugging Face cache within the image
 ENV HF_HOME = /usr/local/huggingface_cache # Set cache directory within the image
