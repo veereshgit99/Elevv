@@ -2,140 +2,88 @@
 
 from typing import Dict, Any, List
 from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
-import re
-from collections import Counter
+import os
+import json
+import logging
+
+# Import the LLM client (example using OpenAI)
+from openai import AsyncOpenAI # Using AsyncOpenAI for async operations
+
+logger = logging.getLogger(__name__)
 
 class DocumentClassifierAgent(BaseAgent):
-    """Agent responsible for classifying document types"""
+    """
+    Agent responsible for classifying document types using a Large Language Model.
+    Replaces regex/keyword matching with LLM's semantic understanding.
+    """
     
     def __init__(self):
         super().__init__(AgentType.CLASSIFIER)
         
-        # Define document type patterns and keywords
-        self.document_patterns = {
-            "meeting_notes": {
-                "keywords": ["meeting", "agenda", "minutes", "attendees", "action items", 
-                            "discussion", "next steps", "follow up", "participants"],
-                "patterns": [
-                    r"(?i)(meeting|minutes)\s*(notes|summary)",
-                    r"(?i)attendees?:?\s*",
-                    r"(?i)agenda:?\s*",
-                    r"(?i)action\s*items?:?\s*"
-                ],
-                "confidence_threshold": 3
-            },
-            "legal_contract": {
-                "keywords": ["whereas", "agreement", "party", "parties", "shall", "hereby",
-                            "witness", "obligations", "terms", "conditions", "liability",
-                            "indemnify", "governing law", "termination"],
-                "patterns": [
-                    r"(?i)this\s+agreement",
-                    r"(?i)between.*and.*\(.*parties",
-                    r"(?i)whereas",
-                    r"(?i)now,?\s+therefore"
-                ],
-                "confidence_threshold": 4
-            },
-            "financial_report": {
-                "keywords": ["revenue", "profit", "loss", "balance sheet", "income statement",
-                            "cash flow", "assets", "liabilities", "equity", "fiscal",
-                            "quarter", "annual", "earnings"],
-                "patterns": [
-                    r"(?i)(financial|earnings)\s*report",
-                    r"(?i)balance\s*sheet",
-                    r"(?i)income\s*statement",
-                    r"\$[\d,]+\.?\d*"
-                ],
-                "confidence_threshold": 3
-            },
-            "technical_documentation": {
-                "keywords": ["api", "function", "method", "class", "implementation",
-                            "parameters", "returns", "example", "usage", "installation",
-                            "configuration", "documentation"],
-                "patterns": [
-                    r"(?i)(api|technical)\s*documentation",
-                    r"(?i)installation\s*guide",
-                    r"(?i)function\s*\w+\s*\(",
-                    r"(?i)class\s*\w+\s*[:{]"
-                ],
-                "confidence_threshold": 3
-            },
-            "email": {
-                "keywords": ["from:", "to:", "subject:", "date:", "sent:", "cc:", "bcc:",
-                            "regards", "sincerely", "best", "thanks"],
-                "patterns": [
-                    r"(?i)from:\s*",
-                    r"(?i)to:\s*",
-                    r"(?i)subject:\s*",
-                    r"[\w\.-]+@[\w\.-]+\.\w+"
-                ],
-                "confidence_threshold": 2
-            },
-            "research_paper": {
-                "keywords": ["abstract", "introduction", "methodology", "results",
-                            "conclusion", "references", "bibliography", "hypothesis",
-                            "literature review", "findings"],
-                "patterns": [
-                    r"(?i)abstract:?\s*",
-                    r"(?i)\d+\.\s*introduction",
-                    r"(?i)references:?\s*",
-                    r"\[\d+\]"  # Citation pattern
-                ],
-                "confidence_threshold": 3
-            }
-        }
+        # Initialize LLM client
+        # It's recommended to load API key from environment variables for security
+        self.openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.llm_model = "gpt-4o" # Or "gpt-4-turbo", "claude-3-5-sonnet-20240620", "gemini-1.5-pro"
+        
+        # Define the primary document types for classification specific to your project
+        # We will explicitly instruct the LLM to choose from these.
+        self.supported_doc_types = [
+            "Resume",
+            "Job Description",
+            "Cover Letter",
+            "Email",
+            "Project Documentation",
+            "Meeting Notes",
+            "Financial Report",
+            "Legal Contract",
+            "Research Paper",
+            "General Document" # Fallback for unknown types
+        ]
     
     async def process(self, context: DocumentContext) -> AgentResult:
-        """Classify the document based on content analysis"""
+        """Classify the document using an LLM based on its content."""
         try:
-            content_lower = context.content.lower()
-            scores = {}
-            
-            # Analyze each document type
-            for doc_type, config in self.document_patterns.items():
-                score = 0
-                matches = []
-                
-                # Check keywords
-                for keyword in config["keywords"]:
-                    if keyword.lower() in content_lower:
-                        score += 1
-                        matches.append(f"keyword: {keyword}")
-                
-                # Check patterns
-                for pattern in config["patterns"]:
-                    if re.search(pattern, context.content):
-                        score += 2  # Patterns are weighted higher
-                        matches.append(f"pattern: {pattern}")
-                
-                scores[doc_type] = {
-                    "score": score,
-                    "matches": matches,
-                    "confidence": min(score / config["confidence_threshold"], 1.0)
+            # Construct the prompt for the LLM
+            # We'll use a system message to define the LLM's role and a user message for the content.
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert document classification AI. Your task is to accurately "
+                        "classify the provided text into one of the predefined categories. "
+                        "Return your answer as a JSON object with 'primary_classification' (string), "
+                        "'confidence' (float between 0.0 and 1.0), and 'reasoning' (string explaining your choice)."
+                        f"The allowed categories are: {', '.join(self.supported_doc_types)}."
+                        "If the content doesn't clearly fit, classify it as 'General Document'."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Please classify the following document:\n\n```\n{context.content[:4000]}\n```" # Truncate large content for prompt
                 }
+            ]
             
-            # Determine primary classification
-            primary_type = max(scores.items(), key=lambda x: x[1]["score"])
+            # Make the LLM API call
+            # Use 'response_format={"type": "json_object"}' for stricter JSON output
+            response = await self.openai_client.chat.completions.create(
+                model=self.llm_model,
+                messages=messages,
+                response_format={"type": "json_object"}, # Ensure JSON output
+                temperature=0.1 # Keep temperature low for consistent classification
+            )
             
-            # Check if we have sufficient confidence
-            if primary_type[1]["score"] < 2:
-                classification = "general_document"
-                confidence = 0.5
-            else:
-                classification = primary_type[0]
-                confidence = primary_type[1]["confidence"]
+            # Parse the LLM's JSON response
+            llm_output = json.loads(response.choices[0].message.content)
             
-            # Find secondary classifications
-            secondary_types = []
-            for doc_type, data in scores.items():
-                if doc_type != classification and data["score"] >= 2:
-                    secondary_types.append({
-                        "type": doc_type,
-                        "confidence": data["confidence"]
-                    })
+            classification = llm_output.get("primary_classification", "General Document")
+            confidence = llm_output.get("confidence", 0.0)
+            reasoning = llm_output.get("reasoning", "")
             
-            # Additional metadata extraction
-            metadata = self._extract_metadata(context.content, classification)
+            # Ensure confidence is within bounds
+            confidence = max(0.0, min(1.0, float(confidence)))
+            
+            # The LLM implicitly handles keyword and pattern matching through its training.
+            # We're relying on its semantic understanding for primary classification.
             
             return AgentResult(
                 agent_type=self.agent_type,
@@ -143,67 +91,49 @@ class DocumentClassifierAgent(BaseAgent):
                 data={
                     "primary_classification": classification,
                     "confidence": confidence,
-                    "secondary_classifications": secondary_types,
-                    "scores": scores,
-                    "metadata": metadata,
-                    "file_type": context.file_type
+                    "reasoning": reasoning, # Include LLM's reasoning for transparency
+                    "file_type": context.file_type # Keep original file type
                 },
                 confidence=confidence,
-                processing_time=0.0
+                processing_time=response.usage.total_tokens * 0.001 # Simple estimate, actual timing handled by _execute_with_timing
             )
             
         except Exception as e:
-            self.logger.error(f"Classification failed: {str(e)}", exc_info=True)
-            raise
+            self.logger.error(f"LLM-based classification failed: {str(e)}", exc_info=True)
+            # Raise the exception so _execute_with_timing can catch and report it
+            raise 
     
     def _extract_metadata(self, content: str, doc_type: str) -> Dict[str, Any]:
-        """Extract type-specific metadata"""
+        """
+        Extract type-specific metadata using LLM if needed, or simple properties.
+        NOTE: For a pure LLM approach, this could also be done via a separate LLM call
+        or integrated into the main classification prompt using function calling.
+        For now, keeping basic properties and noting potential for LLM enhancement.
+        """
         metadata = {
             "word_count": len(content.split()),
             "line_count": len(content.split('\n')),
-            "has_tables": bool(re.search(r'\|.*\|.*\|', content)),
-            "has_lists": bool(re.search(r'(?m)^\s*[\-\*\d+\.]\s+', content))
+            # LLMs can identify tables/lists too, but it's more complex. Keeping simple for now.
+            "has_tables": None, 
+            "has_lists": None 
         }
         
-        # Type-specific metadata
-        if doc_type == "email":
-            # Extract email headers
-            from_match = re.search(r'(?i)from:\s*(.+)', content)
-            to_match = re.search(r'(?i)to:\s*(.+)', content)
-            subject_match = re.search(r'(?i)subject:\s*(.+)', content)
-            
-            if from_match:
-                metadata["from"] = from_match.group(1).strip()
-            if to_match:
-                metadata["to"] = to_match.group(1).strip()
-            if subject_match:
-                metadata["subject"] = subject_match.group(1).strip()
-        
-        elif doc_type == "meeting_notes":
-            # Extract meeting date if present
-            date_patterns = [
-                r'(?i)date:\s*(.+)',
-                r'(?i)meeting\s+date:\s*(.+)',
-                r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
-            ]
-            for pattern in date_patterns:
-                match = re.search(pattern, content)
-                if match:
-                    metadata["meeting_date"] = match.group(1).strip()
-                    break
+        # If you want LLM-driven metadata extraction:
+        # You'd send another prompt here or use function calling in the main prompt
+        # E.g., asking for 'from', 'to', 'subject' if doc_type is 'email'
         
         return metadata
     
     def get_capabilities(self) -> Dict[str, Any]:
         """Return agent capabilities"""
         return {
-            "name": "Document Classifier",
-            "description": "Classifies documents into predefined categories",
-            "supported_types": list(self.document_patterns.keys()) + ["general_document"],
+            "name": "LLM-Powered Document Classifier",
+            "description": "Classifies documents into predefined categories using advanced LLM semantic understanding.",
+            "supported_types": self.supported_doc_types,
             "features": [
-                "Pattern-based classification",
-                "Confidence scoring",
-                "Secondary classification detection",
-                "Type-specific metadata extraction"
+                "LLM-based semantic classification",
+                "Confidence scoring (LLM-derived)",
+                "Transparent reasoning from LLM",
+                "Flexible classification across diverse document types"
             ]
         }

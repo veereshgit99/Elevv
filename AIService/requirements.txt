@@ -1,3 +1,4 @@
+# AIService/requirements.txt
 fastapi
 uvicorn
 requests
@@ -15,8 +16,6 @@ Pillow
 pytesseract
 mangum
 python-dotenv
-
-# New dependencies for multi-agent system
-spacy>=3.5.0  # For enhanced NLP capabilities
-asyncio  # For async orchestration (usually built-in)
-dataclasses  # For Python 3.6 compatibility (built-in for 3.7+)
+openai # <--- Add this for OpenAI API access
+asyncio
+dataclasses

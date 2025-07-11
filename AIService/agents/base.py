@@ -9,13 +9,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 class AgentType(Enum):
-    """Enumeration of available agent types"""
-    CLASSIFIER = "classifier"
+    """Enumeration of available agent types for career-focused AI"""
+    CLASSIFIER = "classifier" # Keep for input validation (Resume vs. JD)
     ENTITY_EXTRACTOR = "entity_extractor"
-    ACTION_ITEM_EXTRACTOR = "action_item_extractor"
-    TOPIC_ANALYZER = "topic_analyzer"
-    SENTIMENT_ANALYZER = "sentiment_analyzer"
-    STRUCTURE_ANALYZER = "structure_analyzer"
+    RELATIONSHIP_MAPPER = "relationship_mapper"
+    JOB_MATCHER = "job_matcher" # New: For calculating match score
+    RESUME_OPTIMIZER = "resume_optimizer" # New: For generating enhancement suggestions
+    WEB_SCRAPER = "web_scraper" # New: For fetching company info from JD URL
+    MESSAGE_GENERATOR = "message_generator" # Later Phase: For cold emails/referral messages
+    # Removed: TOPIC_ANALYZER, SENTIMENT_ANALYZER, ACTION_ITEM_EXTRACTOR, STRUCTURE_ANALYZER
+    # These can be added back if the project expands to broader document types.
 
 @dataclass
 class AgentResult:
@@ -29,11 +32,12 @@ class AgentResult:
 
 @dataclass
 class DocumentContext:
-    """Context passed between agents"""
-    file_id: str
-    content: str
-    file_type: str
-    metadata: Dict[str, Any]
+    """Context passed between agents during document processing"""
+    user_id: str # Added to link processing to a specific user
+    file_id: str # ID for the specific document (resume or JD) being processed
+    content: str # The text content of the document
+    file_type: str # Original file type (e.g., 'pdf', 'docx')
+    metadata: Dict[str, Any] # Flexible dict for additional context (e.g., JD content/entities when processing a resume)
     previous_results: Dict[AgentType, AgentResult] = None
     
     def __post_init__(self):
