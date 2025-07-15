@@ -1,246 +1,139 @@
-# AIService/main.py - Enhanced version with multi-agent support
+# AIService/main.py
 
-from fastapi import FastAPI, HTTPException
-from mangum import Mangum
-from typing import Dict, Any, Optional
-import json
+from fastapi import FastAPI, UploadFile, File, HTTPException, status
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, Union
 import logging
+import os
+import uuid
+import tempfile
 import asyncio
 
-# Set up logging for better visibility in CloudWatch
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-from models.request_schema import FileProcessRequest
-
-# Import your core service functions
-from services.summarizer import generate_summary
-from services.emailer import send_summary_email
-from services.storage import store_enhanced_analysis
-from services.utils import download_file_to_tmp, extract_text_content
-
-# Import multi-agent components
+# Import your orchestrator and utility services
 from agents.orchestrator import DocumentAnalysisOrchestrator
+from services.utils import extract_text_content # For text extraction from files
+from services.storage import store_enhanced_analysis # To save results to DB
 
 # Initialize FastAPI app
-app = FastAPI()
+app = FastAPI(
+    title="LexIQ Career AI Service",
+    description="Backend for AI-powered resume and job description analysis, matching, and enhancement."
+)
 
-# Initialize the orchestrator
+# Configure CORS (Cross-Origin Resource Sharing)
+# IMPORTANT: Adjust origins for production deployment!
+origins = [
+    "http://localhost",
+    "http://localhost:3000", # Example for a React/Vue frontend
+    "chrome-extension://<YOUR_CHROME_EXTENSION_ID>" # Replace with your actual Chrome Extension ID
+    # Add your actual frontend and extension origins here in production
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"], # Allows all headers
+)
+
+# Initialize Orchestrator
 orchestrator = DocumentAnalysisOrchestrator()
 
-# --- Enhanced Core Processing Logic Function ---
-async def _process_file_core(
-    file_id: str, 
-    pre_signed_url: str, 
-    user_email: str = None,
-    enable_multi_agent: bool = True  # Feature flag for gradual rollout
-):
-    try:
-        logger.info(f"Starting core processing for fileId: {file_id}")
-        
-        # 1. Download file to /tmp and get its type
-        file_path, content_type = download_file_to_tmp(pre_signed_url)
-        logger.info(f"File downloaded to {file_path} with Content-Type: {content_type}")
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-        # 2. Extract text content
-        content = extract_text_content(file_path, content_type)
-        logger.info(f"Extracted text content for fileId: {file_id}. Length: {len(content)} characters.")
+# --- Pydantic Models for Request Body ---
+# Define this ideally in AIService/models/request_schema.py and import it
+class FileInput(BaseModel):
+    file_id: Optional[str] = Field(None, description="Unique ID of the file, if already uploaded to storage (e.g., S3).")
+    content: Optional[str] = Field(None, description="Raw text content of the file. Required if file_id is not provided.")
+    file_name: str = Field(..., description="Original name of the file (e.g., 'my_resume.pdf').")
+    file_type: str = Field(..., description="MIME type or file extension (e.g., 'application/pdf', 'docx', 'txt').")
 
-        # Check if the extracted content is an error message
-        if content.startswith("Cannot generate summary:"):
-            summary = content
-            multi_agent_results = None
-            logger.error(f"Processing skipped for fileId {file_id} due to content extraction error: {summary}")
-        else:
-            # 3. Generate traditional summary (keep existing functionality)
-            summary = generate_summary(content)
-            logger.info(f"Summary generated for fileId: {file_id}")
-            
-            # 4. Run multi-agent analysis if enabled
-            multi_agent_results = None
-            if enable_multi_agent:
-                try:
-                    logger.info(f"Starting multi-agent analysis for fileId: {file_id}")
-                    multi_agent_results = await orchestrator.analyze_document(
-                        file_id=file_id,
-                        content=content,
-                        file_type=content_type,
-                        metadata={
-                            "file_path": file_path,
-                            "original_content_type": content_type
-                        }
-                    )
-                    logger.info(f"Multi-agent analysis completed for fileId: {file_id}")
-                except Exception as e:
-                    logger.error(f"Multi-agent analysis failed for fileId {file_id}: {e}", exc_info=True)
-                    # Continue with traditional processing even if multi-agent fails
-
-        # 5. Store results in DynamoDB
-        # Enhanced storage to include multi-agent results
-        storage_data = {
-            "file_id": file_id,
-            "summary": summary,
-            "multi_agent_analysis": multi_agent_results
-        }
-        store_enhanced_analysis(file_id=file_id, analysis_data=storage_data)  # Keep existing storage
-        
-        # TODO: Store multi-agent results in enhanced DynamoDB schema
-        # store_enhanced_analysis(file_id=file_id, analysis_data=storage_data)
-        
-        # 6. Send enhanced email with both summary and analysis
-        if multi_agent_results and multi_agent_results.get("success"):
-            enhanced_email_content = _format_enhanced_email(
-                summary=summary,
-                analysis=multi_agent_results,
-                file_id=file_id
-            )
-            send_summary_email(to_email=user_email, summary=enhanced_email_content, file_id=file_id)
-        else:
-            # Fallback to original email format
-            send_summary_email(to_email=user_email, summary=summary, file_id=file_id)
-        
-        logger.info(f"Email sent for fileId: {file_id} to {user_email}")
-
-        return {
-            "status": "success", 
-            "summary": summary,
-            "multi_agent_analysis": multi_agent_results
-        }
-
-    except Exception as e:
-        logger.error(f"Core processing failed for fileId {file_id}: {e}", exc_info=True)
-        raise
-
-def _format_enhanced_email(summary: str, analysis: Dict[str, Any], file_id: str) -> str:
-    """Format enhanced email content with multi-agent analysis results"""
-    email_parts = [
-        f"File ID: {file_id}",
-        "",
-        "=== SUMMARY ===",
-        summary,
-        "",
-        "=== DOCUMENT ANALYSIS ==="
-    ]
+class AnalyzeApplicationRequest(BaseModel):
+    user_id: str = Field(..., description="Unique ID of the user initiating the request.")
+    resume: FileInput = Field(..., description="Details for the candidate's resume.")
+    job_description: Union[FileInput, str] = Field(..., description="Details for the Job Description. Can be a FileInput object (for uploaded JD) or a string (for JD URL).")
     
-    if analysis.get("summary"):
-        analysis_summary = analysis["summary"]
-        
-        # Document type
-        email_parts.append(f"\nDocument Type: {analysis_summary.get('document_type', 'Unknown')}")
-        
-        # Key findings
-        if analysis_summary.get("key_findings"):
-            email_parts.append("\nKey Findings:")
-            for finding in analysis_summary["key_findings"]:
-                email_parts.append(f"  • {finding}")
-        
-        # Entity summary
-        if analysis_summary.get("entity_summary", {}).get("entity_counts"):
-            email_parts.append("\nEntities Found:")
-            for entity_type, count in analysis_summary["entity_summary"]["entity_counts"].items():
-                if count > 0:
-                    email_parts.append(f"  • {entity_type.title()}: {count}")
+    # Custom validator to ensure either content or file_id is provided for FileInput
+    # (This logic would be inside FileInput if it were a separate class)
+    # For simplicity here, assume it's handled by upstream logic or content is always present.
+
+
+@app.post("/analyze-application")
+async def analyze_application(request: AnalyzeApplicationRequest):
+    """
+    Analyzes a candidate's resume against a job description,
+    performs matching, and generates enhancement suggestions.
+    """
+    user_id = request.user_id
     
-    # Add specific entity details if interesting
-    if "results" in analysis and "entity_extractor" in analysis["results"]:
-        entity_data = analysis["results"]["entity_extractor"]["data"]["entities"]
-        
-        # Add top people and organizations
-        if entity_data.get("people"):
-            email_parts.append("\nPeople Mentioned:")
-            for person in entity_data["people"][:5]:  # Top 5
-                email_parts.append(f"  • {person['text']}")
-        
-        if entity_data.get("organizations"):
-            email_parts.append("\nOrganizations:")
-            for org in entity_data["organizations"][:5]:  # Top 5
-                email_parts.append(f"  • {org['text']}")
-        
-        if entity_data.get("money"):
-            email_parts.append("\nMonetary Values:")
-            for money in entity_data["money"][:5]:  # Top 5
-                email_parts.append(f"  • {money['text']}")
+    # --- Process Resume ---
+    resume_file_id = request.resume.file_id if request.resume.file_id else str(uuid.uuid4())
+    resume_content = request.resume.content
+
+    # If resume content is not directly provided but file_id is, you'd fetch it from S3 here
+    # For simplicity, this example assumes content is directly provided for resume.
+    if not resume_content:
+        logger.error(f"Resume content missing for user {user_id}, resume_file_id {resume_file_id}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resume content is required.")
     
-    return "\n".join(email_parts)
+    # --- Process Job Description ---
+    jd_file_id: Optional[str] = None
+    jd_content: Optional[str] = None
+    jd_url: Optional[str] = None
 
-# --- FastAPI Endpoints ---
-@app.post("/process-summary")
-async def process_file_endpoint(req: FileProcessRequest):
-    """Original endpoint - maintains backward compatibility"""
-    try:
-        # Use multi-agent by default, but can be disabled via header or param
-        result = await _process_file_core(
-            req.fileId, 
-            req.preSignedUrl, 
-            req.userEmail,
-            enable_multi_agent=True
-        )
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/agents/status")
-async def get_agents_status():
-    """Get status of available agents"""
-    return {
-        "available_agents": orchestrator.get_available_agents(),
-        "orchestration_strategy": {
-            "parallel_groups": [
-                [agent.value for agent in group] 
-                for group in orchestrator.strategy.parallel_groups
-            ]
-        }
-    }
-
-@app.post("/analyze/{file_id}")
-async def analyze_document_endpoint(
-    file_id: str,
-    content: str,
-    file_type: Optional[str] = "text/plain"
-):
-    """Direct document analysis endpoint for testing"""
-    try:
-        result = await orchestrator.analyze_document(
-            file_id=file_id,
-            content=content,
-            file_type=file_type
-        )
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# --- AWS Lambda Handler ---
-def lambda_handler(event: Dict[str, Any], context: Any):
-    logger.info(f"Received event: {json.dumps(event)}")
-
-    # Check if the event comes from SQS
-    if 'Records' in event and isinstance(event['Records'], list) and event['Records'] and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
-        logger.info("Processing SQS event...")
-        for record in event['Records']:
-            try:
-                message_body = json.loads(record['body'])
-                file_id = message_body.get('fileId')
-                pre_signed_url = message_body.get('preSignedUrl')
-                user_email = message_body.get('userEmail')
-
-                if file_id and pre_signed_url:
-                    # Process with multi-agent analysis
-                    asyncio.run(_process_file_core(
-                        file_id, 
-                        pre_signed_url, 
-                        user_email,
-                        enable_multi_agent=True
-                    ))
-                    logger.info(f"SQS message processed successfully for fileId: {file_id}")
-                else:
-                    logger.warning(f"Invalid SQS message format received: {message_body}")
-            except Exception as e:
-                logger.error(f"Error processing SQS record: {e}", exc_info=True)
-                raise e
-        return {"statusCode": 200}
-
-    # If not an SQS event, assume it's an API Gateway (HTTP) event
+    if isinstance(request.job_description, str):
+        # JD is provided as a URL
+        jd_url = request.job_description
+        jd_file_id = str(uuid.uuid4()) # Generate a new ID for the JD fetched from URL
+        logger.info(f"JD provided as URL: {jd_url} for user {user_id}")
     else:
-        logger.info("Processing API Gateway event...")
-        asgi_handler = Mangum(app)
-        return asgi_handler(event, context)
+        # JD is provided as file content
+        jd_file_id = request.job_description.file_id if request.job_description.file_id else str(uuid.uuid4())
+        jd_content = request.job_description.content
+        if not jd_content:
+             logger.error(f"JD content missing for user {user_id}, jd_file_id {jd_file_id}")
+             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Job Description content is required.")
+        logger.info(f"JD provided as file content for user {user_id}")
+
+
+    try:
+        # Call the orchestrator to run the full analysis workflow
+        analysis_results = await orchestrator.orchestrate_resume_jd_analysis(
+            user_id=user_id,
+            resume_file_id=resume_file_id,
+            resume_content=resume_content,
+            resume_file_type=request.resume.file_type,
+            jd_file_id=jd_file_id,
+            jd_content=jd_content,
+            jd_url=jd_url
+        )
+
+        # Store the comprehensive analysis results in your database
+        # You'll need to adapt store_enhanced_analysis in services/storage.py
+        # to handle the new complex structure of analysis_results.
+        await store_enhanced_analysis(
+            user_id=user_id,
+            resume_id=resume_file_id,
+            job_description_id=jd_file_id,
+            analysis_data=analysis_results
+        )
+
+        logger.info(f"Analysis complete for user {user_id}. Match: {analysis_results.get('overall_match_percentage')}%")
+        return JSONResponse(status_code=status.HTTP_200_OK, content=analysis_results)
+
+    except HTTPException: # Re-raise FastAPI HTTP exceptions directly
+        raise
+    except Exception as e:
+        logger.error(f"Error during application analysis for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal server error: {str(e)}")
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "LexIQ Career AI Service is running"}
