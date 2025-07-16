@@ -3,3 +3,7 @@ uvicorn
 boto3
 python-dotenv
 pydantic
+requests # For WebScraperAgent, if it were in FileService, but keep here if used elsewhere
+beautifulsoup4 # For WebScraperAgent
+# playwright # If dynamic scraping is enabled
+# Or selenium # If dynamic scraping is enabled

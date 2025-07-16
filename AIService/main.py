@@ -13,7 +13,6 @@ import asyncio
 
 # Import your orchestrator and utility services
 from agents.orchestrator import DocumentAnalysisOrchestrator
-from services.utils import extract_text_content # For text extraction from files
 from services.storage import store_enhanced_analysis # To save results to DB
 
 # Initialize FastAPI app
