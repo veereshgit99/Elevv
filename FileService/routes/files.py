@@ -3,6 +3,7 @@
 import json
 import uuid
 import logging
+import os
 from typing import Dict, Any, Optional
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Form, Body, Depends
@@ -15,8 +16,16 @@ from services.s3_utils import generate_presigned_url
 from database.user_operations import create_user_profile, update_user_profile, get_user_profile
 from database.resume_operations import save_resume_metadata, get_resume_metadata, set_primary_resume
 
+import config 
+
+# Load S3 bucket name from environment variable
+from dotenv import load_dotenv
+load_dotenv()
+S3_BUCKET = os.getenv("S3_BUCKET", "awsbucket288518840771-files")
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
+logger.info(f"Using S3 Bucket: {S3_BUCKET}")
 
 # --- Pydantic Models for Combined Request ---
 class ProfileCreateRequest(BaseModel):
@@ -136,7 +145,10 @@ async def get_user_primary_resume_s3_link(user_id: str):
         if not resume_metadata or resume_metadata.get('status') != 'uploaded':
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Primary resume not found or not fully uploaded.")
         
-        return {"s3_path": resume_metadata['s3_path'], "file_name": resume_metadata['file_name'], "mime_type": resume_metadata['mime_type'], "resume_id": primary_resume_id}
+        # Print S3 bucket
+        logger.info(f"S3 Bucket: {S3_BUCKET}")
+        
+        return {"s3_bucket": S3_BUCKET, "s3_path": resume_metadata['s3_path'], "file_name": resume_metadata['file_name'], "mime_type": resume_metadata['mime_type'], "resume_id": primary_resume_id}
     except HTTPException:
         raise
     except Exception as e:

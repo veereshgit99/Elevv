@@ -16,17 +16,10 @@ def _get_resume_table():
     try:
         dynamodb = boto3.resource('dynamodb', region_name=os.getenv("AWS_REGION", "us-east-2"))
         table = dynamodb.Table(DYNAMODB_RESUME_TABLE_NAME)
-        table.load() # Check if table exists
+        table.load()
         return table
     except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceNotFoundException':
-            logger.error(f"DynamoDB table '{DYNAMODB_RESUME_TABLE_NAME}' not found. Please create it.")
-            raise RuntimeError(f"DynamoDB table '{DYNAMODB_RESUME_TABLE_NAME}' not found.")
-        else:
-            logger.error(f"Could not connect to DynamoDB: {e}", exc_info=True)
-            raise
-    except Exception as e:
-        logger.error(f"Unexpected error getting DynamoDB resume table: {e}", exc_info=True)
+        logger.error(f"Could not connect to DynamoDB: {e}", exc_info=True)
         raise
 
 async def save_resume_metadata(
@@ -35,7 +28,7 @@ async def save_resume_metadata(
     s3_path: str,
     file_name: str,
     mime_type: str,
-    status: str = "uploaded", # e.g., 'uploaded', 'processing', 'processed', 'failed'
+    status: str = "pending_upload",
     is_primary: bool = False
 ) -> bool:
     """
@@ -43,9 +36,10 @@ async def save_resume_metadata(
     """
     table = _get_resume_table()
     try:
+        # This is correct. put_item includes all attributes.
         item = {
-            'user_id': user_id, # Partition Key for GSI, or if PK is composite (user_id, resume_id)
-            'resume_id': resume_id, # Sort Key, or PK if globally unique
+            'resume_id': resume_id,
+            'user_id': user_id,
             's3_path': s3_path,
             'file_name': file_name,
             'mime_type': mime_type,
@@ -57,47 +51,38 @@ async def save_resume_metadata(
         logger.info(f"Resume metadata saved: {resume_id} for user {user_id}")
         return True
     except ClientError as e:
-        logger.error(f"Error saving resume metadata {resume_id} for user {user_id}: {e}", exc_info=True)
-        return False
-    except Exception as e:
-        logger.error(f"Unexpected error saving resume metadata {resume_id} for user {user_id}: {e}", exc_info=True)
+        logger.error(f"Error saving resume metadata {resume_id}: {e}", exc_info=True)
         return False
 
 async def get_resume_metadata(user_id: str, resume_id: str) -> Optional[Dict[str, Any]]:
     """
-    Retrieves resume metadata from the Resumes table.
+    Retrieves resume metadata from the Resumes table using its primary key.
     """
     table = _get_resume_table()
     try:
-        response = table.get_item(Key={'user_id': user_id, 'resume_id': resume_id})
+        # --- CORRECTED LINE ---
+        # The Key must only contain the primary key of the table.
+        response = table.get_item(Key={'resume_id': resume_id})
         item = response.get('Item')
         if item:
-            logger.info(f"Resume metadata retrieved: {resume_id} for user {user_id}")
+            logger.info(f"Resume metadata retrieved: {resume_id}")
             return item
-        logger.info(f"Resume metadata not found: {resume_id} for user {user_id}")
+        logger.info(f"Resume metadata not found: {resume_id}")
         return None
     except ClientError as e:
         logger.error(f"Error retrieving resume metadata {resume_id} for user {user_id}: {e}", exc_info=True)
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error retrieving resume metadata {resume_id} for user {user_id}: {e}", exc_info=True)
         return None
 
 async def set_primary_resume(user_id: str, resume_id: str) -> bool:
     """
     Sets a specific resume as the primary one for a user.
-    This involves unsetting any other primary resumes for the user.
-    NOTE: This operation requires a GSI on user_id if resume_id is not part of PK.
     """
     table = _get_resume_table()
     try:
-        # First, unset any other primary resumes for this user (if any)
-        # This is a query based on GSI (user_id) if resume_id is SK, otherwise it's more complex.
-        # For simplicity in this example, we'll just set the new one to primary.
-        # A more robust solution would involve a transaction or querying and updating.
-
+        # --- CORRECTED LINE ---
+        # The Key for update_item must also match the table's primary key.
         response = table.update_item(
-            Key={'user_id': user_id, 'resume_id': resume_id},
+            Key={'resume_id': resume_id},
             UpdateExpression="SET #is_primary = :true_val",
             ExpressionAttributeNames={"#is_primary": "is_primary"},
             ExpressionAttributeValues={":true_val": True},
@@ -110,9 +95,7 @@ async def set_primary_resume(user_id: str, resume_id: str) -> bool:
     except ClientError as e:
         logger.error(f"Error setting primary resume {resume_id} for user {user_id}: {e}", exc_info=True)
         return False
-    except Exception as e:
-        logger.error(f"Unexpected error setting primary resume {resume_id} for user {user_id}: {e}", exc_info=True)
-        return False
+
 
 async def get_primary_resume_metadata(user_id: str) -> Optional[Dict[str, Any]]:
     """

@@ -16,6 +16,6 @@ Pillow
 pytesseract
 mangum
 python-dotenv
-openai # <--- Add this for OpenAI API access
+google-generativeai # <--- Add this for Google API access
 asyncio
 dataclasses

@@ -1,6 +1,6 @@
 # AIService/agents/web_scraper_agent.py
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
 import os
 import json

@@ -1,26 +1,37 @@
 # AIService/agents/orchestrator.py
 
-from typing import Dict, Any, List, Optional
-from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
+import logging
+from typing import Any, Dict, Optional
+
+# Add imports for making HTTP requests and handling S3
+import httpx  # A modern, async-friendly HTTP client
+import boto3
+from botocore.exceptions import ClientError
+
+from agents.base import AgentType, DocumentContext, BaseAgent, AgentResult
 from agents.classifier_agent import DocumentClassifierAgent
 from agents.entity_extractor_agent import EntityExtractorAgent
-from agents.relationship_mapper_agent import RelationshipMapperAgent
 from agents.job_matching_agent import JobMatchingAgent
+from agents.relationship_mapper_agent import RelationshipMapperAgent
 from agents.resume_optimizer_agent import ResumeOptimizerAgent
 from agents.web_scraper_agent import WebScraperAgent
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 class DocumentAnalysisOrchestrator:
     """
     Orchestrates the execution of various document analysis agents
-    for resume-job description matching and enhancement.
+    for resume-job description matching and enhancement
     """
-    
+
     def __init__(self):
         self.agents: Dict[AgentType, BaseAgent] = {}
         self._initialize_agents()
+        # Initialize an async HTTP client to communicate with FileService
+        self.http_client = httpx.AsyncClient()
+        # Initialize S3 client for downloading
+        self.s3_client = boto3.client("s3")
         self.logger = logging.getLogger(f"{__name__}.Orchestrator")
         self.logger.info("DocumentAnalysisOrchestrator initialized.")
 
@@ -32,8 +43,138 @@ class DocumentAnalysisOrchestrator:
         self.agents[AgentType.RELATIONSHIP_MAPPER] = RelationshipMapperAgent()
         self.agents[AgentType.JOB_MATCHER] = JobMatchingAgent()
         self.agents[AgentType.RESUME_OPTIMIZER] = ResumeOptimizerAgent()
-        # Add other agents here as they are implemented
-        # self.agents[AgentType.MESSAGE_GENERATOR] = MessageGeneratorAgent()
+
+    # --- NEW: Helper method to get resume details from FileService ---
+    async def _get_primary_resume_details(self, user_id: str) -> Dict[str, Any]:
+        """
+        Calls the FileService to get the metadata for the user's primary resume.
+        """
+        # NOTE: Replace with the actual URL of your FileService
+        file_service_url = f"http://localhost:8001/users/{user_id}/primary-resume-s3-link"
+        try:
+            self.logger.info(f"Fetching primary resume details for user {user_id} from {file_service_url}")
+            response = await self.http_client.get(file_service_url, timeout=10.0)
+            response.raise_for_status()  # Raises an exception for 4xx/5xx responses
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            self.logger.error(f"FileService returned an error: {e.response.status_code} {e.response.text}")
+            raise ValueError(f"Could not find primary resume for user {user_id}. Please ensure one is uploaded and set.")
+        except httpx.RequestError as e:
+            self.logger.error(f"Could not connect to FileService: {e}")
+            raise ConnectionError("Failed to connect to the FileService.")
+
+    # --- NEW: Helper method to download resume content from S3 ---
+    # In AIService/agents/orchestrator.py
+
+# ... (inside the DocumentAnalysisOrchestrator class)
+
+    def _download_resume_from_s3(self, bucket_name: str, key: str) -> str:
+        """
+        Downloads the resume content from S3 given its bucket and key.
+        """
+        try:
+            # The line that split the path has been removed, as we now get the bucket and key directly.
+            self.logger.info(f"Downloading resume from S3: bucket={bucket_name}, key={key}")
+            response = self.s3_client.get_object(Bucket=bucket_name, Key=key)
+            return response['Body'].read()
+        except ClientError as e:
+            self.logger.error(f"S3 ClientError downloading s3://{bucket_name}/{key}: {e}")
+            raise FileNotFoundError(f"Could not download resume from S3 path: s3://{bucket_name}/{key}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error downloading from S3: {e}")
+            raise
+
+    # --- REFACTORED: Main orchestration method ---
+    async def orchestrate_resume_jd_analysis(
+        self,
+        user_id: str,
+        jd_file_id: Optional[str] = None,
+        jd_content: Optional[str] = None,
+        jd_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Main orchestration method that now fetches the resume internally.
+        """
+        self.logger.info(f"Starting orchestration for user {user_id}")
+        final_results = {}
+
+        # --- PHASE 1: Fetch and Process Resume ---
+        # Get resume metadata (s3_path, file_name, etc.) from FileService
+        resume_details = await self._get_primary_resume_details(user_id)
+        resume_s3_bucket = resume_details.get("s3_bucket")
+        resume_s3_key = resume_details.get("s3_path")
+        resume_file_id = resume_details.get("resume_id")
+        
+        if not resume_s3_bucket or not resume_s3_key:
+            raise ValueError("Missing S3 bucket or key from FileService response.")
+        
+        # Download the actual resume content from S3
+        # Note: This is a synchronous call. For very large files, consider running in a thread pool.
+        resume_content = self._download_resume_from_s3(resume_s3_bucket, resume_s3_key)
+
+        # Now that we have the resume content, proceed with analysis
+        resume_context = await self.process_document_for_analysis(
+            user_id=user_id,
+            file_id=resume_file_id,
+            content=resume_content,
+            file_type=resume_details.get("mime_type", "application/pdf")
+        )
+        final_results["resume_classification"] = resume_context.previous_results[AgentType.CLASSIFIER].data
+        final_results["resume_entities"] = resume_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
+        self.logger.info(f"Resume {resume_file_id} processed: {final_results['resume_classification']['primary_classification']}")
+
+        # ... (The rest of the method for processing the JD and running the analysis chain remains the same) ...
+
+        # --- PHASE 2: Process Job Description ---
+        jd_doc_id = jd_file_id if jd_file_id else f"jd-url-{hash(jd_url)}" if jd_url else "jd-uploaded-temp"
+        jd_actual_content = jd_content
+
+        if jd_url:
+            scraper_context = DocumentContext(
+                user_id=user_id,
+                file_id=jd_doc_id,
+                content="",
+                file_type="webpage",
+                metadata={"url": jd_url},
+                previous_results={}
+            )
+            scraper_result = await self._run_agent(AgentType.WEB_SCRAPER, scraper_context)
+            jd_actual_content = scraper_result.data.get("extracted_content")
+            final_results["jd_web_scrape_result"] = scraper_result.data
+            self.logger.info(f"JD content scraped from URL: {jd_url}")
+
+        if not jd_actual_content:
+            raise ValueError("Job Description content is missing or could not be scraped.")
+
+        jd_context = await self.process_document_for_analysis(
+            user_id=user_id,
+            file_id=jd_doc_id,
+            content=jd_actual_content,
+            file_type="txt"
+        )
+        final_results["jd_classification"] = jd_context.previous_results[AgentType.CLASSIFIER].data
+        final_results["jd_entities"] = jd_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
+        
+        resume_context.metadata['job_description'] = {
+            'file_id': jd_doc_id,
+            'content': jd_actual_content,
+            'entities': jd_context.previous_results[AgentType.ENTITY_EXTRACTOR].data.get("entities", {}),
+            'entity_extractor_result': jd_context.previous_results[AgentType.ENTITY_EXTRACTOR]
+        }
+
+        # --- PHASE 3: Cross-Document Analysis ---
+        relationship_map_result = await self._run_agent(AgentType.RELATIONSHIP_MAPPER, resume_context)
+        final_results["relationship_map"] = relationship_map_result.data
+
+        job_match_result = await self._run_agent(AgentType.JOB_MATCHER, resume_context)
+        final_results["job_match_analysis"] = job_match_result.data
+        final_results["overall_match_percentage"] = job_match_result.data.get("overall_match_percentage")
+
+        resume_optimizer_result = await self._run_agent(AgentType.RESUME_OPTIMIZER, resume_context)
+        final_results["resume_enhancement_suggestions"] = resume_optimizer_result.data
+
+        self.logger.info(f"Orchestration complete for user {user_id}.")
+        return final_results
 
     async def _run_agent(self, agent_type: AgentType, context: DocumentContext) -> AgentResult:
         """Helper to run a single agent and update context with its result."""
@@ -42,23 +183,19 @@ class DocumentAnalysisOrchestrator:
             raise ValueError(f"Agent of type {agent_type.value} not found.")
         
         self.logger.info(f"Running agent: {agent_type.value} for file {context.file_id}")
-        result = await agent._execute_with_timing(context) # Use the wrapper for timing and error handling
+        result = await agent._execute_with_timing(context)
         
-        # Store the result in the context for subsequent agents
         context.previous_results[agent_type] = result
         
         if not result.success:
             self.logger.error(f"Agent {agent_type.value} failed: {result.error}")
-            # Depending on severity, you might raise an exception or allow partial results
-            # For critical path, raising is often better.
             raise RuntimeError(f"Agent {agent_type.value} failed: {result.error}")
             
         return result
 
     async def process_document_for_analysis(self, user_id: str, file_id: str, content: str, file_type: str, initial_metadata: Dict[str, Any] = None) -> DocumentContext:
         """
-        Processes a single document (either resume or JD) through initial analysis agents.
-        Returns the updated DocumentContext.
+        Processes a single document through initial analysis agents.
         """
         if initial_metadata is None:
             initial_metadata = {}
@@ -68,124 +205,11 @@ class DocumentAnalysisOrchestrator:
             file_id=file_id,
             content=content,
             file_type=file_type,
-            metadata=initial_metadata
+            metadata=initial_metadata,
+            previous_results={}
         )
 
-        # Step 1: Classify the document
         await self._run_agent(AgentType.CLASSIFIER, context)
-        
-        # Step 2: Extract entities
         await self._run_agent(AgentType.ENTITY_EXTRACTOR, context)
 
         return context
-    
-    async def orchestrate_resume_jd_analysis(
-        self, 
-        user_id: str,
-        resume_file_id: str, 
-        resume_content: str, 
-        resume_file_type: str,
-        jd_file_id: Optional[str] = None, # If JD is an uploaded file
-        jd_content: Optional[str] = None, # If JD is uploaded content
-        jd_url: Optional[str] = None # If JD is a URL
-    ) -> Dict[str, Any]:
-        """
-        Main orchestration method for resume-job description analysis and enhancement.
-        """
-        self.logger.info(f"Starting orchestration for user {user_id} with resume {resume_file_id}")
-        
-        final_results = {}
-        
-        # --- PHASE 1: Process Resume ---
-        # Initial processing of the resume document
-        resume_context = await self.process_document_for_analysis(
-            user_id=user_id, 
-            file_id=resume_file_id, 
-            content=resume_content, 
-            file_type=resume_file_type
-        )
-        final_results["resume_classification"] = resume_context.previous_results[AgentType.CLASSIFIER].data
-        final_results["resume_entities"] = resume_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
-        self.logger.info(f"Resume processed: {final_results['resume_classification']['primary_classification']}")
-
-        # Validate resume classification (optional but good practice)
-        if resume_context.previous_results[AgentType.CLASSIFIER].data.get("primary_classification") != "Resume":
-            self.logger.warning(f"Uploaded file {resume_file_id} classified as {final_results['resume_classification']['primary_classification']}, not 'Resume'. Proceeding but results may vary.")
-            # You might choose to raise an error or halt here in a production system
-
-        # --- PHASE 2: Process Job Description ---
-        jd_doc_id = jd_file_id if jd_file_id else f"jd-url-{hash(jd_url)}" if jd_url else "jd-uploaded-temp"
-        jd_actual_content = jd_content
-
-        if jd_url:
-            # Use WebScraperAgent to get JD content from URL
-            scraper_context = DocumentContext(
-                user_id=user_id,
-                file_id=jd_doc_id, # Temporary ID for scraping process
-                content="", # Content will be filled by scraper
-                file_type="webpage",
-                metadata={"url": jd_url}
-            )
-            scraper_result = await self._run_agent(AgentType.WEB_SCRAPER, scraper_context)
-            jd_actual_content = scraper_result.data.get("extracted_content")
-            # Store scraper result in final_results if needed
-            final_results["jd_web_scrape_result"] = scraper_result.data
-            self.logger.info(f"JD content scraped from URL: {jd_url}")
-
-            # Also try to scrape company info from the base URL of the JD
-            if scraper_result.data.get("base_url"):
-                company_scraper_context = DocumentContext(
-                    user_id=user_id,
-                    file_id=f"{jd_doc_id}-company-info",
-                    content="",
-                    file_type="webpage",
-                    metadata={"url": scraper_result.data["base_url"]} # Scrape the base domain
-                )
-                company_scraper_result = await self._run_agent(AgentType.WEB_SCRAPER, company_scraper_context)
-                resume_context.metadata['company_info'] = company_scraper_result.data # Add to resume context for optimizer
-                self.logger.info(f"Company info scraped from base URL: {scraper_result.data['base_url']}")
-        
-        if not jd_actual_content:
-            raise ValueError("Job Description content is missing or could not be scraped.")
-
-        jd_context = await self.process_document_for_analysis(
-            user_id=user_id,
-            file_id=jd_doc_id,
-            content=jd_actual_content,
-            file_type="txt" if not jd_url else "web_scraped_text" # Adjust file_type based on source
-        )
-        final_results["jd_classification"] = jd_context.previous_results[AgentType.CLASSIFIER].data
-        final_results["jd_entities"] = jd_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
-        self.logger.info(f"Job Description processed: {final_results['jd_classification']['primary_classification']}")
-
-        # Store JD processing results in resume_context.metadata for cross-document agents
-        resume_context.metadata['job_description'] = {
-            'file_id': jd_doc_id,
-            'content': jd_actual_content,
-            'entities': jd_context.previous_results[AgentType.ENTITY_EXTRACTOR].data.get("entities", {}),
-            'entity_extractor_result': jd_context.previous_results[AgentType.ENTITY_EXTRACTOR] # Full result object
-        }
-        
-        # --- PHASE 3: Cross-Document Analysis (Resume vs. JD) ---
-        
-        # Step 3: Relationship Mapping (Resume vs. JD)
-        # RelationshipMapper needs resume context, and JD context/entities which are now in resume_context.metadata
-        relationship_map_result = await self._run_agent(AgentType.RELATIONSHIP_MAPPER, resume_context)
-        final_results["relationship_map"] = relationship_map_result.data
-        self.logger.info("Relationship mapping completed.")
-
-        # Step 4: Job Matching
-        # JobMatcher needs relationship map, now available in resume_context
-        job_match_result = await self._run_agent(AgentType.JOB_MATCHER, resume_context)
-        final_results["job_match_analysis"] = job_match_result.data
-        final_results["overall_match_percentage"] = job_match_result.data.get("overall_match_percentage")
-        self.logger.info(f"Job matching completed with {final_results['overall_match_percentage']}% match.")
-        
-        # Step 5: Resume Optimization
-        # ResumeOptimizer needs all prior context for comprehensive suggestions
-        resume_optimizer_result = await self._run_agent(AgentType.RESUME_OPTIMIZER, resume_context)
-        final_results["resume_enhancement_suggestions"] = resume_optimizer_result.data
-        self.logger.info("Resume optimization suggestions generated.")
-
-        self.logger.info(f"Orchestration complete for user {user_id}.")
-        return final_results

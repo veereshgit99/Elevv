@@ -5,9 +5,30 @@ from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
 import os
 import json
 import logging
-from openai import AsyncOpenAI
+
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
+
+from dotenv import load_dotenv
+load_dotenv()
+
+try:
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise KeyError("GOOGLE_API_KEY not found in environment variables.")
+    genai.configure(api_key=api_key)
+except KeyError as e:
+    logger.warning(f"{e} The agent will not work.")
+    genai = None
+    
+# --- Define standard safety settings ---
+GEMINI_SAFETY_SETTINGS = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+]
 
 class ResumeOptimizerAgent(BaseAgent):
     """
@@ -18,9 +39,12 @@ class ResumeOptimizerAgent(BaseAgent):
     
     def __init__(self):
         super().__init__(AgentType.RESUME_OPTIMIZER)
-        self.openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.llm_model = "gpt-4o" # Or your chosen LLM
-        self.logger.info(f"ResumeOptimizerAgent initialized with model: {self.llm_model}")
+        
+        if genai:
+            self.llm_model = genai.GenerativeModel("gemini-1.5-pro")
+        else:
+            self.llm_model = None
+        self.logger.info("LLM-based ResumeOptimizerAgent initialized with model: Gemini 1.5 Pro")
 
     async def process(self, context: DocumentContext) -> AgentResult:
         """
@@ -77,46 +101,37 @@ class ResumeOptimizerAgent(BaseAgent):
 
             # Construct the prompt for the LLM
             # Provide all relevant context for comprehensive suggestions
-            messages = [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are an expert Resume Optimization AI. Your goal is to provide highly specific, actionable, "
-                        "and semantically rich suggestions to enhance a candidate's resume for a given job description. "
-                        "Base your suggestions on the provided resume content, job description, extracted entities, "
-                        "the relationship map, job match analysis, and company context (if available). "
-                        "Crucially, for each suggestion, provide clear reasoning, propose specific text, and identify the target section. "
-                        "Focus on quantification, alignment with JD requirements, and matching company values/needs. "
-                        "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Optimize the following resume for the given job description:\n\n"
-                        f"--- Original Resume (Partial) ---\n{resume_content[:5000]}\n\n"
-                        f"--- Job Description ---\n{jd_content[:5000]}\n\n"
-                        f"--- Resume's Extracted Entities ---\n{json.dumps(resume_entities, indent=2)}\n\n"
-                        f"--- Job Description's Extracted Entities ---\n{json.dumps(jd_entities, indent=2)}\n\n"
-                        f"--- Resume-JD Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
-                        f"--- Job Match Analysis ---\n{json.dumps(match_analysis, indent=2)}\n\n"
-                        f"--- Company Context (from Website) ---\n{json.dumps(company_info, indent=2)}\n\n"
-                        f"Provide your enhancement suggestions as a JSON object strictly following this schema:\n"
-                        f"{json.dumps(enhancement_schema, indent=2)}"
-                    )
-                }
-            ]
             
-            # Make the LLM API call
-            response = await self.openai_client.chat.completions.create(
-                model=self.llm_model,
-                messages=messages,
-                response_format={"type": "json_object"},
-                temperature=0.4 # Higher temperature than extraction/matching for more creative suggestions
+            system_prompt = (
+                "You are an expert Resume Optimization AI. Your goal is to provide highly specific, actionable, "
+                "and semantically rich suggestions to enhance a candidate's resume for a given job description. "
+                "Base your suggestions on the provided resume content, job description, extracted entities, "
+                "the relationship map, job match analysis, and company context (if available). "
+                "Crucially, for each suggestion, provide clear reasoning, propose specific text, and identify the target section. "
+                "Focus on quantification, alignment with JD requirements, and matching company values/needs. "
+                "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
             )
             
-            # Parse and validate the LLM's response
-            llm_output = json.loads(response.choices[0].message.content)
+            user_prompt = (
+                f"Optimize the following resume for the given job description:\n\n"
+                f"--- Original Resume (Partial) ---\n{resume_content[:5000]}\n\n"
+                f"--- Job Description ---\n{jd_content[:5000]}\n\n"
+                f"--- Resume's Extracted Entities ---\n{json.dumps(resume_entities, indent=2)}\n\n"
+                f"--- Job Description's Extracted Entities ---\n{json.dumps(jd_entities, indent=2)}\n\n"
+                f"--- Resume-JD Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
+                f"--- Job Match Analysis ---\n{json.dumps(match_analysis, indent=2)}\n\n"
+                f"--- Company Context (from Website) ---\n{json.dumps(company_info, indent=2)}\n\n"
+                f"Provide your enhancement suggestions as a JSON object strictly following this schema:\n"
+                f"{json.dumps(enhancement_schema, indent=2)}"
+            )
+            
+            # Make the LLM API call
+            response = await self.llm_model.generate_content_async(
+                [system_prompt, user_prompt],
+                generation_config={"response_mime_type": "application/json", "temperature": 0.4},
+                safety_settings=GEMINI_SAFETY_SETTINGS
+            )
+            llm_output = json.loads(response.text)
             
             if not isinstance(llm_output, dict) or "suggestions" not in llm_output or not isinstance(llm_output["suggestions"], list):
                 raise ValueError("LLM returned invalid or incomplete JSON for resume suggestions.")

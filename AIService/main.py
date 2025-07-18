@@ -1,138 +1,96 @@
 # AIService/main.py
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional, Dict, Any, Union
 import logging
 import os
 import uuid
-import tempfile
-import asyncio
 
-# Import your orchestrator and utility services
+# Import your orchestrator
 from agents.orchestrator import DocumentAnalysisOrchestrator
-from services.storage import store_enhanced_analysis # To save results to DB
 
-# Initialize FastAPI app
+# --- 1. Setup Authentication ---
+# This scheme will look for an "Authorization: Bearer <token>" header
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") # "token" is a dummy URL
+
+async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
+    """
+    Dependency to decode JWT token and extract the user_id.
+    In a real application, you would use a library like python-jose to decode
+    and validate the token.
+    """
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+    # --- Placeholder Logic ---
+    # For now, we'll assume the token itself is the user_id.
+    # Replace this with your actual JWT decoding logic.
+    # Example:
+    # from jose import jwt, JWTError
+    # try:
+    #     payload = jwt.decode(token, YOUR_SECRET_KEY, algorithms=[ALGORITHM])
+    #     user_id: str = payload.get("sub") # 'sub' is standard for subject/user_id
+    #     if user_id is None:
+    #         raise HTTPException(status_code=401, detail="Invalid token")
+    #     return user_id
+    # except JWTError:
+    #     raise HTTPException(status_code=401, detail="Invalid token")
+    
+
+# --- 2. Define the Simplified Request Body ---
+class JobMatchRequest(BaseModel):
+    job_info: Union[HttpUrl, str] = Field(..., description="The URL of the job description, or the full text content of the JD.")
+
+# --- FastAPI App Initialization ---
 app = FastAPI(
     title="LexIQ Career AI Service",
-    description="Backend for AI-powered resume and job description analysis, matching, and enhancement."
+    description="Analyzes resumes against job descriptions."
 )
-
-# Configure CORS (Cross-Origin Resource Sharing)
-# IMPORTANT: Adjust origins for production deployment!
-origins = [
-    "http://localhost",
-    "http://localhost:3000", # Example for a React/Vue frontend
-    "chrome-extension://<YOUR_CHROME_EXTENSION_ID>" # Replace with your actual Chrome Extension ID
-    # Add your actual frontend and extension origins here in production
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
-    allow_headers=["*"], # Allows all headers
-)
-
-# Initialize Orchestrator
 orchestrator = DocumentAnalysisOrchestrator()
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-# --- Pydantic Models for Request Body ---
-# Define this ideally in AIService/models/request_schema.py and import it
-class FileInput(BaseModel):
-    file_id: Optional[str] = Field(None, description="Unique ID of the file, if already uploaded to storage (e.g., S3).")
-    content: Optional[str] = Field(None, description="Raw text content of the file. Required if file_id is not provided.")
-    file_name: str = Field(..., description="Original name of the file (e.g., 'my_resume.pdf').")
-    file_type: str = Field(..., description="MIME type or file extension (e.g., 'application/pdf', 'docx', 'txt').")
-
-class AnalyzeApplicationRequest(BaseModel):
-    user_id: str = Field(..., description="Unique ID of the user initiating the request.")
-    resume: FileInput = Field(..., description="Details for the candidate's resume.")
-    job_description: Union[FileInput, str] = Field(..., description="Details for the Job Description. Can be a FileInput object (for uploaded JD) or a string (for JD URL).")
-    
-    # Custom validator to ensure either content or file_id is provided for FileInput
-    # (This logic would be inside FileInput if it were a separate class)
-    # For simplicity here, assume it's handled by upstream logic or content is always present.
-
-
+# --- 3. Update the API Endpoint ---
 @app.post("/analyze-application")
-async def analyze_application(request: AnalyzeApplicationRequest):
-    """
-    Analyzes a candidate's resume against a job description,
-    performs matching, and generates enhancement suggestions.
-    """
-    user_id = request.user_id
+async def analyze_application(
+    request: JobMatchRequest,
+    #user_id: str = Depends(get_current_user_id) # User ID is now securely injected
     
-    # --- Process Resume ---
-    resume_file_id = request.resume.file_id if request.resume.file_id else str(uuid.uuid4())
-    resume_content = request.resume.content
-
-    # If resume content is not directly provided but file_id is, you'd fetch it from S3 here
-    # For simplicity, this example assumes content is directly provided for resume.
-    if not resume_content:
-        logger.error(f"Resume content missing for user {user_id}, resume_file_id {resume_file_id}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resume content is required.")
+    # for testing, let's just use a dummy user_id, later uncomment the line above
+    user_id = "65a4c0a2-5872-4459-9a60-e7a2fadea4d0"  # Dummy user_id for testing purposes
+):
+    """
+    Analyzes the logged-in user's primary resume against a job description.
+    The user is identified via the Authorization header.
+    """
+    logger.info(f"Received analysis request for user_id: {user_id}")
     
-    # --- Process Job Description ---
-    jd_file_id: Optional[str] = None
+    jd_url: Optional[HttpUrl] = None
     jd_content: Optional[str] = None
-    jd_url: Optional[str] = None
-
-    if isinstance(request.job_description, str):
-        # JD is provided as a URL
-        jd_url = request.job_description
-        jd_file_id = str(uuid.uuid4()) # Generate a new ID for the JD fetched from URL
-        logger.info(f"JD provided as URL: {jd_url} for user {user_id}")
+    
+    if isinstance(request.job_info, HttpUrl):
+        jd_url = request.job_info
     else:
-        # JD is provided as file content
-        jd_file_id = request.job_description.file_id if request.job_description.file_id else str(uuid.uuid4())
-        jd_content = request.job_description.content
-        if not jd_content:
-             logger.error(f"JD content missing for user {user_id}, jd_file_id {jd_file_id}")
-             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Job Description content is required.")
-        logger.info(f"JD provided as file content for user {user_id}")
-
+        jd_content = request.job_info
 
     try:
-        # Call the orchestrator to run the full analysis workflow
+        # NOTE: You will need to add the logic inside your orchestrator
+        # to fetch the resume content from S3 using the user_id.
         analysis_results = await orchestrator.orchestrate_resume_jd_analysis(
             user_id=user_id,
-            resume_file_id=resume_file_id,
-            resume_content=resume_content,
-            resume_file_type=request.resume.file_type,
-            jd_file_id=jd_file_id,
+            # ---
+            jd_file_id=str(uuid.uuid4()), # Temporary ID for this JD
             jd_content=jd_content,
             jd_url=jd_url
         )
 
-        # Store the comprehensive analysis results in your database
-        # You'll need to adapt store_enhanced_analysis in services/storage.py
-        # to handle the new complex structure of analysis_results.
-        await store_enhanced_analysis(
-            user_id=user_id,
-            resume_id=resume_file_id,
-            job_description_id=jd_file_id,
-            analysis_data=analysis_results
-        )
-
-        logger.info(f"Analysis complete for user {user_id}. Match: {analysis_results.get('overall_match_percentage')}%")
         return JSONResponse(status_code=status.HTTP_200_OK, content=analysis_results)
 
-    except HTTPException: # Re-raise FastAPI HTTP exceptions directly
-        raise
     except Exception as e:
         logger.error(f"Error during application analysis for user {user_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal server error: {str(e)}")
-
-
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "message": "LexIQ Career AI Service is running"}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -1,13 +1,34 @@
 # AIService/agents/relationship_mapper_agent.py
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
 import os
 import json
 import logging
-from openai import AsyncOpenAI
+
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
+
+from dotenv import load_dotenv
+load_dotenv()
+
+try:
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise KeyError("GOOGLE_API_KEY not found in environment variables.")
+    genai.configure(api_key=api_key)
+except KeyError as e:
+    logger.warning(f"{e} The agent will not work.")
+    genai = None
+    
+# --- Define standard safety settings ---
+GEMINI_SAFETY_SETTINGS = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+]
 
 class RelationshipMapperAgent(BaseAgent):
     """
@@ -17,9 +38,12 @@ class RelationshipMapperAgent(BaseAgent):
     
     def __init__(self):
         super().__init__(AgentType.RELATIONSHIP_MAPPER)
-        self.openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.llm_model = "gpt-4o" # Or your chosen LLM
-        self.logger.info(f"RelationshipMapperAgent initialized with model: {self.llm_model}")
+        
+        if genai:
+            self.llm_model = genai.GenerativeModel("gemini-1.5-pro")
+        else:
+            self.llm_model = None
+        self.logger.info("LLM-based RelationshipMapperAgent initialized with model: Gemini 1.5 Pro")
 
     async def process(self, context: DocumentContext) -> AgentResult:
         """
@@ -118,42 +142,32 @@ class RelationshipMapperAgent(BaseAgent):
             }
 
             # Construct the prompt for the LLM
-            messages = [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are an expert career relationship mapper AI. Your task is to analyze a candidate's resume "
-                        "and a job description to identify precise semantic matches and gaps. "
-                        "Focus on how specific skills and experiences in the resume align with or miss requirements "
-                        "and responsibilities in the job description. "
-                        "Provide a structured JSON output strictly following the schema. "
-                        "Be very precise and detailed in your reasoning. Confidence should reflect the strength of the match."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Analyze the following resume and job description to map relationships, matches, and gaps.\n\n"
-                        f"--- Candidate's Resume Entities ---\n{json.dumps(resume_entities, indent=2)}\n\n"
-                        f"--- Candidate's Resume Content (Partial for context) ---\n{context.content[:5000]}\n\n" # Pass relevant parts
-                        f"--- Job Description Entities ---\n{json.dumps(jd_entities, indent=2)}\n\n"
-                        f"--- Job Description Content ---\n{jd_content[:5000]}\n\n" # Pass relevant parts
-                        f"Output the relationships as a JSON object strictly following this schema:\n"
-                        f"{json.dumps(relationship_schema, indent=2)}"
-                    )
-                }
-            ]
-            
-            # Make the LLM API call
-            response = await self.openai_client.chat.completions.create(
-                model=self.llm_model,
-                messages=messages,
-                response_format={"type": "json_object"},
-                temperature=0.0 # Low temperature for factual, deterministic mapping
+            system_prompt = (
+                "You are an expert career relationship mapper AI. Your task is to analyze a candidate's resume "
+                "and a job description to identify precise semantic matches and gaps. "
+                "Focus on how specific skills and experiences in the resume align with or miss requirements "
+                "and responsibilities in the job description. "
+                "Provide a structured JSON output strictly following the schema. "
+                "Be very precise and detailed in your reasoning. Confidence should reflect the strength of the match."
             )
             
-            # Parse and validate the LLM's response
-            llm_output = json.loads(response.choices[0].message.content)
+            user_prompt = (
+                f"Analyze the following resume and job description to map relationships, matches, and gaps.\n\n"
+                f"--- Candidate's Resume Entities ---\n{json.dumps(resume_entities, indent=2)}\n\n"
+                f"--- Candidate's Resume Content (Partial for context) ---\n{context.content[:5000]}\n\n" # Pass relevant parts
+                f"--- Job Description Entities ---\n{json.dumps(jd_entities, indent=2)}\n\n"
+                f"--- Job Description Content ---\n{jd_content[:5000]}\n\n" # Pass relevant parts
+                f"Output the relationships as a JSON object strictly following this schema:\n"
+                f"{json.dumps(relationship_schema, indent=2)}"
+            )
+            
+            # Make the LLM API call
+            response = await self.llm_model.generate_content_async(
+                [system_prompt, user_prompt],  # Pass prompts as a list
+                generation_config={"response_mime_type": "application/json", "temperature": 0.0},
+                safety_settings=GEMINI_SAFETY_SETTINGS
+            )
+            llm_output = json.loads(response.text)
             
             # Basic validation to ensure all required fields are present
             for key in relationship_schema['required']:
