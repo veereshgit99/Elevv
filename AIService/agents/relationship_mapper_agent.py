@@ -185,7 +185,7 @@ class RelationshipMapperAgent(BaseAgent):
                     "relationship_map": llm_output,
                     "resume_id": context.file_id,
                     "jd_id": job_description_data.get('file_id'), # Assuming JD also has a file_id
-                    "llm_model_used": self.llm_model
+                    "llm_model_used": "gemini-1.5-pro"
                 },
                 confidence=overall_confidence,
                 processing_time=0.0 # Will be updated by _execute_with_timing

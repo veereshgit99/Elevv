@@ -83,7 +83,8 @@ class DocumentClassifierAgent(BaseAgent):
                     "primary_classification": classification,
                     "confidence": confidence,
                     "reasoning": reasoning,
-                    "file_type": context.file_type
+                    "file_type": context.file_type,
+                    "llm_model_used": "gemini-1.5-flash"
                 },
                 confidence=confidence,
                 processing_time=0.0

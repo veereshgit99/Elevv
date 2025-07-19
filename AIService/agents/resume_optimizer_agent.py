@@ -131,7 +131,28 @@ class ResumeOptimizerAgent(BaseAgent):
                 generation_config={"response_mime_type": "application/json", "temperature": 0.4},
                 safety_settings=GEMINI_SAFETY_SETTINGS
             )
-            llm_output = json.loads(response.text)
+            
+            # --- NEW: Robust JSON Parsing Logic ---
+            try:
+                # First, try to parse the response directly
+                llm_output = json.loads(response.text)
+            except json.JSONDecodeError:
+                self.logger.warning("Initial JSON parsing failed. Attempting to self-correct.")
+                # If it fails, ask the LLM to fix the broken JSON
+                fix_prompt = (
+                    "The following text is not a valid JSON object due to an unescaped character or formatting error. "
+                    "Please analyze the text, correct the error, and return only the perfectly formatted JSON object. "
+                    "Do not include any other text or explanation outside of the JSON itself.\n\n"
+                    f"--- BROKEN TEXT ---\n{response.text}\n--- END BROKEN TEXT ---"
+                )
+                
+                correction_response = await self.llm_model.generate_content_async(
+                    fix_prompt,
+                    generation_config={"response_mime_type": "application/json", "temperature": 0.0},
+                    safety_settings=GEMINI_SAFETY_SETTINGS
+                )
+                llm_output = json.loads(correction_response.text) # Try parsing the fixed version
+                
             
             if not isinstance(llm_output, dict) or "suggestions" not in llm_output or not isinstance(llm_output["suggestions"], list):
                 raise ValueError("LLM returned invalid or incomplete JSON for resume suggestions.")
@@ -145,7 +166,7 @@ class ResumeOptimizerAgent(BaseAgent):
                 data={
                     "enhancement_suggestions": llm_output["suggestions"],
                     "overall_feedback": llm_output.get("overall_feedback", ""),
-                    "llm_model_used": self.llm_model
+                    "llm_model_used": "gemini-1.5-pro"
                 },
                 confidence=overall_confidence,
                 processing_time=0.0 # Will be updated by _execute_with_timing

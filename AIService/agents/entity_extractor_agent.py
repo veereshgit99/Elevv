@@ -55,7 +55,6 @@ class EntityExtractorAgent(BaseAgent):
                 "type": "object",
                 "properties": {
                     "companies": {"type": "array", "items": {"type": "string", "description": "Companies, institutions, or other organizations"}},
-                    "locations": {"type": "array", "items": {"type": "string", "description": "Geographical locations"}},
                     "dates": {"type": "array", "items": {"type": "string", "description": "Dates or time periods (e.g., 'Jan 2024 - Dec 2025', '2023')"}},
                     "skills": {"type": "array", "items": {"type": "string", "description": "Technical and soft skills (e.g., 'Python', 'Machine Learning', 'Agile')"}},
                     "job_titles": {"type": "array", "items": {"type": "string", "description": "Titles of positions held or sought"}},
@@ -64,20 +63,28 @@ class EntityExtractorAgent(BaseAgent):
                     "universities": {"type": "array", "items": {"type": "string", "description": "Educational institutions"}},
                     "achievements": {"type": "array", "items": {"type": "string", "description": "Quantifiable accomplishments or significant contributions"}},
                     "requirements": {"type": "array", "items": {"type": "string", "description": "Specific requirements extracted from a Job Description"}},
-                    "gpa": {"type": "array", "items": {"type": "string", "description": "GPA values (e.g., '3.9 GPA')"}}
                 },
                 "required": ["skills", "job_titles", "companies", "dates"] # Ensure these common ones are always present
             }
+            
+            # --- NEW: Get the job title and company from the context metadata ---
+            # The orchestrator will place this information here.
+            doc_type = context.metadata.get("doc_type", "professional document") # Default value
+            job_title = context.metadata.get("job_title", "the job")
+            company_name = context.metadata.get("company_name", "the company")
 
             # Construct the prompt for the LLM
             # We provide a clear role and instructions for structured extraction.
             system_prompt = (
-                "You are an expert entity extraction AI, specialized in analyzing professional documents "
-                "like resumes and job descriptions. Your goal is to accurately identify and extract "
-                "various types of entities from the provided text according to the specified JSON schema. "
-                "Ensure all extracted entities are clean, relevant, and deduplicated. "
+                "You are an expert entity extraction AI, specialized in analyzing professional documents. "
+                "Your goal is to accurately identify and extract various types of entities from the provided text "
+                "according to the specified JSON schema. Ensure all extracted entities are clean, relevant, and deduplicated. "
                 "Do not include any conversational text outside the JSON output."
             )
+            
+            # Add more specific context if we know it's a JD
+            if doc_type == "Job Description" and job_title:
+                 system_prompt += f" You are analyzing a job description for the role of '{job_title}' at '{company_name}'."
             
             user_prompt = (
                 f"Extract entities from the following document. "
@@ -85,7 +92,7 @@ class EntityExtractorAgent(BaseAgent):
                 "If it's a job description, focus on required skills, responsibilities, and company details. "
                 "Provide all extracted entities in a JSON object strictly following this schema:\n"
                 f"{json.dumps(entity_schema, indent=2)}\n\n"
-                f"Document content:\n```\n{context.content[:10000]}\n```" # Truncate for LLM context, adjust as needed
+                f"Document content:\n```\n{context.content}\n```"
             )
             
             
@@ -134,7 +141,7 @@ class EntityExtractorAgent(BaseAgent):
                         "requirements_found": len(extracted_entities.get("requirements", [])) > 0
                     },
                     "document_classification": doc_classification,
-                    "llm_model_used": self.llm_model
+                    "llm_model_used": "gemini-1.5-flash"
                 },
                 confidence=0.95, # Higher confidence as LLMs are generally more robust
                 processing_time=0.0 # Will be updated by _execute_with_timing in BaseAgent
