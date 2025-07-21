@@ -121,9 +121,12 @@ class ResumeOptimizerAgent(BaseAgent):
                 "   ii. 'high' : Use ONLY for suggestions that add significant, measurable value. This includes **quantifying a key achievement** that was not previously quantified or\n"
                 "               **fundamentally rephrasing a weak bullet point** to directly address a core job responsibility.\n"
                 "   iii. 'medium' : Use for suggestions that improve the alignment with a 'preferred' qualification or add clarifying technical details.\n"
-                "3. SUGGEST NEW PROJECT IDEAS:\n"
-                "   i. *Only if you identify a critical, high-priority skill or experience gap**, propose a detailed project idea that the user could build in the future to fill that gap.\n"
-                "   ii. Clearly label this with type 'suggest_new_project'. If the gaps are minor, do not suggest a new project.\n\n"
+                "3. NEW ADDITION\n"
+                "   i. **Re-frame, Do Not Invent**: You must not invent experience. However, you are encouraged to intelligently **re-frame** a candidate's existing experience to better align with the language of the job description.\n"
+                "       If you identify a skill or qualification on the resume that is semantically related to a job requirement but not explicitly stated, you can suggest adding a new bullet point that highlights this connection.\n"
+                "       Your reasoning must clearly state which part of the existing resume supports your new suggested text.\n\n"
+                "   ii. *Only if you identify a critical, high-priority skill or experience gap**, propose a detailed project idea that the user could build in the future to fill that gap.\n"
+                "       Clearly label this with type 'suggest_new_project'. If the gaps are minor, do not suggest a new project.\n\n"
 
                 "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
             )

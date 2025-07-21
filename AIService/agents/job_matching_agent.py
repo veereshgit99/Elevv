@@ -65,19 +65,16 @@ class JobMatchingAgent(BaseAgent):
 
             # --- CORRECTED: System and User prompts are now separate ---
             system_prompt = (
-    "You are an expert Job Matching AI, acting as a seasoned senior recruiter. Your task is to calculate a realistic overall match percentage and provide insightful analysis based on a detailed relationship map. You must adhere to the following principles of professional evaluation:\n\n"
+                "You are an expert Job Matching AI, acting as a seasoned executive recruiter. Your task is to calculate a realistic overall match percentage and provide insightful analysis based on a detailed relationship map. You must adhere to the following universal principles of professional evaluation:\n\n"
     
-    "--- CORE REASONING PRINCIPLES ---\n"
-    "1.  **Hierarchy of Experience**: Always weigh experience in this order: Relevant Full-Time Experience > Relevant Internships > Relevant Personal Projects > Academic Coursework. For example, if a job requires skills demonstrated in an internship, but the candidate has 2 years of full-time experience using those skills, that requirement is not just met, but exceeded.\n\n"
+                "--- CORE REASONING PRINCIPLES ---\n"
+                "1.  **Hierarchy of Experience**: Always weigh different types of experience appropriately. Relevant full-time professional experience is the most valuable, followed by internships or freelance work, then personal projects, and finally academic coursework.\n\n"
+                "2.  **Impact over Keywords**: Give significantly more weight to skills demonstrated with quantified, results-oriented achievements.\n\n"
+                "3.  **Semantic Equivalence**: Understand that different industries use different terminology for the same skills and responsibilities.\n\n"
+                "4.  **Recency Matters**: More recent experience is generally more relevant than older experience.\n\n"
     
-    "2.  **Impact over Keywords**: Do not just match keywords. Give significantly more weight to skills and technologies that are demonstrated within the context of a professional achievement. A quantified result (e.g., 'Improved performance by 30% using Redis') is far more valuable than simply listing 'Redis' in a skills section.\n\n"
-    
-    "3.  **Semantic Equivalence**: Understand that different companies use different terminology for the same concepts. 'Experience with distributed systems' on a resume is a strong match for a requirement of 'building scalable services'.\n\n"
-    
-    "4.  **Recency Matters**: More recent experience is generally more relevant than older experience. A skill used extensively in the last 2 years is more important than a skill used 10 years ago.\n\n"
-    
-    "--- OUTPUT INSTRUCTIONS ---\n"
-    "Based on these principles, provide your analysis. Ensure the match percentage is realistic and your feedback is directly supported by the data in the relationship map. The output must strictly follow the JSON schema."
+                "--- OUTPUT INSTRUCTIONS ---\n"
+                "Based on these principles, provide your analysis. Ensure the match percentage is realistic and your feedback is directly supported by the data in the relationship map. The output must strictly follow the JSON schema."
 )
 
             user_prompt = (
