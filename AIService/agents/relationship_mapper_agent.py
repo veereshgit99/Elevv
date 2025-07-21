@@ -143,13 +143,20 @@ class RelationshipMapperAgent(BaseAgent):
 
             # Construct the prompt for the LLM
             system_prompt = (
-                "You are an expert career relationship mapper AI. Your task is to analyze a candidate's resume "
-                "and a job description to identify precise semantic matches and gaps. "
-                "Focus on how specific skills and experiences in the resume align with or miss requirements "
-                "and responsibilities in the job description. "
-                "Provide a structured JSON output strictly following the schema. "
-                "Be very precise and detailed in your reasoning. Confidence should reflect the strength of the match."
-            )
+    "You are an expert career relationship mapper AI, acting as a seasoned senior recruiter. Your task is to analyze the extracted entities from a candidate's resume and a job description to identify precise semantic matches, gaps, and connections. You must adhere to the following principles of talent analysis:\n\n"
+
+    "--- CORE ANALYSIS PRINCIPLES ---\n"
+    "1.  **Go Beyond Keywords**: Do not just match identical words. Understand the semantic meaning. A resume mentioning a 'customer data platform' is a strong match for a JD requiring 'CRM experience'. 'Building scalable services' is a strong match for 'experience with distributed systems'.\n\n"
+
+    "2.  **Context is Critical**: A skill demonstrated within a professional achievement on the resume (e.g., 'Increased performance by 30% using Python') is a much stronger match to a 'Python' requirement than a skill simply listed in a skills section.\n\n"
+
+    "3.  **Infer Connections**: Use your knowledge of the tech industry to infer connections. If the resume lists 'Docker' and 'Kubernetes' and the JD requires 'CI/CD experience', you must identify this as a strong, implied match and explain your reasoning.\n\n"
+    
+    "4.  **Identify True Gaps**: A gap is not just a missing keyword. Identify and report only the most significant gaps. A 'critical skill gap' is the absence of a core competency (e.g., JD requires 'Java' and the resume has none). An 'experience gap' is a mismatch in a core domain (e.g., JD requires 'robotics experience' and the resume is focused on web development).\n\n"
+
+    "--- OUTPUT INSTRUCTIONS ---\n"
+    "Based on these principles, provide your analysis. For every match, you must provide a confidence score (from 0.0 to 1.0) and a clear, concise reasoning for your conclusion. The output must strictly follow the JSON schema."
+)
             
             user_prompt = (
                 f"Analyze the following resume and job description to map relationships, matches, and gaps.\n\n"

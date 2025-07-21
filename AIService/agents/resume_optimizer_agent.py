@@ -109,6 +109,22 @@ class ResumeOptimizerAgent(BaseAgent):
                 "the relationship map, job match analysis, and company context (if available). "
                 "Crucially, for each suggestion, provide clear reasoning, propose specific text, and identify the target section. "
                 "Focus on quantification, alignment with JD requirements, and matching company values/needs. "
+                "CRITICAL RULE: Never invent or suggest adding a project or experience the user has not done.\n\n"
+                "Focus on suggestions:\n"
+                "1. ENHANCE EXISTING CONTENT:\n"
+                "   i. Rephrase bullet points to be more impactful, quantify achievements, and highlight existing skills that align with the job description.\n"
+                "   ii. Any suggested bullet points must be concise and if possible, start with a strong action verb.\n"
+                "   iii. Only suggest a change if it provides a significant and meaningful improvement.** Do not suggest minor stylistic tweaks, if the original bullet point is already strong and clear.\n"
+                "The 'ENHANCE EXISTING CONTENT' is your primary focus.\n"
+                "2. Coming to the priority of suggestions, focus on the following:\n"
+                "   i. 'critical' : Use only for suggestions that address a major, explicitly stated requirement in the job description that is currently missing from the resume.\n"
+                "   ii. 'high' : Use ONLY for suggestions that add significant, measurable value. This includes **quantifying a key achievement** that was not previously quantified or\n"
+                "               **fundamentally rephrasing a weak bullet point** to directly address a core job responsibility.\n"
+                "   iii. 'medium' : Use for suggestions that improve the alignment with a 'preferred' qualification or add clarifying technical details.\n"
+                "3. SUGGEST NEW PROJECT IDEAS:\n"
+                "   i. *Only if you identify a critical, high-priority skill or experience gap**, propose a detailed project idea that the user could build in the future to fill that gap.\n"
+                "   ii. Clearly label this with type 'suggest_new_project'. If the gaps are minor, do not suggest a new project.\n\n"
+
                 "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
             )
             

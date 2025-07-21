@@ -53,6 +53,15 @@ class JobMatchRequest(BaseModel):
     job_description_text: str = Field(..., description="The main text content of the job description.")
     # You can add other fields from the UI here, like URL if you want to store it
     job_url: Optional[HttpUrl] = Field(None, description="The original URL of the job posting.")
+    
+class OptimizationRequest(BaseModel):
+    # This model will contain all the data from the first analysis
+    user_id: str
+    resume_id: str
+    resume_content: str
+    job_description: Dict[str, Any]
+    relationship_map: Dict[str, Any]
+    job_match_analysis: Dict[str, Any]
 
 
 # --- FastAPI App Initialization ---
@@ -72,18 +81,19 @@ async def analyze_application(
     
     # Hardcode user_id for testing purposes, later uncomment the line above
     #user_id = "2eb8ce01-a735-4f14-a30d-30346a3f76ec" # Anmol's Resume
-    #user_id = "65a4c0a2-5872-4459-9a60-e7a2fadea4d0" # Veer's Resume
-    user_id = "7a90fc55-ec79-483a-8ba0-84ecab8b8c1d" # Prajwal's Resume
+    user_id = "65a4c0a2-5872-4459-9a60-e7a2fadea4d0" # Veer's Resume
+    #user_id = "ce780eae-f191-4e81-9085-85f3a27987a5" # Vijeth's Resume
+    #user_id = "7a90fc55-ec79-483a-8ba0-84ecab8b8c1d" # Prajwal's Resume
     
 ):
     """
-    Analyzes the logged-in user's primary resume against the provided job description text.
+    Performs the initial, fast analysis of a resume against a job description.
     """
     logger.info(f"Received analysis request for user_id: {user_id}")
     
     try:
         # The call to the orchestrator is now much simpler.
-        analysis_results = await orchestrator.orchestrate_resume_jd_analysis(
+        analysis_results = await orchestrator.orchestrate_initial_analysis(
             user_id=user_id,
             job_title=request.job_title,
             company_name=request.company_name,
@@ -94,4 +104,22 @@ async def analyze_application(
 
     except Exception as e:
         logger.error(f"Error during application analysis for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+    
+# --- NEW: The Second, On-Demand Endpoint ---
+@app.post("/optimize-resume")
+async def optimize_resume(request: OptimizationRequest):
+    """
+    Takes the context from an initial analysis and generates resume suggestions.
+    """
+    logger.info(f"Received optimization request for user_id: {request.user_id}")
+    try:
+        # Call the new optimization-only method
+        optimization_results = await orchestrator.orchestrate_resume_optimization(
+            analysis_context=request.dict()
+        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content=optimization_results)
+    except Exception as e:
+        logger.error(f"Error during resume optimization for user {request.user_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -3,6 +3,7 @@
 import logging
 import uuid, json
 import fitz # PyMuPDF for PDF text extraction
+import asyncio # For async operations - parallel processing
 import io
 from typing import Any, Dict, Optional
 
@@ -112,8 +113,8 @@ class DocumentAnalysisOrchestrator:
             self.logger.error(f"Unexpected error downloading from S3: {e}")
             raise
 
-    # --- REFACTORED: Main orchestration method ---
-    async def orchestrate_resume_jd_analysis(
+    # --- REFACTORED: Main orchestration method for parallel running of the agents---
+    async def orchestrate_initial_analysis(
         self,
         user_id: str,
         job_title: str,
@@ -126,8 +127,8 @@ class DocumentAnalysisOrchestrator:
         self.logger.info(f"Starting orchestration for user {user_id}")
         final_results = {}
 
-        # --- PHASE 1: Fetch and Process Resume ---
-        # Get resume metadata (s3_path, file_name, etc.) from FileService
+        # --- PHASE 1 & 2: Process Resume and JD in Parallel ---
+        # Get resume details first
         resume_details = await self._get_primary_resume_details(user_id)
         resume_s3_bucket = resume_details.get("s3_bucket")
         resume_s3_key = resume_details.get("s3_path")
@@ -144,39 +145,40 @@ class DocumentAnalysisOrchestrator:
         resume_content = self._extract_text_from_content(resume_binary_content, resume_mime_type)
 
         # Now that we have the resume content, proceed with analysis
-        resume_context = await self.process_document_for_analysis(
+        resume_task = asyncio.create_task(self.process_document_for_analysis(
             user_id=user_id,
             file_id=resume_file_id,
             content=resume_content,
             file_type=resume_details.get("mime_type", "application/pdf")
-        )
-        final_results["resume_classification"] = resume_context.previous_results[AgentType.CLASSIFIER].data
-        final_results["resume_entities"] = resume_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
-        self.logger.info(f"Resume {resume_file_id} processed: {final_results['resume_classification']['primary_classification']}")
-
-        # ... (The rest of the method for processing the JD and running the analysis chain remains the same) ...
-
-        # --- PHASE 2: Process Job Description ---
-
+        ))
+        
+        # Process JD now
         if not jd_content:
             raise ValueError("Job Description content is missing or could not be scraped.")
         
         jd_doc_id = f"jd-text-{uuid.uuid4()}"
         
-        # Create a metadata dictionary with the structured info
         jd_metadata = {
             "job_title": job_title,
             "company_name": company_name,
             "doc_type": "Job Description"
         }
 
-        jd_context = await self.process_document_for_analysis(
+        jd_task = asyncio.create_task(self.process_document_for_analysis(
             user_id=user_id,
             file_id=jd_doc_id,
             content=jd_content,
-            file_type="txt",
+            file_type="text",
             initial_metadata=jd_metadata # <-- Pass the metadata here
-        )
+        ))
+
+        # Run both tasks concurrently
+        resume_context, jd_context = await asyncio.gather(resume_task, jd_task)
+        
+        final_results["resume_classification"] = resume_context.previous_results[AgentType.CLASSIFIER].data
+        final_results["resume_entities"] = resume_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
+        self.logger.info(f"Resume {resume_file_id} processed: {final_results['resume_classification']['primary_classification']}")
+        
         final_results["jd_classification"] = jd_context.previous_results[AgentType.CLASSIFIER].data
         
         jd_entity_data = jd_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
@@ -195,12 +197,56 @@ class DocumentAnalysisOrchestrator:
         job_match_result = await self._run_agent(AgentType.JOB_MATCHER, resume_context)
         final_results["job_match_analysis"] = job_match_result.data
         final_results["overall_match_percentage"] = job_match_result.data.get("overall_match_percentage")
-
-        resume_optimizer_result = await self._run_agent(AgentType.RESUME_OPTIMIZER, resume_context)
-        final_results["resume_enhancement_suggestions"] = resume_optimizer_result.data
-
-        self.logger.info(f"Orchestration complete for user {user_id}.")
+        
+        final_results["resume content"] = resume_content  # Store the resume content for later use
+        
+        # --- ADD THESE LINES ---
+        # Add the necessary IDs and content to the final results so they can be
+        # passed to the next endpoint.
+        final_results["user_id"] = user_id
+        final_results["resume_id"] = resume_file_id
+        final_results["resume_content"] = resume_content # Use "resume_content" (no space)
+        final_results["job_description"] = resume_context.metadata['job_description']
+        final_results["resume_file_type"] = resume_mime_type
+        
         return final_results
+
+    # In AIService/agents/orchestrator.py
+
+    async def orchestrate_resume_optimization(self, analysis_context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Runs only the resume optimization agent.
+        """
+        self.logger.info("Starting on-demand resume optimization")
+        
+        # --- CORRECTED: Re-create the DocumentContext with all required fields ---
+        resume_context = DocumentContext(
+            user_id=analysis_context.get("user_id"),
+            file_id=analysis_context.get("resume_id"),
+            content=analysis_context.get("resume_content"),
+            file_type=analysis_context.get("resume_file_type"),
+            metadata={'job_description': analysis_context.get('job_description', {})},
+            # We provide default values for the non-data fields
+            previous_results={
+                AgentType.RELATIONSHIP_MAPPER: AgentResult(
+                    agent_type=AgentType.RELATIONSHIP_MAPPER,
+                    success=True,
+                    data=analysis_context.get("relationship_map", {}),
+                    confidence=1.0, # Assume 100% confidence in previous data
+                    processing_time=0.0
+                ),
+                AgentType.JOB_MATCHER: AgentResult(
+                    agent_type=AgentType.JOB_MATCHER,
+                    success=True,
+                    data=analysis_context.get("job_match_analysis", {}),
+                    confidence=1.0,
+                    processing_time=0.0
+                )
+            }
+        )
+
+        optimizer_result = await self._run_agent(AgentType.RESUME_OPTIMIZER, resume_context)
+        return optimizer_result.data
 
     async def _run_agent(self, agent_type: AgentType, context: DocumentContext) -> AgentResult:
         """Helper to run a single agent and update context with its result."""
