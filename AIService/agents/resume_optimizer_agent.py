@@ -103,7 +103,7 @@ class ResumeOptimizerAgent(BaseAgent):
             # Provide all relevant context for comprehensive suggestions
             
             system_prompt = (
-                "You are an expert Resume Optimization AI. Your goal is to provide highly specific, actionable, "
+                "You are an expert Resume Optimization AI, acting as a seasoned executive recruiter with years of experience evaluating top-tier candidates. Your goal is to provide highly specific, actionable, "
                 "and semantically rich suggestions to enhance a candidate's resume for a given job description. "
                 "Base your suggestions on the provided resume content, job description, extracted entities, "
                 "the relationship map, job match analysis, and company context (if available). "
