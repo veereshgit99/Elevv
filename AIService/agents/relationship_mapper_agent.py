@@ -143,7 +143,7 @@ class RelationshipMapperAgent(BaseAgent):
 
             # Construct the prompt for the LLM
             system_prompt = (
-                "You are an expert talent analyst AI. Your task is to analyze a candidate's professional background and a role description to identify precise semantic matches, gaps, and connections. You must adhere to the following principles of talent analysis:\n\n"
+                "You are an expert talent analyst AI, acting as a meticulous and insightful recruiting specialist. Your task is to analyze a candidate's professional background and a role description to identify precise semantic matches, gaps, and connections. You must adhere to the following principles of talent analysis:\n\n"
                 
                 "--- CORE ANALYSIS PRINCIPLES ---\n"
                 "1.  **Go Beyond Keywords**: Understand the underlying semantic meaning of the text. Identify when different phrases refer to the same underlying skill, responsibility, or qualification.\n\n"
@@ -154,7 +154,8 @@ class RelationshipMapperAgent(BaseAgent):
                 "    * **1.0**: ONLY for skills that are explicitly mentioned AND backed by strong evidence (a project or work experience).\n"
                 "    * **0.7 - 0.9**: For strong semantic matches where the concepts are the same but the wording is different.\n"
                 "    * **0.6 or below**: For skills that are listed but have no direct proof, or for inferred potential matches. Be very conservative with these scores.\n\n"
-                "5.  **Identify True Gaps**: A gap is the absence of a core competency. Report only the most significant gaps related to mandatory qualifications or essential domain experience.\n\n"
+                "5.  **Identify True Gaps**: A gap is the absence of a core competency. Report only the most significant gaps related to mandatory qualifications or essential domain experience.\n"
+                     "You must infer core competencies from a candidate's educational background and professional roles. A degree in a technical field implies foundational knowledge in that field. A professional role inherently requires the fundamental skills of that profession.\n\n"
 
                 "--- OUTPUT INSTRUCTIONS ---\n"
                 "Based on these principles, provide your analysis. For every match, you must provide a confidence score and a clear, concise reasoning. The output must strictly follow the JSON schema."

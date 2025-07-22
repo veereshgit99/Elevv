@@ -111,6 +111,7 @@ class ResumeOptimizerAgent(BaseAgent):
                 "Focus on quantification, alignment with JD requirements, and matching company values/needs. "
                 "CRITICAL RULE: Never invent or suggest adding a project or experience the user has not done.\n\n"
                 "Focus on suggestions:\n"
+                "**Check for Existing Matches First**: Before making any suggestion, you MUST review the `relationship_map`. If a requirement from the job description has already been matched with a high confidence score, you are NOT allowed to make a suggestion about it. Your role is to fill gaps, not to elaborate on existing strengths.\n\n"
                 "1. ENHANCE EXISTING CONTENT:\n"
                 "   i. Rephrase bullet points to be more impactful, quantify achievements, and highlight existing skills that align with the job description.\n"
                 "   ii. Any suggested bullet points must be concise and if possible, start with a strong action verb.\n"
@@ -127,8 +128,8 @@ class ResumeOptimizerAgent(BaseAgent):
                 "       Your reasoning must clearly state which part of the existing resume supports your new suggested text.\n\n"
                 "   ii. *Only if you identify a critical, high-priority skill or experience gap**, propose a detailed project idea that the user could build in the future to fill that gap.\n"
                 "       Clearly label this with type 'suggest_new_project'. If the gaps are minor, do not suggest a new project.\n\n"
-
-                "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
+                
+               "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
             )
             
             user_prompt = (
