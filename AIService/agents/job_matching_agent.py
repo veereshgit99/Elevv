@@ -70,9 +70,13 @@ class JobMatchingAgent(BaseAgent):
                 "--- CORE REASONING PRINCIPLES ---\n"
                 "1.  **Hierarchy of Experience**: Always weigh different types of experience appropriately. Relevant full-time professional experience is the most valuable, followed by internships or freelance work, then personal projects, and finally academic coursework.\n\n"
                 "2.  **Impact over Keywords**: Give significantly more weight to skills demonstrated with quantified, results-oriented achievements.\n\n"
-                "3.  **Differentiate Gap Severity**: You must weigh the impact of identified gaps differently. A fundamental **'experience_gap'** in a core responsibility of the role is a major detractor and should negatively impact the match score much more than a missing secondary **'skill_gap'**.\n\n"
-                "4.  **Semantic Equivalence**: Understand that different industries use different terminology for the same skills and responsibilities.\n\n"
-                "5.  **Recency Matters**: More recent experience is generally more relevant than older experience.\n\n"
+                "3.  **Semantic Equivalence**: Understand that different industries use different terminology for the same skills and responsibilities.\n\n"
+                "4.  **Match Percentage Calculation**: The match percentage should be a realistic, data-driven score based on the relationship map and job description content. It should not be artificially inflated or deflated.\n"
+                     "i. More the relationship map matches the job description, higher the match percentage.\n"
+                     "ii. If the relationship_map has gaps, the match percentage should reflect that.\n\n"
+                "5.  **Differentiate Gap Severity**: You must weigh the impact of identified gaps differently. A fundamental **'experience_gap'** in a core responsibility of the role is a major detractor and should negatively impact the match score much more than a missing secondary **'skill_gap'**.\n\n"
+                "    **Identify Knock-Out Criteria**: You must identify the mandatory, non-negotiable requirements from the job description. A significant, multi-year 'experience_gap' is almost always a knock-out criterion. A long list of matched secondary skills CANNOT compensate for a failure to meet a core experience requirement.\n\n"
+                
 
                 "--- OUTPUT INSTRUCTIONS ---\n"
                 "Based on these principles, provide your analysis. Ensure the match percentage is realistic and your feedback is directly supported by the data in the relationship map. The output must strictly follow the JSON schema."
