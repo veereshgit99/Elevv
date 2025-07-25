@@ -1,38 +1,20 @@
 # FileService/main.py
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from routes import files # Import the router from files.py
-import logging
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Import both routers
+from routes.files import router as files_router
+from routes.auth import router as auth_router
 
 app = FastAPI(
-    title="Profile and File Service", # Renamed title to reflect new role
-    description="Manages user profiles, resume uploads, and document metadata."
+    title="LexIQ File & User Service",
+    description="Handles user authentication, profile management, and file uploads.",
+    version="1.0"
 )
 
-origins = [
-    "http://localhost",
-    "http://localhost:3000", # Example for your frontend
-    "chrome-extension://<YOUR_CHROME_EXTENSION_ID>" # Replace with your actual Chrome Extension ID
-    # Add your actual frontend and extension origins here in production
-]
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "FileService is running"}
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include the router from files.py
-app.include_router(files.router, tags=["Profile & Files"])
-
-
-@app.get("/health")
-async def health_check():
-    logger.info("Health check endpoint hit.")
-    return {"status": "ok", "message": "Profile and File Service is running"}
+# Include both routers in your application
+app.include_router(auth_router, prefix="/auth") # e.g., /auth/signup
+app.include_router(files_router) # e.g., /users/{user_id}/...
