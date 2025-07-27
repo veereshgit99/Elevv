@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field
 # Import the new security dependency
 from security import get_current_user_id
 
+from database.resume_operations import get_resumes_for_user # New function
+
 # Import S3 utility, config, and DB operations
 from services.s3_utils import generate_presigned_url
 import config
@@ -26,6 +28,14 @@ class ResumeUploadResponse(BaseModel):
     s3_form_fields: Dict[str, str]
 
 # --- Resume Management Endpoints ---
+
+@router.get("/resumes", tags=["Resumes"])
+async def list_my_resumes(user_id: str = Depends(get_current_user_id)):
+    """
+    Retrieves a list of all resumes for the currently authenticated user.
+    """
+    resumes = await get_resumes_for_user(user_id)
+    return resumes
 
 @router.post("/resumes/upload-url", response_model=ResumeUploadResponse, tags=["Resumes"])
 async def get_resume_upload_url(
@@ -83,7 +93,7 @@ async def get_user_primary_resume_s3_link(user_id: str):
             raise HTTPException(status_code=404, detail="Primary resume not found or not fully uploaded.")
         
         return {
-            "s3_bucket": config.S3_BUCKET_NAME,
+            "s3_bucket": config.S3_BUCKET,
             "s3_path": resume_metadata['s3_path'],
             "file_name": resume_metadata['file_name'],
             "mime_type": resume_metadata['mime_type'],

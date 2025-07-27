@@ -1,23 +1,21 @@
 // types/next-auth.d.ts
 
-import NextAuth, { DefaultSession, Profile } from "next-auth"
-
-// Extend the built-in session and user types
-declare module "next-auth" {
-    /**
-     * The shape of the user object returned in the OAuth providers' profile callback,
-     * available here for convenience.
-     */
-    interface Profile {
-        given_name?: string;
-        family_name?: string;
-    }
-}
+import NextAuth, { DefaultSession } from "next-auth"
+import { JWT } from "next-auth/jwt"
 
 declare module "next-auth" {
     interface Session {
         user: {
-            id?: string; // Add the id field
+            id?: string; // This will hold the user's unique Cognito ID
         } & DefaultSession["user"];
+        // This will hold the secure token for our backend
+        accessToken?: string;
+    }
+}
+
+declare module "next-auth/jwt" {
+    interface JWT {
+        // This property will hold the user's unique Cognito ID
+        userId?: string;
     }
 }

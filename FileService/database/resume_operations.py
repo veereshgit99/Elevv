@@ -7,6 +7,8 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 from typing import Dict, Any, Optional
 
+from boto3.dynamodb.conditions import Key
+
 logger = logging.getLogger(__name__)
 
 DYNAMODB_RESUME_TABLE_NAME = os.getenv("DYNAMODB_RESUME_TABLE_NAME", "Resumes")
@@ -125,3 +127,30 @@ async def get_primary_resume_metadata(user_id: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Unexpected error retrieving primary resume for user {user_id}: {e}", exc_info=True)
         return None
+
+async def get_resumes_for_user(user_id: str) -> list[Dict[str, Any]]:
+    """
+    Retrieves all resume metadata for a given user by querying the GSI.
+    Requires a GSI on the 'user_id' attribute.
+    """
+    table = _get_resume_table()
+    try:
+        # A GSI is needed to efficiently query by user_id
+        # We assume the GSI is named 'user_id-index'
+        response = table.query(
+            IndexName='user_id-index',
+            KeyConditionExpression=Key('user_id').eq(user_id)
+        )
+        items = response.get('Items', [])
+        logger.info(f"Found {len(items)} resumes for user {user_id}")
+        return items
+    except ClientError as e:
+        # This error often means the GSI doesn't exist.
+        if e.response['Error']['Code'] == 'ValidationException':
+             logger.error(f"Error querying resumes for user {user_id}: The required GSI 'user_id-index' may be missing.", exc_info=True)
+             raise RuntimeError("A database index required for this operation is missing.")
+        logger.error(f"Error retrieving resumes for user {user_id}: {e}", exc_info=True)
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error retrieving resumes for user {user_id}: {e}", exc_info=True)
+        return []

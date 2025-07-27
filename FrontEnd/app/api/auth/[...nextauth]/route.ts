@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
-import { JWT } from "next-auth/jwt";
+import { JWT, encode } from "next-auth/jwt";
+import jwt from "jsonwebtoken";
 import GoogleProvider from "next-auth/providers/google";
 import LinkedInProvider from "next-auth/providers/linkedin";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -97,6 +98,17 @@ const handler = NextAuth({
         })
     ],
 
+    // --- ADD THIS SESSION CONFIGURATION ---
+    session: {
+        strategy: "jwt",
+    },
+    secret: process.env.NEXTAUTH_SECRET,
+
+    // --- ADD THIS JWT CONFIGURATION ---
+    jwt: {
+        secret: process.env.NEXTAUTH_SECRET,
+    },
+
     callbacks: {
         async signIn({ user, account, profile }) {
             // For debugging, it's helpful to see the raw data:
@@ -174,25 +186,30 @@ const handler = NextAuth({
             }
         },
 
-        // --- NEW: Add the jwt and session callbacks ---
-        async jwt({ token, user, account, profile }) {
-            // This callback runs first, after a user signs in.
-            // We want to find their Cognito user ID and add it to the token.
-            if (user && user.email) {
-                const userId = await getCognitoUserId(user.email);
-                if (userId) {
-                    token.userId = userId; // Add the Cognito ID to the token
+        // --- UPDATED JWT and Session callbacks ---
+        async jwt({ token, user, account }) {
+            // This runs after sign-in.
+            if (user?.email) {
+                const cognitoUserId = await getCognitoUserId(user.email);
+                if (cognitoUserId) {
+                    // This is the most important step: set the 'sub' (subject) claim
+                    // to be our unique Cognito ID.
+                    token.sub = cognitoUserId;
                 }
             }
             return token;
         },
 
         async session({ session, token }) {
-            // This callback runs second. It takes the token from the jwt callback
-            // and makes the information available to the client-side session object.
-            if (session.user && token.userId) {
-                session.user.id = token.userId as string; // Add the ID to the session
+            // This makes the user ID available on the client-side session object.
+            if (session.user && token.sub) {
+                session.user.id = token.sub;
             }
+
+            // We manually encode the token to get the raw JWT string
+            // and attach it to the session so the frontend can use it.
+            const encodedToken = await encode({ token, secret: process.env.NEXTAUTH_SECRET! });
+            session.accessToken = encodedToken;
             return session;
         },
     },
