@@ -5,45 +5,54 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional, Dict, Any, Union
+from jose import jwt, JWTError
 import logging
 import os
 import uuid
 
+# Load environment variables
+from dotenv import load_dotenv  
+load_dotenv()
+
 # Import your orchestrator
 from agents.orchestrator import DocumentAnalysisOrchestrator
 
-
-# Uncomment this if you want to use OAuth2 for authentication
-
+from fastapi.middleware.cors import CORSMiddleware
 
 # --- 1. Setup Authentication ---
 # This scheme will look for an "Authorization: Bearer <token>" header
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") # "token" is a dummy URL
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") 
 
-# async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
-#     """
-#     Dependency to decode JWT token and extract the user_id.
-#     In a real application, you would use a library like python-jose to decode
-#     and validate the token.
-#     """
-#     if not token:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Not authenticated"
-#         )
-    # --- Placeholder Logic ---
-    # For now, we'll assume the token itself is the user_id.
-    # Replace this with your actual JWT decoding logic.
-    # Example:
-    # from jose import jwt, JWTError
-    # try:
-    #     payload = jwt.decode(token, YOUR_SECRET_KEY, algorithms=[ALGORITHM])
-    #     user_id: str = payload.get("sub") # 'sub' is standard for subject/user_id
-    #     if user_id is None:
-    #         raise HTTPException(status_code=401, detail="Invalid token")
-    #     return user_id
-    # except JWTError:
-    #     raise HTTPException(status_code=401, detail="Invalid token")
+# Use the same secret as your NextAuth
+NEXTAUTH_SECRET = os.getenv("NEXTAUTH_SECRET")
+if not NEXTAUTH_SECRET:
+    raise RuntimeError("NEXTAUTH_SECRET is not set in environment variables")
+
+async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
+    """
+    Decode JWT token and extract the user_id (sub claim)
+    """
+    try:
+        # Decode using the same secret and algorithm as NextAuth
+        payload = jwt.decode(
+            token,
+            NEXTAUTH_SECRET,
+            algorithms=["HS256"]
+        )
+        
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: User ID not found"
+            )
+        return user_id
+        
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Could not validate credentials: {e}"
+        )
     
 
 # --- 2. Define the Simplified Request Body ---
@@ -51,7 +60,7 @@ class JobMatchRequest(BaseModel):
     job_title: str = Field(..., description="The title of the job.")
     company_name: Optional[str] = Field(None, description="The name of the company.")
     job_description_text: str = Field(..., description="The main text content of the job description.")
-    # You can add other fields from the UI here, like URL if you want to store it
+    resume_id: str = Field(..., description="The ID of the resume to analyze")  # Add this
     job_url: Optional[HttpUrl] = Field(None, description="The original URL of the job posting.")
     
 class OptimizationRequest(BaseModel):
@@ -73,31 +82,34 @@ orchestrator = DocumentAnalysisOrchestrator()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# --- Update the API Endpoint ---
+# --- CORS Middleware ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.post("/analyze-application")
 async def analyze_application(
     request: JobMatchRequest,
-    #user_id: str = Depends(get_current_user_id) # Or your hardcoded ID for testing
-    
-    # Hardcode user_id for testing purposes, later uncomment the line above
-    #user_id = "2eb8ce01-a735-4f14-a30d-30346a3f76ec" # Anmol's Resume
-    user_id = "65a4c0a2-5872-4459-9a60-e7a2fadea4d0" # Veer's Resume
-    #user_id = "ce780eae-f191-4e81-9085-85f3a27987a5" # Vijeth's Resume
-    #user_id = "7a90fc55-ec79-483a-8ba0-84ecab8b8c1d" # Prajwal's Resume
-    
+    user_id: str = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
 ):
     """
     Performs the initial, fast analysis of a resume against a job description.
     """
-    logger.info(f"Received analysis request for user_id: {user_id}")
+    logger.info(f"Received analysis request for user_id: {user_id}, resume_id: {request.resume_id}")
     
     try:
-        # The call to the orchestrator is now much simpler.
         analysis_results = await orchestrator.orchestrate_initial_analysis(
             user_id=user_id,
+            resume_id=request.resume_id,  # Pass the resume_id
             job_title=request.job_title,
             company_name=request.company_name,
-            jd_content=request.job_description_text
+            jd_content=request.job_description_text,
+            auth_token=token  # Pass the auth token for FileService calls
         )
 
         return JSONResponse(status_code=status.HTTP_200_OK, content=analysis_results)

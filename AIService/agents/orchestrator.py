@@ -73,21 +73,25 @@ class DocumentAnalysisOrchestrator:
                 self.logger.warning("Could not decode content as UTF-8. Returning as is.")
                 return str(file_content)
 
-    # --- NEW: Helper method to get resume details from FileService ---
-    async def _get_primary_resume_details(self, user_id: str) -> Dict[str, Any]:
+    async def _get_resume_details(self, user_id: str, resume_id: str, auth_token: str) -> Dict[str, Any]:
         """
-        Calls the FileService to get the metadata for the user's primary resume.
+        Calls the FileService to get the metadata for a specific resume.
         """
-        # NOTE: Replace with the actual URL of your FileService
-        file_service_url = f"http://localhost:8001/users/{user_id}/primary-resume-s3-link"
+        file_service_url = f"http://localhost:8001/users/{user_id}/resume/{resume_id}/s3-link"
         try:
-            self.logger.info(f"Fetching primary resume details for user {user_id} from {file_service_url}")
-            response = await self.http_client.get(file_service_url, timeout=10.0)
-            response.raise_for_status()  # Raises an exception for 4xx/5xx responses
+            self.logger.info(f"Fetching resume details for user {user_id}, resume {resume_id}")
+            
+            # Add the Authorization header
+            headers = {
+                "Authorization": f"Bearer {auth_token}"
+            }
+            
+            response = await self.http_client.get(file_service_url, headers=headers, timeout=10.0)
+            response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
             self.logger.error(f"FileService returned an error: {e.response.status_code} {e.response.text}")
-            raise ValueError(f"Could not find primary resume for user {user_id}. Please ensure one is uploaded and set.")
+            raise ValueError(f"Could not find resume {resume_id} for user {user_id}")
         except httpx.RequestError as e:
             self.logger.error(f"Could not connect to FileService: {e}")
             raise ConnectionError("Failed to connect to the FileService.")
@@ -117,8 +121,10 @@ class DocumentAnalysisOrchestrator:
     async def orchestrate_initial_analysis(
         self,
         user_id: str,
+        resume_id: str,
         job_title: str,
         jd_content: str,
+        auth_token: str,
         company_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -129,7 +135,7 @@ class DocumentAnalysisOrchestrator:
 
         # --- PHASE 1 & 2: Process Resume and JD in Parallel ---
         # Get resume details first
-        resume_details = await self._get_primary_resume_details(user_id)
+        resume_details = await self._get_resume_details(user_id, resume_id, auth_token)
         resume_s3_bucket = resume_details.get("s3_bucket")
         resume_s3_key = resume_details.get("s3_path")
         resume_file_id = resume_details.get("resume_id")

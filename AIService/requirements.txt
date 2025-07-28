@@ -19,3 +19,4 @@ python-dotenv
 google-generativeai # <--- Add this for Google API access
 asyncio
 dataclasses
+python-jose[cryptography]

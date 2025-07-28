@@ -74,63 +74,42 @@ async def get_resume_upload_url(
     except Exception as e:
         logger.error(f"Error generating upload URL for user {user_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
-
-@router.get("/users/{user_id}/primary-resume-s3-link", tags=["Resumes"])
-async def get_user_primary_resume_s3_link(user_id: str):
+    
+    
+@router.get("/users/{user_id}/resume/{resume_id}/s3-link", tags=["Resumes"])
+async def get_resume_s3_link(
+    user_id: str,
+    resume_id: str,
+    current_user_id: str = Depends(get_current_user_id)
+):
     """
-    Retrieves the S3 location for the user's primary resume.
-    This is called by the AIService.
+    Retrieves the S3 location for a specific resume.
+    Verifies that the user owns this resume.
     """
     try:
-        user_profile = await get_user_profile(user_id)
-        if not user_profile or not user_profile.get('primary_resume_id'):
-            raise HTTPException(status_code=404, detail="User not found or no primary resume set.")
+        # Security check: ensure the requesting user owns this resume
+        if user_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
         
-        primary_resume_id = user_profile['primary_resume_id']
-        resume_metadata = await get_resume_metadata(user_id, primary_resume_id)
+        # Get the specific resume metadata
+        resume_metadata = await get_resume_metadata(user_id, resume_id)
         
-        if not resume_metadata or resume_metadata.get('status') != 'uploaded':
-            raise HTTPException(status_code=404, detail="Primary resume not found or not fully uploaded.")
+        if not resume_metadata:
+            raise HTTPException(status_code=404, detail="Resume not found")
+            
+        if resume_metadata.get('status') != 'uploaded':
+            raise HTTPException(status_code=400, detail="Resume not fully uploaded")
         
         return {
             "s3_bucket": config.S3_BUCKET,
             "s3_path": resume_metadata['s3_path'],
             "file_name": resume_metadata['file_name'],
             "mime_type": resume_metadata['mime_type'],
-            "resume_id": primary_resume_id
+            "resume_id": resume_id,
+            "is_primary": resume_metadata.get('is_primary', False)
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error getting primary resume link for user {user_id}: {e}", exc_info=True)
+        logger.error(f"Error getting resume link for user {user_id}, resume {resume_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
-    
-    
-# # Add this endpoint to your FileService/routes/files.py
-
-# @router.post("/resumes/{resume_id}/confirm-upload", tags=["Resumes"])
-# async def confirm_resume_upload(
-#     resume_id: str,
-#     user_id: str = Depends(get_current_user_id)
-# ):
-#     """
-#     Confirms that a resume has been successfully uploaded to S3.
-#     Updates the resume status from 'pending_upload' to 'uploaded'.
-#     """
-#     try:
-#         # Get the resume metadata to verify ownership
-#         resume_metadata = await get_resume_metadata(user_id, resume_id)
-        
-#         if not resume_metadata:
-#             raise HTTPException(status_code=404, detail="Resume not found")
-        
-#         if resume_metadata.get('status') == 'uploaded':
-#             return {"message": "Resume already confirmed as uploaded"}
-        
-#         # Update the resume status to 'uploaded'
-#         # You'll need to implement this function in your resume_operations.py
-#         await update_resume_status(user_id, resume_id, 'uploaded')
-        
-#         return {"message": "Resume upload confirmed successfully"}
-        
-#     except Exception as e:
-#         logger.error(f"Error confirming resume upload for user {user_id}, resume {resume_id}: {e}", exc_info=True)
-#         raise HTTPException(status_code=500, detail="Internal server error")

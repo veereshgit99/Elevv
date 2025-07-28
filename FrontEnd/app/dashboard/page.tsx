@@ -39,6 +39,8 @@ import { fetchUserProfile, fetchResumes } from "@/utils/api"
 // Add these imports
 import { ResumeUpload } from "@/components/resume-upload"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { analyzeJobApplication } from '@/utils/analysis-api'
+import { storeAnalysisResults } from '@/utils/analysis-storage'
 
 // Define types for better TypeScript support
 interface UserProfile {
@@ -46,11 +48,14 @@ interface UserProfile {
   email: string
   name: string
 }
-
 interface Resume {
   resume_id: string
-  name: string
+  file_name: string  // This is what's in your database
+  s3_path: string
   created_at: string
+  mime_type: string
+  status: string
+  is_primary: boolean
 }
 
 export default function DashboardPage() {
@@ -119,14 +124,18 @@ export default function DashboardPage() {
           setUserResumes(resumesData)
           console.log("User resumes fetched:", resumesData)
 
+          // If there's a primary resume, select it by default
+          const primaryResume = resumesData.find((r: Resume) => r.is_primary)
+          if (primaryResume) {
+            setSelectedResume(primaryResume.resume_id)
+          }
+
         } catch (error) {
           console.error("Failed to fetch dashboard data:", error)
           setError("Failed to load user data. Please try refreshing the page.")
         } finally {
           setIsLoadingData(false)
         }
-      } else if (status === "unauthenticated") {
-        router.push('/login')
       }
     }
 
@@ -136,19 +145,44 @@ export default function DashboardPage() {
   }, [status, session, router])
 
   const handleAnalyze = async () => {
+    if (!jobTitle || !companyName || !jobDescription || !selectedResume) {
+      setError('Please fill in all required fields')
+      return
+    }
+
     setIsAnalyzing(true)
+    setError('')
 
-    // Simulate analysis time
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Call the analysis API
+      const analysisData = await analyzeJobApplication({
+        job_title: jobTitle,
+        company_name: companyName,
+        job_description_text: jobDescription,
+        resume_id: selectedResume,
+        job_url: undefined, // Add if you have a URL field
+      })
 
-    console.log("Starting analysis with:", {
-      jobTitle,
-      companyName,
-      jobDescription,
-      selectedResume,
-    })
+      // Store the results
+      storeAnalysisResults(analysisData)
 
-    router.push("/analysis-results")
+      // Log for debugging
+      console.log('Analysis completed:', {
+        matchPercentage: analysisData.overall_match_percentage,
+        resumeId: analysisData.resume_id,
+        gaps: analysisData.relationship_map.relationship_map.identified_gaps_in_resume.length,
+        matchedSkills: analysisData.relationship_map.relationship_map.matched_skills.length
+      })
+
+      // Navigate to results page
+      router.push('/analysis-results')
+
+    } catch (error) {
+      console.error('Analysis failed:', error)
+      setError(error instanceof Error ? error.message : 'Analysis failed. Please try again.')
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const handleSignOut = () => {
@@ -561,14 +595,16 @@ export default function DashboardPage() {
                   {userResumes.length > 0 ? (
                     <Select value={selectedResume} onValueChange={setSelectedResume}>
                       <SelectTrigger className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]">
-                        <SelectValue placeholder="Select a resume to analyze" />
+                        <SelectValue placeholder="Select a resume to analyze">
+                          {selectedResume && userResumes.find(r => r.resume_id === selectedResume)?.file_name}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {userResumes.map((resume) => (
                           <SelectItem key={resume.resume_id} value={resume.resume_id}>
                             <div className="flex items-center space-x-2">
                               <FileText className="w-4 h-4 text-gray-400" />
-                              <span>{resume.name}</span>
+                              <span>{resume.file_name || 'Unnamed Resume'}</span>
                             </div>
                           </SelectItem>
                         ))}
