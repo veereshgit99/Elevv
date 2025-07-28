@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -34,9 +34,27 @@ import {
   ArrowRight,
 } from "lucide-react"
 import { useAnalysisNavigation } from "@/components/analysis-navigation-context"
+import { fetchUserProfile, fetchResumes } from "@/utils/api"
+
+// Add these imports
+import { ResumeUpload } from "@/components/resume-upload"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+// Define types for better TypeScript support
+interface UserProfile {
+  user_id: string
+  email: string
+  name: string
+}
+
+interface Resume {
+  resume_id: string
+  name: string
+  created_at: string
+}
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession()
   const [jobTitle, setJobTitle] = useState("")
   const [companyName, setCompanyName] = useState("")
   const [jobDescription, setJobDescription] = useState("")
@@ -46,17 +64,15 @@ export default function DashboardPage() {
   const { lastAnalysisPage } = useAnalysisNavigation()
 
   // State for user data fetched from the backend
-  const [userName, setUserName] = useState("");
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [userResumes, setUserResumes] = useState<Resume[]>([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Sample resume data
-  const savedResumes = [
-    { id: "resume-1", name: "Veeresh_Koliwad_Resume" },
-    { id: "resume-2", name: "Veeresh_Koliwad_Frontend" },
-    { id: "resume-3", name: "Veeresh_Koliwad_Backend" },
-  ]
+  // Add this with your other state declarations
+  const [showUploadModal, setShowUploadModal] = useState(false)
 
-  // Sample recent analyses
+  // Sample recent analyses (will be replaced with real data later)
   const recentAnalyses = [
     {
       id: 1,
@@ -84,48 +100,40 @@ export default function DashboardPage() {
     },
   ]
 
-  // --- CORRECTED: useEffect block for data fetching ---
+
+  // Fetch user data when session is available
   useEffect(() => {
     const fetchData = async () => {
-      // We check for the session and the accessToken within it
-      if (status === "authenticated" && (session as any)?.accessToken) {
-        setIsLoadingData(true);
+      if (status === "authenticated" && session) {
+        setIsLoadingData(true)
+        setError(null)
+
         try {
-          // The session.accessToken is the encoded JWT string we need
-          console.log("Session Access Token:", session.accessToken);
-          const accessToken = session.accessToken;
-          console.log("Access Token:", accessToken);
+          // Fetch user profile
+          const profileData = await fetchUserProfile()
+          setUserProfile(profileData)
+          console.log("User profile fetched:", profileData)
 
-          const [profileRes, resumesRes] = await Promise.all([
-            fetch('http://localhost:8001/users/me', {
-              headers: { 'Authorization': `Bearer ${accessToken}` }
-            }),
-            fetch('http://localhost:8001/resumes', {
-              headers: { 'Authorization': `Bearer ${accessToken}` }
-            })
-          ]);
-
-          if (profileRes.ok) {
-            const profileData = await profileRes.json();
-            setUserName(profileData.name); // This will now work!
-          } else {
-            console.error("Failed to fetch user profile:", profileRes.statusText);
-          }
+          // Fetch user resumes
+          const resumesData = await fetchResumes()
+          setUserResumes(resumesData)
+          console.log("User resumes fetched:", resumesData)
 
         } catch (error) {
-          console.error("Failed to fetch dashboard data:", error);
+          console.error("Failed to fetch dashboard data:", error)
+          setError("Failed to load user data. Please try refreshing the page.")
         } finally {
-          setIsLoadingData(false);
+          setIsLoadingData(false)
         }
       } else if (status === "unauthenticated") {
-        router.push('/login');
+        router.push('/login')
       }
-    };
+    }
 
     if (status !== "loading") {
-      fetchData();
+      fetchData()
     }
-  }, [status, session, router]);
+  }, [status, session, router])
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true)
@@ -144,9 +152,7 @@ export default function DashboardPage() {
   }
 
   const handleSignOut = () => {
-    // This function will clear the user's session and then
-    // redirect them to the homepage.
-    signOut({ callbackUrl: '/' });
+    signOut({ callbackUrl: '/' })
   }
 
   const getScoreColor = (score: number) => {
@@ -157,6 +163,145 @@ export default function DashboardPage() {
 
   const characterCount = jobDescription.length
   const maxCharacters = 5000
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (userProfile?.name) {
+      return userProfile.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    return 'U'
+  }
+
+  // In your dashboard page component, update the loading check:
+
+  if (status === "loading" || isLoadingData) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Keep the actual header for consistency */}
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-10">
+                <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
+                  <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
+                    <Brain className="h-5 w-5 text-white" />
+                  </div>
+                  LexIQ
+                </Link>
+                <nav className="flex items-center space-x-8">
+                  <div className="flex items-center space-x-2 text-base font-semibold text-black relative pb-4 border-b-2 border-[#FF5722]">
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Analysis</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-base font-medium text-gray-600 pb-4">
+                    <User className="w-5 h-5" />
+                    <span>Profile</span>
+                  </div>
+                </nav>
+              </div>
+              <div className="flex items-center">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content Skeleton */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Left Column Skeleton */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Welcome Card Skeleton */}
+              <Card className="bg-gradient-to-br from-gray-100 to-gray-200">
+                <CardContent className="p-6">
+                  <div className="animate-pulse">
+                    <div className="h-6 bg-white/30 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-white/20 rounded w-full"></div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stats Cards Skeleton */}
+              <div className="grid grid-cols-2 gap-4">
+                {[1, 2].map((i) => (
+                  <Card key={i}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-3 animate-pulse">
+                        <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                        <div>
+                          <div className="h-8 w-8 bg-gray-200 rounded mb-1"></div>
+                          <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              {/* Recent Analyses Skeleton */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border animate-pulse">
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="flex items-center space-x-2">
+                          <div className="h-3 bg-gray-200 rounded w-20"></div>
+                          <div className="h-3 bg-gray-200 rounded w-16"></div>
+                        </div>
+                      </div>
+                      <div className="h-6 w-12 bg-gray-200 rounded-full"></div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column - Analysis Form Skeleton */}
+            <div className="lg:col-span-2">
+              <Card className="shadow-lg">
+                <CardHeader className="text-center pb-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
+                  <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full max-w-md mx-auto"></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 space-y-6">
+                  {/* Form Fields Skeleton */}
+                  {[1, 2].map((i) => (
+                    <div key={i} className="space-y-2 animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                      <div className="h-10 bg-gray-200 rounded w-full"></div>
+                    </div>
+                  ))}
+
+                  {/* Job Description Skeleton */}
+                  <div className="space-y-2 animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-32 bg-gray-200 rounded w-full"></div>
+                  </div>
+
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -199,15 +344,15 @@ export default function DashboardPage() {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors">
                     <div className="w-8 h-8 bg-[#FF5722] rounded-full flex items-center justify-center text-white font-medium">
-                      VK
+                      {getUserInitials()}
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-gray-900">Veeresh Koliwad</p>
-                    <p className="text-xs text-gray-500">veeresh.koliwad@email.com</p>
+                    <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
+                    <p className="text-xs text-gray-500">{userProfile?.email || session?.user?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -237,6 +382,25 @@ export default function DashboardPage() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Simple notice when no resumes are uploaded */}
+        {userResumes.length === 0 && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <p className="text-sm text-blue-800">
+                Please upload your resume to get started with job analysis.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Column - Stats and Recent Analyses */}
           <div className="lg:col-span-1 space-y-6">
@@ -245,7 +409,9 @@ export default function DashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-bold mb-2">Welcome, {userName}!</h2>
+                    <h2 className="text-xl font-bold mb-2">
+                      Welcome, {userProfile?.name?.split(' ')[0] || 'there'}!
+                    </h2>
                     <p className="text-orange-100 text-sm">Ready to land your dream role?</p>
                   </div>
                   <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -392,21 +558,36 @@ export default function DashboardPage() {
                     <FileText className="w-4 h-4 mr-2 text-[#FF5722]" />
                     Analyze using this resume:
                   </Label>
-                  <Select value={selectedResume} onValueChange={setSelectedResume}>
-                    <SelectTrigger className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]">
-                      <SelectValue placeholder="Select a resume to analyze" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {savedResumes.map((resume) => (
-                        <SelectItem key={resume.id} value={resume.id}>
-                          <div className="flex items-center space-x-2">
-                            <FileText className="w-4 h-4 text-gray-400" />
-                            <span>{resume.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {userResumes.length > 0 ? (
+                    <Select value={selectedResume} onValueChange={setSelectedResume}>
+                      <SelectTrigger className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]">
+                        <SelectValue placeholder="Select a resume to analyze" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userResumes.map((resume) => (
+                          <SelectItem key={resume.resume_id} value={resume.resume_id}>
+                            <div className="flex items-center space-x-2">
+                              <FileText className="w-4 h-4 text-gray-400" />
+                              <span>{resume.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 mb-2">No resumes uploaded yet</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[#FF5722] border-[#FF5722] hover:bg-[#FF5722] hover:text-white"
+                        onClick={() => setShowUploadModal(true)}
+                      >
+                        Upload Resume
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Analyze Button */}
@@ -429,6 +610,32 @@ export default function DashboardPage() {
                     )}
                   </Button>
                 </div>
+                {/* Upload Resume Modal */}
+                <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+                  <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                      <DialogTitle>Upload Your Resume</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <ResumeUpload
+                        onUploadSuccess={async () => {
+                          setShowUploadModal(false)
+                          // Refresh the resumes list
+                          try {
+                            const resumesData = await fetchResumes()
+                            setUserResumes(resumesData)
+                          } catch (error) {
+                            console.error("Failed to refresh resumes:", error)
+                          }
+                        }}
+                        onUploadError={(error) => {
+                          console.error("Upload error:", error)
+                          // You could show a toast notification here
+                        }}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
                 {/* Additional Info */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

@@ -43,6 +43,11 @@ import {
 } from "lucide-react"
 import { useAnalysisNavigation } from "@/components/analysis-navigation-context"
 
+// Add this import with your other imports
+import { useSession } from "next-auth/react"
+import { fetchResumes, fetchUserProfile } from "@/utils/api"
+import { ResumeUpload } from "@/components/resume-upload"
+
 type EditSection = "personal" | "education" | "work-experience" | null
 
 export default function ProfilePage() {
@@ -60,6 +65,13 @@ export default function ProfilePage() {
   const personalRef = useRef<HTMLDivElement>(null)
   const educationRef = useRef<HTMLDivElement>(null)
   const workExperienceRef = useRef<HTMLDivElement>(null)
+
+
+  // Add this with your other state declarations (around line 35-40)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+
+  // Add this with your other state declarations (around line 35)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
 
   // Sample resume data
   const [resumes, setResumes] = useState([
@@ -138,30 +150,35 @@ export default function ProfilePage() {
     },
   ])
 
-  // Scroll spy functionality
+  // Update your useEffect or wherever you fetch data
   useEffect(() => {
-    const handleScroll = () => {
-      const sections = [
-        { id: "personal", ref: personalRef },
-        { id: "education", ref: educationRef },
-        { id: "work-experience", ref: workExperienceRef },
-      ]
+    const loadProfileData = async () => {
+      setIsLoadingProfile(true)
+      try {
+        // Fetch all your data here
+        const [profileData, resumesData] = await Promise.all([
+          fetchUserProfile(),
+          fetchResumes()
+        ])
 
-      const scrollPosition = window.scrollY + 300
 
-      for (const section of sections) {
-        if (section.ref.current) {
-          const { offsetTop, offsetHeight } = section.ref.current
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(section.id)
-            break
-          }
-        }
+        // Transform and set resumes
+        const transformedResumes = resumesData.map((resume: any) => ({
+          id: resume.resume_id,
+          name: resume.name || resume.file_name,
+          jobTitle: "Software Engineer",
+          created: new Date(resume.created_at).toLocaleDateString(),
+        }))
+        setResumes(transformedResumes)
+
+      } catch (error) {
+        console.error("Failed to load profile data:", error)
+      } finally {
+        setIsLoadingProfile(false)
       }
     }
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    loadProfileData()
   }, [])
 
   const scrollToSection = (sectionId: string) => {
@@ -570,6 +587,115 @@ export default function ProfilePage() {
     )
   }
 
+  if (isLoadingProfile) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Persistent Header */}
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              {/* Left side - Logo and Navigation */}
+              <div className="flex items-center space-x-10">
+                {/* Logo */}
+                <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
+                  <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
+                    <Brain className="h-5 w-5 text-white" />
+                  </div>
+                  LexIQ
+                </Link>
+
+                {/* Primary Navigation */}
+                <nav className="flex items-center space-x-8">
+                  <Link
+                    href={lastAnalysisPage}
+                    className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
+                  >
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Analysis</span>
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="flex items-center space-x-2 text-base font-semibold text-black relative pb-4 border-b-2 border-[#FF5722] transition-colors"
+                  >
+                    <User className="w-5 h-5" />
+                    <span>Profile</span>
+                  </Link>
+                </nav>
+              </div>
+
+              {/* Right side - User Menu */}
+              <div className="flex items-center">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors">
+                      <div className="w-8 h-8 bg-[#FF5722] rounded-full flex items-center justify-center text-white font-medium">
+                        VK
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-3 py-2">
+                      <p className="text-sm font-medium text-gray-900">Veeresh Koliwad</p>
+                      <p className="text-xs text-gray-500">veeresh.koliwad@email.com</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
+                        <User className="w-4 h-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="flex items-center space-x-2 cursor-pointer">
+                      <Settings className="w-4 h-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleSignOut}
+                      className="flex items-center space-x-2 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex gap-8">
+            {/* Skeleton for sidebar */}
+            <div className="w-72 flex-shrink-0">
+              <Card className="p-6">
+                <div className="animate-pulse">
+                  <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4"></div>
+                  <div className="h-6 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Skeleton for main content */}
+            <div className="flex-1">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Persistent Header */}
@@ -667,9 +793,8 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <button
                     onClick={() => setActiveTab("profile")}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${
-                      activeTab === "profile" ? "bg-[#FF5722] text-white" : "text-gray-600 hover:bg-gray-100"
-                    }`}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "profile" ? "bg-[#FF5722] text-white" : "text-gray-600 hover:bg-gray-100"
+                      }`}
                   >
                     <User className="w-5 h-5" />
                     <span className="font-medium">Profile</span>
@@ -677,9 +802,8 @@ export default function ProfilePage() {
 
                   <button
                     onClick={() => setActiveTab("resume")}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${
-                      activeTab === "resume" ? "bg-[#FF5722] text-white" : "text-gray-600 hover:bg-gray-100"
-                    }`}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "resume" ? "bg-[#FF5722] text-white" : "text-gray-600 hover:bg-gray-100"
+                      }`}
                   >
                     <FileText className="w-5 h-5" />
                     <span className="font-medium">Resume</span>
@@ -698,9 +822,8 @@ export default function ProfilePage() {
                   <nav className="flex space-x-8">
                     <button
                       onClick={() => scrollToSection("personal")}
-                      className={`pb-2 text-sm font-medium transition-colors relative ${
-                        activeSection === "personal" ? "text-black" : "text-gray-600 hover:text-gray-900"
-                      }`}
+                      className={`pb-2 text-sm font-medium transition-colors relative ${activeSection === "personal" ? "text-black" : "text-gray-600 hover:text-gray-900"
+                        }`}
                     >
                       Personal
                       {activeSection === "personal" && (
@@ -709,9 +832,8 @@ export default function ProfilePage() {
                     </button>
                     <button
                       onClick={() => scrollToSection("education")}
-                      className={`pb-2 text-sm font-medium transition-colors relative ${
-                        activeSection === "education" ? "text-black" : "text-gray-600 hover:text-gray-900"
-                      }`}
+                      className={`pb-2 text-sm font-medium transition-colors relative ${activeSection === "education" ? "text-black" : "text-gray-600 hover:text-gray-900"
+                        }`}
                     >
                       Education
                       {activeSection === "education" && (
@@ -720,9 +842,8 @@ export default function ProfilePage() {
                     </button>
                     <button
                       onClick={() => scrollToSection("work-experience")}
-                      className={`pb-2 text-sm font-medium transition-colors relative ${
-                        activeSection === "work-experience" ? "text-black" : "text-gray-600 hover:text-gray-900"
-                      }`}
+                      className={`pb-2 text-sm font-medium transition-colors relative ${activeSection === "work-experience" ? "text-black" : "text-gray-600 hover:text-gray-900"
+                        }`}
                     >
                       Work Experience
                       {activeSection === "work-experience" && (
@@ -916,7 +1037,10 @@ export default function ProfilePage() {
                           Manage your resume versions and optimize for different roles
                         </p>
                       </div>
-                      <Button className="bg-[#FF5722] hover:bg-[#E64A19] text-white">
+                      <Button
+                        onClick={() => setShowUploadModal(true)}
+                        className="bg-[#FF5722] hover:bg-[#E64A19] text-white"
+                      >
                         <Plus className="w-4 h-4 mr-2" />
                         Add Resume
                       </Button>
@@ -1051,6 +1175,40 @@ export default function ProfilePage() {
                         Save Changes
                       </Button>
                     </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Upload Resume Modal */}
+                <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+                  <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                      <DialogTitle>Upload New Resume</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <ResumeUpload
+                        onUploadSuccess={async () => {
+                          setShowUploadModal(false)
+                          // Refresh the resumes list
+                          try {
+                            const resumesData = await fetchResumes()
+                            const transformedResumes = resumesData.map((resume: any) => ({
+                              id: resume.resume_id,
+                              name: resume.name || resume.file_name,
+                              jobTitle: "Software Engineer",
+                              created: new Date(resume.created_at).toLocaleDateString(),
+                              isPrimary: resume.is_primary
+                            }))
+                            setResumes(transformedResumes)
+                          } catch (error) {
+                            console.error("Failed to refresh resumes:", error)
+                          }
+                        }}
+                        onUploadError={(error) => {
+                          console.error("Upload error:", error)
+                          // You could show a toast notification here
+                        }}
+                      />
+                    </div>
                   </DialogContent>
                 </Dialog>
               </div>

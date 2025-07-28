@@ -16,7 +16,7 @@ from database.resume_operations import get_resumes_for_user # New function
 from services.s3_utils import generate_presigned_url
 import config
 from database.user_operations import update_user_profile, get_user_profile
-from database.resume_operations import save_resume_metadata, get_resume_metadata
+from database.resume_operations import save_resume_metadata, get_resume_metadata, update_resume_status
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -102,3 +102,35 @@ async def get_user_primary_resume_s3_link(user_id: str):
     except Exception as e:
         logger.error(f"Error getting primary resume link for user {user_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    
+    
+# # Add this endpoint to your FileService/routes/files.py
+
+# @router.post("/resumes/{resume_id}/confirm-upload", tags=["Resumes"])
+# async def confirm_resume_upload(
+#     resume_id: str,
+#     user_id: str = Depends(get_current_user_id)
+# ):
+#     """
+#     Confirms that a resume has been successfully uploaded to S3.
+#     Updates the resume status from 'pending_upload' to 'uploaded'.
+#     """
+#     try:
+#         # Get the resume metadata to verify ownership
+#         resume_metadata = await get_resume_metadata(user_id, resume_id)
+        
+#         if not resume_metadata:
+#             raise HTTPException(status_code=404, detail="Resume not found")
+        
+#         if resume_metadata.get('status') == 'uploaded':
+#             return {"message": "Resume already confirmed as uploaded"}
+        
+#         # Update the resume status to 'uploaded'
+#         # You'll need to implement this function in your resume_operations.py
+#         await update_resume_status(user_id, resume_id, 'uploaded')
+        
+#         return {"message": "Resume upload confirmed successfully"}
+        
+#     except Exception as e:
+#         logger.error(f"Error confirming resume upload for user {user_id}, resume {resume_id}: {e}", exc_info=True)
+#         raise HTTPException(status_code=500, detail="Internal server error")

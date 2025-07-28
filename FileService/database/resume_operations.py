@@ -154,3 +154,35 @@ async def get_resumes_for_user(user_id: str) -> list[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Unexpected error retrieving resumes for user {user_id}: {e}", exc_info=True)
         return []
+    
+# Add this function to your FileService/database/resume_operations.py
+
+async def update_resume_status(user_id: str, resume_id: str, status: str) -> None:
+    """
+    Updates the status of a resume in DynamoDB.
+    
+    Args:
+        user_id: The user's ID
+        resume_id: The resume's ID
+        status: The new status (e.g., 'uploaded', 'pending_upload', 'failed')
+    """
+    table = _get_resume_table()
+    try:
+        table.update_item(
+            Key={
+                'PK': f"USER#{user_id}",
+                'SK': f"RESUME#{resume_id}"
+            },
+            UpdateExpression="SET #status = :status, updated_at = :updated_at",
+            ExpressionAttributeNames={
+                '#status': 'status'
+            },
+            ExpressionAttributeValues={
+                ':status': status,
+                ':updated_at': datetime.utcnow().isoformat()
+            }
+        )
+        logger.info(f"Updated resume {resume_id} status to {status} for user {user_id}")
+    except Exception as e:
+        logger.error(f"Failed to update resume status: {e}", exc_info=True)
+        raise
