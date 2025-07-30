@@ -41,7 +41,7 @@ class ResumeOptimizerAgent(BaseAgent):
         super().__init__(AgentType.RESUME_OPTIMIZER)
         
         if genai:
-            self.llm_model = genai.GenerativeModel("gemini-1.5-pro")
+            self.llm_model = genai.GenerativeModel("gemini-2.5-pro")
         else:
             self.llm_model = None
         self.logger.info("LLM-based ResumeOptimizerAgent initialized with model: Gemini 1.5 Pro")
@@ -190,7 +190,7 @@ class ResumeOptimizerAgent(BaseAgent):
                 data={
                     "enhancement_suggestions": llm_output["suggestions"],
                     "overall_feedback": llm_output.get("overall_feedback", ""),
-                    "llm_model_used": "gemini-1.5-pro"
+                    "llm_model_used": "gemini-2.5-pro"
                 },
                 confidence=overall_confidence,
                 processing_time=0.0 # Will be updated by _execute_with_timing

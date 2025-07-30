@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional, Dict, Any, Union
 from jose import jwt, JWTError
+from services.analysis_storage import store_analysis_complete
 import logging
 import os
 import uuid
@@ -91,6 +92,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# In AIService/main.py, update the analyze_application endpoint
 @app.post("/analyze-application")
 async def analyze_application(
     request: JobMatchRequest,
@@ -105,13 +107,23 @@ async def analyze_application(
     try:
         analysis_results = await orchestrator.orchestrate_initial_analysis(
             user_id=user_id,
-            resume_id=request.resume_id,  # Pass the resume_id
+            resume_id=request.resume_id,
             job_title=request.job_title,
             company_name=request.company_name,
             jd_content=request.job_description_text,
-            auth_token=token  # Pass the auth token for FileService calls
+            auth_token=token
         )
-
+        
+        # Add request data to results for storage
+        analysis_results["job_title"] = request.job_title
+        analysis_results["company_name"] = request.company_name
+        
+        # Store the analysis
+        storage_summary = await store_analysis_complete(user_id, analysis_results, auth_token=token)
+        
+        # Add the analysis_id to the response
+        analysis_results["analysis_id"] = storage_summary["analysis_id"]
+        
         return JSONResponse(status_code=status.HTTP_200_OK, content=analysis_results)
 
     except Exception as e:

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.files import router as files_router
 from routes.auth import router as auth_router
 from routes.users import router as users_router
+from routes.analysis import router as analysis_router
 
 app = FastAPI(
     title="LexIQ File & User Service",
@@ -39,3 +40,4 @@ def read_root():
 app.include_router(auth_router, prefix="/auth") # e.g., /auth/signup
 app.include_router(files_router) # e.g., /users/{user_id}/...
 app.include_router(users_router)
+app.include_router(analysis_router)

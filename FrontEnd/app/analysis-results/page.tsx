@@ -27,15 +27,50 @@ import {
 import { getStoredAnalysisResults } from '@/utils/analysis-storage'
 import { AnalysisResponse } from '@/utils/analysis-api'
 import { useSession, signOut } from 'next-auth/react'
+import { optimizeResume } from "@/utils/analysis-api"
+import { fetchUserProfile } from "@/utils/api"
+interface UserProfile {
+  user_id: string
+  email: string
+  name: string
+}
 
 export default function AnalysisResultsPage() {
+  const { data: session, status } = useSession()
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const router = useRouter()
-  const { data: session } = useSession()
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadAnalysisData = () => {
+    const fetchData = async () => {
+      if (status === "authenticated" && session) {
+        setIsLoadingData(true)
+        setError(null)
+
+        try {
+          // Fetch user profile
+          const profileData = await fetchUserProfile()
+          setUserProfile(profileData)
+          console.log("User profile fetched:", profileData)
+
+        } catch (error) {
+          console.error("Failed to fetch dashboard data:", error)
+          setError("Failed to load user data. Please try refreshing the page.")
+        } finally {
+          setIsLoadingData(false)
+        }
+      }
+    }
+
+    if (status !== "loading") {
+      fetchData()
+    }
+
+    const loadAnalysisData = async () => {
       const data = getStoredAnalysisResults()
       if (!data) {
         // If no data, redirect back to dashboard
@@ -47,21 +82,36 @@ export default function AnalysisResultsPage() {
     }
 
     loadAnalysisData()
-  }, [router])
+  }, [status, session, router])
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
   }
 
-  const handleTailorResume = () => {
-    // Navigate to resume optimization page
-    // The analysis data is already in storage
-    router.push('/enhancements')
+  const handleTailorResume = async () => {
+    setIsAnalyzing(true) // Add this state to your component
+
+    try {
+      if (!analysisData) {
+        console.error('No analysis data available')
+        return
+      }
+      const optimizationResult = await optimizeResume(analysisData)
+      // Store in session storage
+      sessionStorage.setItem('enhancement_results', JSON.stringify(optimizationResult))
+      router.push('/enhancements')
+    } catch (error) {
+      console.error('Failed to generate enhancements:', error)
+      // Show error message
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
+  // Get user initials for avatar
   const getUserInitials = () => {
-    if (session?.user?.name) {
-      return session.user.name
+    if (userProfile?.name) {
+      return userProfile.name
         .split(' ')
         .map(n => n[0])
         .join('')
@@ -78,7 +128,7 @@ export default function AnalysisResultsPage() {
   }
 
   const getScoreLabel = (score: number) => {
-    if (score >= 80) return 'Excellent Match'
+    if (score >= 80) return 'Strong Match'
     if (score >= 60) return 'Good Match'
     if (score >= 40) return 'Fair Match'
     return 'Needs Improvement'
@@ -244,10 +294,20 @@ export default function AnalysisResultsPage() {
                 </p>
                 <Button
                   onClick={handleTailorResume}
+                  disabled={isAnalyzing}
                   className="bg-[#FF5722] hover:bg-[#E64A19] text-white"
                 >
-                  <Zap className="w-4 h-4 mr-2" />
-                  Tailor Your Resume
+                  {isAnalyzing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 mr-2" />
+                      Tailor Your Resume
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

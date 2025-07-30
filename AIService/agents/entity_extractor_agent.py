@@ -40,7 +40,7 @@ class EntityExtractorAgent(BaseAgent):
         super().__init__(AgentType.ENTITY_EXTRACTOR)
         
         if genai:
-            self.llm_model = genai.GenerativeModel("gemini-1.5-flash")
+            self.llm_model = genai.GenerativeModel("gemini-2.5-flash")
         else:
             self.llm_model = None
         self.logger.info("LLM-based EntityExtractorAgent initialized with model: Gemini 1.5 Flash")
@@ -141,7 +141,7 @@ class EntityExtractorAgent(BaseAgent):
                         "requirements_found": len(extracted_entities.get("requirements", [])) > 0
                     },
                     "document_classification": doc_classification,
-                    "llm_model_used": "gemini-1.5-flash"
+                    "llm_model_used": "gemini-2.5-flash"
                 },
                 confidence=0.95, # Higher confidence as LLMs are generally more robust
                 processing_time=0.0 # Will be updated by _execute_with_timing in BaseAgent

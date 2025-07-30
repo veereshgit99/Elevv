@@ -40,9 +40,9 @@ class DocumentClassifierAgent(BaseAgent):
     """
     def __init__(self):
         super().__init__(AgentType.CLASSIFIER)
-        # Initialize the Gemini model. Use 'gemini-1.5-flash' for speed.
+        # Initialize the Gemini model. Use 'gemini-2.5-flash' for speed.
         if genai:
-            self.llm_model = genai.GenerativeModel("gemini-1.5-flash")
+            self.llm_model = genai.GenerativeModel("gemini-2.5-flash")
         else:
             self.llm_model = None
         self.supported_doc_types = ["Resume", "Job Description", "Other"]
@@ -84,7 +84,7 @@ class DocumentClassifierAgent(BaseAgent):
                     "confidence": confidence,
                     "reasoning": reasoning,
                     "file_type": context.file_type,
-                    "llm_model_used": "gemini-1.5-flash"
+                    "llm_model_used": "gemini-2.5-flash"
                 },
                 confidence=confidence,
                 processing_time=0.0

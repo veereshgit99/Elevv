@@ -1,0 +1,10 @@
+# Ignore env files and config files in subprojects
+FileService/.env
+FileService/config.py
+
+AIService/.env
+AIService/config.py
+
+FrontEnd/.env.local
+FrontEnd/.env.production.local
+FrontEnd/config.js

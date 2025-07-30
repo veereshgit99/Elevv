@@ -40,7 +40,7 @@ class RelationshipMapperAgent(BaseAgent):
         super().__init__(AgentType.RELATIONSHIP_MAPPER)
         
         if genai:
-            self.llm_model = genai.GenerativeModel("gemini-1.5-pro")
+            self.llm_model = genai.GenerativeModel("gemini-2.5-pro")
         else:
             self.llm_model = None
         self.logger.info("LLM-based RelationshipMapperAgent initialized with model: Gemini 1.5 Pro")
@@ -158,8 +158,13 @@ class RelationshipMapperAgent(BaseAgent):
                      "You must infer core competencies from a candidate's educational background and professional roles. A degree in a technical field implies foundational knowledge in that field. A professional role inherently requires the fundamental skills of that profession.\n\n"
 
                 "--- OUTPUT INSTRUCTIONS ---\n"
-                "Based on these principles, provide your analysis. For every match, you must provide a confidence score and a clear, concise reasoning. The output must strictly follow the JSON schema."
-                "CRITICAL FINAL CHECK: Before you output the response, you must validate it to ensure it is a single, perfectly formatted JSON object with no extra text, comments, or characters outside of the main JSON structure."
+                "- Output exactly one single JSON object strictly matching the schema below, with no additional text, explanations, or comments.\n"
+                "- Confidence scores must be rounded to two decimal places.\n"
+                "- In each reasoning field, briefly cite the part of the resume or JD that supports the match or gap.\n"
+                "- Include all required keys; arrays must be present but can be empty if no data exists.\n"
+                "- Only identify core, mandatory gaps to avoid excessive minor points.\n"
+                "- Content provided may be truncated; analyze with the available context.\n"
+                "CRITICAL FINAL CHECK: Before outputting, verify the JSON is perfectly formatted and validated against the schema."
             )
 
             
@@ -216,7 +221,7 @@ class RelationshipMapperAgent(BaseAgent):
                     "relationship_map": llm_output,
                     "resume_id": context.file_id,
                     "jd_id": job_description_data.get('file_id'), # Assuming JD also has a file_id
-                    "llm_model_used": "gemini-1.5-pro"
+                    "llm_model_used": "gemini-2.5-pro"
                 },
                 confidence=overall_confidence,
                 processing_time=0.0 # Will be updated by _execute_with_timing

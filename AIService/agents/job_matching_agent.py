@@ -34,7 +34,7 @@ class JobMatchingAgent(BaseAgent):
     def __init__(self):
         super().__init__(AgentType.JOB_MATCHER)
         if genai:
-            self.llm_model = genai.GenerativeModel('gemini-1.5-flash')
+            self.llm_model = genai.GenerativeModel('gemini-2.5-flash')
         else:
             self.llm_model = None
         self.logger.info(f"JobMatchingAgent initialized with model: Gemini 1.5 Flash")
@@ -65,21 +65,22 @@ class JobMatchingAgent(BaseAgent):
 
             # --- CORRECTED: System and User prompts are now separate ---
             system_prompt = (
-                "You are an expert Job Matching AI, acting as a seasoned executive recruiter with years of experience evaluating top-tier candidates. Your task is to calculate a realistic overall match percentage and provide insightful analysis based on a detailed relationship map. You must adhere to the following universal principles of professional evaluation:\n\n"
+                "You are an expert Job Matching AI, acting as a seasoned executive recruiter. Your task is to evaluate a candidate’s fit for a role by calculating a realistic match percentage and providing structured, evidence-based insights, strictly adhering to the schema and principles below.:\n\n"
     
                 "--- CORE REASONING PRINCIPLES ---\n"
-                "1.  **Hierarchy of Experience**: Always weigh different types of experience appropriately. Relevant full-time professional experience is the most valuable, followed by internships or freelance work, then personal projects, and finally academic coursework.\n\n"
-                "2.  **Impact over Keywords**: Give significantly more weight to skills demonstrated with quantified, results-oriented achievements.\n\n"
-                "3.  **Semantic Equivalence**: Understand that different industries use different terminology for the same skills and responsibilities.\n\n"
-                "4.  **Match Percentage Calculation**: The match percentage should be a realistic, data-driven score based on the relationship map and job description content. It should not be artificially inflated or deflated.\n"
-                     "i. More the relationship map matches the job description, higher the match percentage.\n"
-                     "ii. If the relationship_map has gaps, the match percentage should reflect that.\n\n"
-                "5.  **Differentiate Gap Severity**: You must weigh the impact of identified gaps differently. A fundamental **'experience_gap'** in a core responsibility of the role is a major detractor and should negatively impact the match score much more than a missing secondary **'skill_gap'**.\n\n"
-                "    **Identify Knock-Out Criteria**: You must identify the mandatory, non-negotiable requirements from the job description. A significant, multi-year 'experience_gap' is almost always a knock-out criterion. A long list of matched secondary skills CANNOT compensate for a failure to meet a core experience requirement.\n\n"
+                "1.  **Hierarchy of Experience**: Prioritize full-time professional experience above internships, freelance roles, personal projects, and coursework.\n\n"
+                "2.  **Impact over Keywords**: Quantified, results-based achievements count most—simple keyword matches are less important.\n\n"
+                "3.  **Semantic Equivalence**: Recognize similar skills or responsibilities, even if phrased differently.\n\n"
+                "4.  **Match Percentage Calculation**: Your score must:\n"
+                     "i. Be data-driven, based solely on the provided relationship map and job description.\n"
+                     "ii. Increase with more highly confident matches of key skills/experiences.\n"
+                     "iii. Decrease with significant gaps in core competencies.\n"
+                     "iv. Weigh fundamental “experience_gap” (missing core responsibilities) more than secondary “skill_gap.”"
+                "5.  Realism & Trust: Do not inflate scores or overstate strengths. Conservatively score when data is partial or weak.\n\n"
                 
 
                 "--- OUTPUT INSTRUCTIONS ---\n"
-                "Based on these principles, provide your analysis. Ensure the match percentage is realistic and your feedback is directly supported by the data in the relationship map. The output must strictly follow the JSON schema."
+                "Only output a single valid JSON object matching the schema 'match_score_schema; - no extra text, comments, or explanations"
 )
 
             user_prompt = (
@@ -114,7 +115,7 @@ class JobMatchingAgent(BaseAgent):
                 data={
                     "match_analysis": llm_output,
                     "overall_match_percentage": match_percentage,
-                    "llm_model_used": "gemini-1.5-flash"
+                    "llm_model_used": "gemini-2.5-flash"
                 },
                 confidence=match_percentage / 100.0,
                 processing_time=0.0
@@ -132,7 +133,7 @@ class JobMatchingAgent(BaseAgent):
         return {
             "name": "LLM-Powered Job Matcher",
             "description": "Calculates an overall match percentage and provides key insights between a candidate's resume and a job description.",
-            "model": "gemini-1.5-flash",
+            "model": "gemini-2.5-flash",
             "input_requirements": [
                 "Relationship Mapper Agent result",
                 "Job Description content"

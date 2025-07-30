@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -13,98 +13,79 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { Brain, BarChart3, User, Settings, LogOut, ChevronDown, ArrowLeft, Copy, Check } from "lucide-react"
-import { useAnalysisNavigation } from "@/components/analysis-navigation-context"
+import {
+  Brain,
+  BarChart3,
+  User,
+  Settings,
+  LogOut,
+  ChevronDown,
+  ArrowLeft,
+  Copy,
+  Check,
+  AlertCircle,
+  Download,
+  CheckCircle2
+} from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
+import { getStoredAnalysisResults } from "@/utils/analysis-storage"
+
+interface EnhancementSuggestion {
+  type: 'add' | 'rephrase' | 'quantify' | 'highlight' | 'remove' | 'style_adjust'
+  target_section: string
+  original_text_snippet: string
+  suggested_text: string
+  reasoning: string
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  quantification_prompt?: string
+}
+
+interface OptimizationResponse {
+  enhancement_suggestions: EnhancementSuggestion[]
+  overall_feedback: string
+  llm_model_used: string
+}
 
 export default function EnhancementsPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [copiedText, setCopiedText] = useState<string | null>(null)
-  const { lastAnalysisPage } = useAnalysisNavigation()
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [enhancementData, setEnhancementData] = useState<OptimizationResponse | null>(null)
 
-  // Sample enhancement suggestions data - in real app, this would come from the backend
-  const enhancementData = {
-    jobTitle: "Senior Software Engineer",
-    companyName: "Google",
-    enhancement_suggestions: [
-      {
-        id: 1,
-        priority: "critical",
-        target_section: "Professional Summary",
-        type: "modify",
-        original_text_snippet: "Experienced software developer with expertise in full-stack development.",
-        suggested_text:
-          "Senior Software Engineer with 5+ years of expertise in full-stack development and proven experience building scalable microservices for enterprise applications serving 10K+ users.",
-        reasoning:
-          "Adding specific years of experience, seniority level, and quantifiable impact metrics makes your summary more compelling and aligns with Google's preference for measurable achievements.",
-      },
-      {
-        id: 2,
-        priority: "high",
-        target_section: "Experience Section",
-        type: "add",
-        original_text_snippet: "",
-        suggested_text:
-          "Led cross-functional team of 4 engineers in architecting cloud-native solutions, resulting in 40% improvement in system reliability and 25% reduction in deployment time.",
-        reasoning:
-          "Google values leadership experience and cloud expertise. This addition demonstrates both technical leadership and measurable business impact, which are key differentiators for senior roles.",
-      },
-      {
-        id: 3,
-        priority: "high",
-        target_section: "Technical Skills",
-        type: "modify",
-        original_text_snippet: "Experience with cloud platforms and microservices",
-        suggested_text:
-          "Expert-level proficiency in Google Cloud Platform (GCP), Kubernetes, Docker, and microservices architecture with hands-on experience in Cloud Run, BigQuery, and Pub/Sub",
-        reasoning:
-          "Specifically mentioning GCP and Google's preferred technologies shows direct alignment with their tech stack. The detailed technology list demonstrates depth of knowledge rather than generic cloud experience.",
-      },
-      {
-        id: 4,
-        priority: "medium",
-        target_section: "Experience Section",
-        type: "modify",
-        original_text_snippet: "Collaborated with cross-functional teams to deliver enterprise-grade solutions",
-        suggested_text:
-          "Collaborated with product managers, designers, and data scientists across 3 time zones to deliver enterprise-grade solutions, improving cross-team communication efficiency by 30%",
-        reasoning:
-          "Google operates globally and values collaboration across diverse teams. Adding specific details about cross-timezone work and quantified improvements in team efficiency demonstrates relevant soft skills.",
-      },
-      {
-        id: 5,
-        priority: "medium",
-        target_section: "Projects Section",
-        type: "add",
-        original_text_snippet: "",
-        suggested_text:
-          "Open Source Contributions: Active contributor to Kubernetes ecosystem with 15+ merged PRs and maintainer of a popular DevOps automation tool with 500+ GitHub stars.",
-        reasoning:
-          "Google highly values open source contributions and community involvement. This addition shows your commitment to the broader tech community and demonstrates expertise in technologies Google uses internally.",
-      },
-      {
-        id: 6,
-        priority: "critical",
-        target_section: "Experience Section",
-        type: "modify",
-        original_text_snippet: "Optimized API response time by 30% using Redis caching",
-        suggested_text:
-          "Architected and implemented distributed caching strategy using Redis and Memcached, optimizing API response time by 30% and reducing database load by 50% for high-traffic endpoints serving 1M+ daily requests",
-        reasoning:
-          "Google processes massive scale. Expanding this achievement to show distributed systems thinking, multiple technologies, and specific scale metrics (1M+ requests) demonstrates the kind of high-scale problem-solving Google needs.",
-      },
-    ],
-    overall_feedback:
-      "Your resume shows strong technical foundation, but to stand out for Google's Senior Software Engineer role, focus on demonstrating scale, leadership, and specific Google technologies. The suggested enhancements emphasize quantifiable impact, distributed systems experience, and alignment with Google's engineering culture. Implementing these changes will position you as a candidate who can handle Google's technical challenges and contribute to their collaborative, data-driven environment.",
-  }
+  useEffect(() => {
+    const loadEnhancements = async () => {
+      try {
+        // Check if we already have enhancement data in session storage
+        const storedEnhancements = sessionStorage.getItem('enhancement_results')
+        if (storedEnhancements) {
+          setEnhancementData(JSON.parse(storedEnhancements))
+          setIsLoading(false)
+          return
+        }
+
+        // If no stored enhancements, redirect to analysis results
+        router.push('/analysis-results')
+
+      } catch (err) {
+        console.error('Failed to load enhancements:', err)
+        setError('Failed to load enhancement suggestions.')
+        setIsLoading(false)
+      }
+    }
+
+    loadEnhancements()
+  }, [router])
 
   const handleSignOut = () => {
-    router.push("/")
+    signOut({ callbackUrl: '/' })
   }
 
-  const handleCopyText = async (text: string, id: number) => {
+  const handleCopyText = async (text: string, index: number) => {
     try {
       await navigator.clipboard.writeText(text)
-      setCopiedText(`${id}`)
+      setCopiedText(`${index}`)
       setTimeout(() => setCopiedText(null), 2000)
     } catch (err) {
       console.error("Failed to copy text: ", err)
@@ -128,15 +109,69 @@ export default function EnhancementsPage() {
     return priority.charAt(0).toUpperCase() + priority.slice(1) + " Priority"
   }
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'add':
+        return 'Add New Content'
+      case 'rephrase':
+        return 'Rephrase Existing'
+      case 'quantify':
+        return 'Add Metrics'
+      default:
+        return 'Modify'
+    }
+  }
+
+  const getUserInitials = () => {
+    if (session?.user?.name) {
+      return session.user.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    return 'U'
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return '#22c55e' // green
+    if (score >= 60) return '#f59e0b' // amber
+    return '#ef4444' // red
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#FF5722] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Generating enhancement suggestions...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !enhancementData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-600">{error || 'Failed to load enhancements'}</p>
+          <Button onClick={() => router.push('/analysis-results')} className="mt-4">
+            Back to Results
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Persistent Header */}
+      {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Left side - Logo and Navigation */}
             <div className="flex items-center space-x-10">
-              {/* Logo */}
               <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
                 <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                   <Brain className="h-5 w-5 text-white" />
@@ -144,10 +179,9 @@ export default function EnhancementsPage() {
                 LexIQ
               </Link>
 
-              {/* Primary Navigation */}
               <nav className="flex items-center space-x-8">
                 <Link
-                  href={lastAnalysisPage}
+                  href="/dashboard"
                   className="flex items-center space-x-2 text-base font-semibold text-black relative pb-4 border-b-2 border-[#FF5722] transition-colors"
                 >
                   <BarChart3 className="w-5 h-5" />
@@ -163,21 +197,20 @@ export default function EnhancementsPage() {
               </nav>
             </div>
 
-            {/* Right side - User Menu */}
             <div className="flex items-center">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors">
                     <div className="w-8 h-8 bg-[#FF5722] rounded-full flex items-center justify-center text-white font-medium">
-                      VK
+                      {getUserInitials()}
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-gray-900">Veeresh Koliwad</p>
-                    <p className="text-xs text-gray-500">veeresh.koliwad@email.com</p>
+                    <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'User'}</p>
+                    <p className="text-xs text-gray-500">{session?.user?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -206,7 +239,7 @@ export default function EnhancementsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Navigation */}
         <div className="mb-6">
           <Button
@@ -224,16 +257,64 @@ export default function EnhancementsPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Resume Enhancement Suggestions</h1>
         </div>
 
+        {/* Strategic Summary at Top */}
+        <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-2xl p-6 border border-gray-200 mb-8">
+          <div className="flex items-start space-x-6">
+
+            {/* Score Circle */}
+            <div className="relative">
+              <svg className="w-32 h-32 transform -rotate-90">
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="56"
+                  stroke="#e5e7eb"
+                  strokeWidth="12"
+                  fill="none"
+                />
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="56"
+                  stroke={getScoreColor(85)}
+                  strokeWidth="12"
+                  fill="none"
+                  strokeDasharray={`${(85 / 100) * 352} 352`}
+                  className="transition-all duration-1000"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-bold text-gray-900">{85}%</span>
+                <span className="text-sm text-gray-600">Match Score</span>
+              </div>
+            </div>
+
+            {/* Summary Text */}
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Strategic Summary</h2>
+              <p className="text-base text-gray-700 leading-relaxed">{enhancementData.overall_feedback}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Suggestion Cards */}
         <div className="space-y-6 mb-8">
-          {enhancementData.enhancement_suggestions.map((suggestion) => (
-            <Card key={suggestion.id} className="border border-gray-200 shadow-sm">
+          {enhancementData.enhancement_suggestions.map((suggestion, index) => (
+            <Card
+              key={index}
+              className="border border-gray-200 shadow-sm"
+            >
               <CardContent className="p-6">
                 {/* Priority Tag and Target Section */}
                 <div className="flex items-center justify-between mb-4">
-                  <Badge className={`${getPriorityColor(suggestion.priority)} font-medium`}>
-                    {getPriorityLabel(suggestion.priority)}
-                  </Badge>
+                  <div className="flex items-center space-x-3">
+                    <Badge className={`${getPriorityColor(suggestion.priority)} font-medium`}>
+                      {getPriorityLabel(suggestion.priority)}
+                    </Badge>
+                    <Badge variant="outline" className="text-gray-600">
+                      {getTypeLabel(suggestion.type)}
+                    </Badge>
+                  </div>
                   <span className="text-sm font-medium text-gray-600">In your {suggestion.target_section}</span>
                 </div>
 
@@ -242,37 +323,31 @@ export default function EnhancementsPage() {
                   {/* Original Text (if exists) */}
                   {suggestion.original_text_snippet && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <div className="flex items-start space-x-2">
-                        <div>
-                          <h4 className="text-sm font-semibold text-red-800 mb-1">Current Text:</h4>
-                          <p className="text-sm text-red-700">{suggestion.original_text_snippet}</p>
-                        </div>
-                      </div>
+                      <h4 className="text-sm font-semibold text-red-800 mb-1">Current Text:</h4>
+                      <p className="text-sm text-red-700">{suggestion.original_text_snippet}</p>
                     </div>
                   )}
 
                   {/* Suggested Text */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-start space-x-2">
+                    <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-semibold text-green-800">
-                            {suggestion.type === "add" ? "Add This Text:" : "Suggested Improvement:"}
-                          </h4>
-                          <button
-                            onClick={() => handleCopyText(suggestion.suggested_text, suggestion.id)}
-                            className="flex items-center space-x-1 text-green-700 hover:text-green-800 transition-colors"
-                            title="Copy to clipboard"
-                          >
-                            {copiedText === `${suggestion.id}` ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </button>
-                        </div>
+                        <h4 className="text-sm font-semibold text-green-800 mb-1">
+                          {suggestion.type === "add" ? "Add This Text:" : "Suggested Improvement:"}
+                        </h4>
                         <p className="text-sm text-green-700">{suggestion.suggested_text}</p>
                       </div>
+                      <button
+                        onClick={() => handleCopyText(suggestion.suggested_text, index)}
+                        className="ml-2 flex items-center space-x-1 text-green-700 hover:text-green-800 transition-colors"
+                        title="Copy to clipboard"
+                      >
+                        {copiedText === `${index}` ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -285,12 +360,6 @@ export default function EnhancementsPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {/* Overall Feedback */}
-        <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-2xl p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Strategic Summary</h2>
-          <p className="text-lg text-gray-700 leading-relaxed">{enhancementData.overall_feedback}</p>
         </div>
 
         {/* Action Buttons */}
