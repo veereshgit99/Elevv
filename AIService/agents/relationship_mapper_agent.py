@@ -55,13 +55,44 @@ class RelationshipMapperAgent(BaseAgent):
             raise RuntimeError("Gemini API key not configured. Cannot call the LLM.")
         
         try:            
-            # --- UPDATED: Get entities directly from the lean context's metadata ---
-            resume_entities = context.metadata.get("resume_entities")
-            jd_entities = context.metadata.get("jd_entities")
+            # Ensure we have classification and entity extraction results for both resume and JD
+            if not context.previous_results:
+                raise ValueError("RelationshipMapperAgent requires previous agent results (Classifier, EntityExtractor).")
             
-            if not resume_entities or not jd_entities:
-                raise ValueError("RelationshipMapperAgent requires resume_entities and jd_entities in its context metadata.")
+            # Retrieve extracted entities for the resume (assume it's the primary content)
+            resume_entities_result = context.previous_results.get(AgentType.ENTITY_EXTRACTOR)
+            if not resume_entities_result or not resume_entities_result.success:
+                raise ValueError("Failed to get entity extraction results for resume.")
+            resume_entities = resume_entities_result.data.get("entities", {})
             
+            # We need the JD content and its entities.
+            # In your orchestrator, you'll pass both resume and JD through the pipeline.
+            # For now, let's assume JD content/entities are available in context.metadata
+            # This design needs the orchestrator to manage multiple document contexts.
+            
+            # --- IMPORTANT ORCHESTRATOR NOTE ---
+            # For multi-document processing (resume vs. JD), your orchestrator needs
+            # to collect results for BOTH the resume AND the JD before calling this agent.
+            # This example assumes the JD's data is passed in `context.metadata` for simplicity,
+            # but a more robust orchestrator design might create a combined context or
+            # process them sequentially and then pass specific entity results.
+            #
+            # A common pattern:
+            # 1. Process Resume -> get resume_entities
+            # 2. Process JD -> get jd_entities
+            # 3. Call RelationshipMapperAgent with (resume_entities, jd_entities, resume_content, jd_content)
+            #
+            # For this example, let's assume JD data is under `context.metadata['job_description']`
+            
+            job_description_data = context.metadata.get('job_description', {})
+            if not job_description_data:
+                 raise ValueError("Job Description content/entities missing from context metadata for relationship mapping.")
+            
+            jd_content = job_description_data.get('content', '')
+            jd_entities = job_description_data.get('entities', {})
+
+            if not jd_content or not jd_entities:
+                raise ValueError("Job Description content or entities are empty for relationship mapping.")
             # Define the schema for the desired relationship output
             relationship_schema = {
                 "type": "object",
@@ -128,7 +159,8 @@ class RelationshipMapperAgent(BaseAgent):
                 "    * **0.6 or below**: For skills that are listed but have no direct proof, or for inferred potential matches. Be very conservative with these scores.\n\n"
                 "5.  **Identify True Gaps**: A gap is the absence of a core competency. Report only the most significant gaps related to mandatory qualifications or essential domain experience.\n"
                      "You must infer core competencies from a candidate's educational background and professional roles. A degree in a technical field implies foundational knowledge in that field. A professional role inherently requires the fundamental skills of that profession.\n\n"
-
+                "6. Do NOT propose resume changes or additions claiming work authorization, sponsorship, or clearance. If the job description requests it, you may suggest the user consider including a brief line about their eligibility, but make clear that omitting this is common and not usually expected in the resume.\n"
+                
                 "--- OUTPUT INSTRUCTIONS ---\n"
                 "- Output exactly one single JSON object strictly matching the schema below, with no additional text, explanations, or comments.\n"
                 "- Confidence scores must be rounded to two decimal places.\n"
@@ -143,7 +175,9 @@ class RelationshipMapperAgent(BaseAgent):
             user_prompt = (
                 f"Analyze the following resume and job description entities to map relationships, matches, and gaps.\n\n"
                 f"--- Candidate's Resume Entities ---\n{json.dumps(resume_entities, indent=2)}\n\n"
+                f"--- Candidate's Resume Content (Partial for context) ---\n{context.content[:5000]}\n\n" # Pass relevant parts
                 f"--- Job Description Entities ---\n{json.dumps(jd_entities, indent=2)}\n\n"
+                f"--- Job Description Content ---\n{jd_content[:5000]}\n\n" # Pass relevant parts
                 f"Output the relationships as a JSON object strictly following this schema:\n"
                 f"{json.dumps(relationship_schema, indent=2)}"
             )

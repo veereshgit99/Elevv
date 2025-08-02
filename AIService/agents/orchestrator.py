@@ -217,18 +217,7 @@ class DocumentAnalysisOrchestrator:
         # --- OPTIMIZATION 1: Create a lean context for the Relationship Mapper ---
         # Instead of sending the full original documents again, we only send the extracted entities.
         # This drastically reduces the token count.
-        mapper_context = DocumentContext(
-            user_id=user_id,
-            file_id=resume_context.file_id,
-            content="", # We no longer need the raw content
-            file_type="application/json",
-            metadata={
-                'resume_entities': final_results["resume_entities"]["entities"],
-                'jd_entities': final_results["jd_entities"]["entities"]
-            },
-            previous_results={}
-        )
-        relationship_map_result = await self._run_agent(AgentType.RELATIONSHIP_MAPPER, mapper_context)
+        relationship_map_result = await self._run_agent(AgentType.RELATIONSHIP_MAPPER, resume_context)
         final_results["relationship_map"] = relationship_map_result.data
         
         print("Relationship mapping completed. Time: ", response_time)
@@ -238,17 +227,7 @@ class DocumentAnalysisOrchestrator:
         # --- OPTIMIZATION 2: Create a lean context for the Job Matcher ---
         # The matcher doesn't need the full resume or JD text. It only needs the
         # high-level map of connections that the previous agent created.
-        matcher_context = DocumentContext(
-            user_id=user_id,
-            file_id=resume_context.file_id,
-            content="", # No raw content needed
-            file_type="application/json",
-            metadata={
-                'relationship_map': final_results["relationship_map"]
-            },
-            previous_results={}
-        )
-        job_match_result = await self._run_agent(AgentType.JOB_MATCHER, matcher_context)
+        job_match_result = await self._run_agent(AgentType.JOB_MATCHER, resume_context)
         final_results["job_match_analysis"] = job_match_result.data
         final_results["overall_match_percentage"] = job_match_result.data.get("overall_match_percentage")
         
@@ -275,20 +254,26 @@ class DocumentAnalysisOrchestrator:
         """
         self.logger.info("Starting on-demand resume optimization")
         
-        # --- CORRECTED: Re-create the DocumentContext with all required fields ---
+        # --- FIXED: Include full content for the Resume Optimizer ---
         resume_context = DocumentContext(
             user_id=analysis_context.get("user_id"),
             file_id=analysis_context.get("resume_id"),
-            content=analysis_context.get("resume_content"),
+            content=analysis_context.get("resume_content"),  # Full resume content
             file_type=analysis_context.get("resume_file_type"),
-            metadata={'job_description': analysis_context.get('job_description', {})},
-            # We provide default values for the non-data fields
+            metadata={
+                'job_description': analysis_context.get('job_description', {}),  # Full JD content
+                # Add the entities and analysis results for additional context
+                'resume_entities': analysis_context.get('resume_entities', {}),
+                'jd_entities': analysis_context.get('jd_entities', {}),
+                'relationship_map': analysis_context.get('relationship_map', {}),
+                'job_match_analysis': analysis_context.get('job_match_analysis', {})
+            },
             previous_results={
                 AgentType.RELATIONSHIP_MAPPER: AgentResult(
                     agent_type=AgentType.RELATIONSHIP_MAPPER,
                     success=True,
                     data=analysis_context.get("relationship_map", {}),
-                    confidence=1.0, # Assume 100% confidence in previous data
+                    confidence=1.0,
                     processing_time=0.0
                 ),
                 AgentType.JOB_MATCHER: AgentResult(

@@ -45,8 +45,12 @@ class JobMatchingAgent(BaseAgent):
             raise RuntimeError("Gemini API key not configured. Cannot call the LLM.")
 
         try:
-            # --- UPDATED: Get the relationship map directly from the lean context's metadata ---
-            relationship_map = context.metadata.get("relationship_map")
+            relationship_map_result = context.previous_results.get(AgentType.RELATIONSHIP_MAPPER)
+            if not relationship_map_result or not relationship_map_result.success:
+                raise ValueError("Failed to get relationship map results for job matching.")
+            
+            relationship_map = relationship_map_result.data.get("relationship_map", {})
+            jd_content = context.metadata.get('job_description', {}).get('content', 'Job Description content not available.')
             
             if not relationship_map:
                 raise ValueError("JobMatchingAgent requires a relationship_map in its context metadata.")
@@ -76,14 +80,16 @@ class JobMatchingAgent(BaseAgent):
                      "iii. Decrease with significant gaps in core competencies.\n"
                      "iv. Weigh fundamental “experience_gap” (missing core responsibilities) more than secondary “skill_gap.”"
                 "5.  Realism & Trust: Do not inflate scores or overstate strengths. Conservatively score when data is partial or weak.\n\n"
-                
-
+                "6. Authorization, Sponsorship, and Security Requirements: These should NOT affect your match percentage calculation if missing from the resume. Simply highlight as informational for the candidate to clarify if relevant.\n"
+                "-  Only output a valid JSON. In 'areas_for_improvement', you may include a reminder to clarify work authorization or clearance status (if the JD requires it), but do NOT lower 'match_percentage' unless the resume directly contradicts employer requirement.\n\n"
                 "--- OUTPUT INSTRUCTIONS ---\n"
                 "Only output a single valid JSON object matching the schema 'match_score_schema; - no extra text, comments, or explanations"
 )
 
             user_prompt = (
-                f"Analyze the following relationship map to calculate an overall match percentage and provide feedback.\n\n"
+                f"Analyze the following job description and the relationship map (which details matches and gaps "
+                f"between the resume and JD) to calculate an overall match percentage and provide feedback.\n\n"
+                f"--- Job Description ---\n{jd_content[:5000]}\n\n"
                 f"--- Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
                 f"Output the match analysis as a JSON object strictly following this schema:\n"
                 f"{json.dumps(match_score_schema, indent=2)}"
