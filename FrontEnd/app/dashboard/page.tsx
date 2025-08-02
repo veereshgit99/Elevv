@@ -17,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 import {
   Brain,
   BarChart3,
@@ -25,13 +24,11 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  TrendingUp,
   Clock,
   FileText,
   Zap,
   Target,
   Building,
-  ArrowRight,
 } from "lucide-react"
 import { useAnalysisNavigation } from "@/components/analysis-navigation-context"
 import { fetchUserProfile, fetchResumes } from "@/utils/api"
@@ -76,35 +73,6 @@ export default function DashboardPage() {
 
   // Add this with your other state declarations
   const [showUploadModal, setShowUploadModal] = useState(false)
-
-  // Sample recent analyses (will be replaced with real data later)
-  const recentAnalyses = [
-    {
-      id: 1,
-      jobTitle: "Senior Software Engineer",
-      company: "Google",
-      score: 87,
-      date: "2 days ago",
-      status: "completed",
-    },
-    {
-      id: 2,
-      jobTitle: "Frontend Developer",
-      company: "Meta",
-      score: 92,
-      date: "1 week ago",
-      status: "completed",
-    },
-    {
-      id: 3,
-      jobTitle: "Full Stack Developer",
-      company: "Netflix",
-      score: 78,
-      date: "2 weeks ago",
-      status: "completed",
-    },
-  ]
-
 
   // Fetch user data when session is available
   useEffect(() => {
@@ -189,19 +157,16 @@ export default function DashboardPage() {
     signOut({ callbackUrl: '/' })
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return "text-green-600 bg-green-50 border-green-200"
-    if (score >= 70) return "text-yellow-600 bg-yellow-50 border-yellow-200"
-    return "text-red-600 bg-red-50 border-red-200"
-  }
-
   const characterCount = jobDescription.length
   const maxCharacters = 5000
 
   // Get user initials for avatar
   const getUserInitials = () => {
-    if (userProfile?.name) {
-      return userProfile.name
+    // Prioritize DB data
+    const name = userProfile?.name || session?.user?.name || ''
+
+    if (name) {
+      return name
         .split(' ')
         .map(n => n[0])
         .join('')
@@ -211,33 +176,40 @@ export default function DashboardPage() {
     return 'U'
   }
 
-  // In your dashboard page component, update the loading check:
-
   if (status === "loading" || isLoadingData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Keep the actual header for consistency */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-10">
-                <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
+                <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
                   <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                     <Brain className="h-5 w-5 text-white" />
                   </div>
                   LexIQ
                 </Link>
                 <nav className="flex items-center space-x-8">
-                  <div className="flex items-center space-x-2 text-base font-semibold text-black relative pb-4 border-b-2 border-[#FF5722]">
+
+                  {/* FUNCTIONAL LINKS - Not skeletons */}
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center space-x-2 text-base font-semibold text-black border-b-2 border-[#FF5722] transition-colors pb-4"
+                  >
                     <BarChart3 className="w-5 h-5" />
                     <span>Analysis</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-base font-medium text-gray-600 pb-4">
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
+                  >
                     <User className="w-5 h-5" />
                     <span>Profile</span>
-                  </div>
+                  </Link>
                 </nav>
               </div>
+
+              {/* ONLY the user avatar should be skeleton during loading */}
               <div className="flex items-center">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
@@ -248,89 +220,72 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* Main Content Skeleton */}
+        {/* Main Content Skeleton - Updated to match your new layout */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left Column Skeleton */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Welcome Card Skeleton */}
-              <Card className="bg-gradient-to-br from-gray-100 to-gray-200">
-                <CardContent className="p-6">
-                  <div className="animate-pulse">
-                    <div className="h-6 bg-white/30 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-white/20 rounded w-full"></div>
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="animate-pulse">
 
-              {/* Stats Cards Skeleton */}
-              <div className="grid grid-cols-2 gap-4">
-                {[1, 2].map((i) => (
-                  <Card key={i}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-3 animate-pulse">
-                        <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
-                        <div>
-                          <div className="h-8 w-8 bg-gray-200 rounded mb-1"></div>
-                          <div className="h-3 w-16 bg-gray-200 rounded"></div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+            {/* Notice Banner Skeleton */}
+            <div className="mb-6 p-4 bg-gray-100 border border-gray-200 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-5 h-5 bg-gray-200 rounded flex-shrink-0"></div>
+                <div className="h-4 bg-gray-200 rounded flex-1"></div>
               </div>
-              {/* Recent Analyses Skeleton */}
-              <Card>
-                <CardHeader className="pb-3">
+            </div>
+
+            {/* Main Card Skeleton */}
+            <Card className="shadow-lg max-w-4xl mx-auto">
+              {/* Card Header Skeleton */}
+              <CardHeader className="text-center pb-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
+                <div className="h-8 bg-gray-200 rounded w-64 mx-auto mb-2"></div>
+                <div className="h-5 bg-gray-200 rounded w-96 mx-auto"></div>
+              </CardHeader>
+
+              {/* Card Content Skeleton */}
+              <CardContent className="p-8 space-y-6">
+                {/* Job Title Field Skeleton */}
+                <div className="space-y-2">
+                  <div className="h-5 bg-gray-200 rounded w-20"></div>
+                  <div className="h-10 bg-gray-200 rounded w-full"></div>
+                </div>
+
+                {/* Company Name Field Skeleton */}
+                <div className="space-y-2">
+                  <div className="h-5 bg-gray-200 rounded w-28"></div>
+                  <div className="h-10 bg-gray-200 rounded w-full"></div>
+                </div>
+
+                {/* Job Description Field Skeleton */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-5 bg-gray-200 rounded w-32"></div>
+                    <div className="h-4 bg-gray-200 rounded w-16"></div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border animate-pulse">
-                      <div className="flex-1">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                        <div className="flex items-center space-x-2">
-                          <div className="h-3 bg-gray-200 rounded w-20"></div>
-                          <div className="h-3 bg-gray-200 rounded w-16"></div>
-                        </div>
-                      </div>
-                      <div className="h-6 w-12 bg-gray-200 rounded-full"></div>
+                  <div className="h-48 bg-gray-200 rounded w-full"></div>
+                </div>
+
+                {/* Resume Selector Skeleton */}
+                <div className="space-y-2">
+                  <div className="h-5 bg-gray-200 rounded w-40"></div>
+                  <div className="h-10 bg-gray-200 rounded w-full"></div>
+                </div>
+
+                {/* Analyze Button Skeleton */}
+                <div className="pt-4">
+                  <div className="h-12 bg-gray-200 rounded w-full"></div>
+                </div>
+
+                {/* Info Box Skeleton */}
+                <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-5 h-5 bg-gray-200 rounded-full flex-shrink-0 mt-0.5"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-40"></div>
+                      <div className="h-3 bg-gray-200 rounded w-full"></div>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column - Analysis Form Skeleton */}
-            <div className="lg:col-span-2">
-              <Card className="shadow-lg">
-                <CardHeader className="text-center pb-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
-                  <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full max-w-md mx-auto"></div>
                   </div>
-                </CardHeader>
-                <CardContent className="p-8 space-y-6">
-                  {/* Form Fields Skeleton */}
-                  {[1, 2].map((i) => (
-                    <div key={i} className="space-y-2 animate-pulse">
-                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                      <div className="h-10 bg-gray-200 rounded w-full"></div>
-                    </div>
-                  ))}
-
-                  {/* Job Description Skeleton */}
-                  <div className="space-y-2 animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-32 bg-gray-200 rounded w-full"></div>
-                  </div>
-
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </main>
       </div>
@@ -346,7 +301,7 @@ export default function DashboardPage() {
             {/* Left side - Logo and Navigation */}
             <div className="flex items-center space-x-10">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
+              <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
                 <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                   <Brain className="h-5 w-5 text-white" />
                 </div>
@@ -386,7 +341,7 @@ export default function DashboardPage() {
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
                     <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
-                    <p className="text-xs text-gray-500">{userProfile?.email || session?.user?.email}</p>
+                    <p className="text-xs text-gray-500">{userProfile?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -416,6 +371,14 @@ export default function DashboardPage() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Header */}
+        {/* Welcome Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome, {userProfile?.name?.split(' ')[0] || 'there'}! 👋
+          </h1>
+        </div>
+
         {/* Simple notice when no resumes are uploaded */}
         {userResumes.length === 0 && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -435,262 +398,175 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Stats and Recent Analyses */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Welcome Card */}
-            <Card className="bg-gradient-to-br from-[#FF5722] to-[#E64A19] text-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold mb-2">
-                      Welcome, {userProfile?.name?.split(' ')[0] || 'there'}!
-                    </h2>
-                    <p className="text-orange-100 text-sm">Ready to land your dream role?</p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <Zap className="w-6 h-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <BarChart3 className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">12</p>
-                      <p className="text-xs text-gray-600">Analyses</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">85%</p>
-                      <p className="text-xs text-gray-600">Avg Score</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        {/* Start New Analysis Card */}
+        <Card className="shadow-lg max-w-4xl mx-auto">
+          <CardHeader className="text-center pb-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
+            <CardTitle className="text-2xl font-bold text-gray-900 mb-2">Start a New Analysis</CardTitle>
+            <p className="text-gray-600">Get detailed analysis of your resume against any job description</p>
+          </CardHeader>
+          <CardContent className="p-8 space-y-6">
+            {/* Job Title */}
+            <div className="space-y-2">
+              <Label htmlFor="jobTitle" className="text-sm font-medium text-gray-700 flex items-center">
+                <Target className="w-4 h-4 mr-2 text-[#FF5722]" />
+                Job Title
+              </Label>
+              <Input
+                id="jobTitle"
+                type="text"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="e.g. Senior Software Engineer"
+                className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
+              />
             </div>
 
-            {/* Recent Analyses */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">Recent Analyses</CardTitle>
-                  <Link href="/analysis-history">
-                    <Button variant="ghost" size="sm" className="text-[#FF5722] hover:text-[#E64A19]">
-                      View All
-                      <ArrowRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {recentAnalyses.map((analysis) => (
-                  <div key={analysis.id} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm text-gray-900">{analysis.jobTitle}</h4>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Building className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs text-gray-600">{analysis.company}</span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-600">{analysis.date}</span>
-                      </div>
-                    </div>
-                    <Badge className={`text-xs font-medium border ${getScoreColor(analysis.score)}`}>
-                      {analysis.score}%
-                    </Badge>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+            {/* Company Name */}
+            <div className="space-y-2">
+              <Label htmlFor="companyName" className="text-sm font-medium text-gray-700 flex items-center">
+                <Building className="w-4 h-4 mr-2 text-[#FF5722]" />
+                Company Name
+              </Label>
+              <Input
+                id="companyName"
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="e.g. Google, Microsoft, Airbnb"
+                className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
+              />
+            </div>
 
-          {/* Right Column - Analysis Form */}
-          <div className="lg:col-span-2">
-            <Card className="shadow-lg">
-              <CardHeader className="text-center pb-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
-                <CardTitle className="text-2xl font-bold text-gray-900 mb-2">Start a New Analysis</CardTitle>
-                <p className="text-gray-600">Get detailed analysis of your resume against any job description</p>
-              </CardHeader>
-              <CardContent className="p-8 space-y-6">
-                {/* Job Title */}
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle" className="text-sm font-medium text-gray-700 flex items-center">
-                    <Target className="w-4 h-4 mr-2 text-[#FF5722]" />
-                    Job Title
-                  </Label>
-                  <Input
-                    id="jobTitle"
-                    type="text"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="e.g. Senior Software Engineer"
-                    className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
-                  />
-                </div>
+            {/* Job Description */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="jobDescription" className="text-sm font-medium text-gray-700 flex items-center">
+                  <FileText className="w-4 h-4 mr-2 text-[#FF5722]" />
+                  Job Description
+                </Label>
+                <span
+                  className={`text-xs ${characterCount > maxCharacters * 0.9 ? "text-red-500" : "text-gray-500"}`}
+                >
+                  {characterCount}/{maxCharacters}
+                </span>
+              </div>
+              <div className="relative">
+                <Textarea
+                  id="jobDescription"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  placeholder="Paste the full job description here..."
+                  className="w-full min-h-[200px] resize-none transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
+                  rows={8}
+                  maxLength={maxCharacters}
+                />
+              </div>
+            </div>
 
-                {/* Company Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="companyName" className="text-sm font-medium text-gray-700 flex items-center">
-                    <Building className="w-4 h-4 mr-2 text-[#FF5722]" />
-                    Company Name
-                  </Label>
-                  <Input
-                    id="companyName"
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Google, Microsoft, Airbnb"
-                    className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
-                  />
-                </div>
-
-                {/* Job Description */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="jobDescription" className="text-sm font-medium text-gray-700 flex items-center">
-                      <FileText className="w-4 h-4 mr-2 text-[#FF5722]" />
-                      Job Description
-                    </Label>
-                    <span
-                      className={`text-xs ${characterCount > maxCharacters * 0.9 ? "text-red-500" : "text-gray-500"}`}
-                    >
-                      {characterCount}/{maxCharacters}
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <Textarea
-                      id="jobDescription"
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                      placeholder="Paste the full job description here..."
-                      className="w-full min-h-[200px] resize-none transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
-                      rows={8}
-                      maxLength={maxCharacters}
-                    />
-                  </div>
-                </div>
-
-                {/* Resume Selector */}
-                <div className="space-y-2">
-                  <Label htmlFor="resumeSelect" className="text-sm font-medium text-gray-700 flex items-center">
-                    <FileText className="w-4 h-4 mr-2 text-[#FF5722]" />
-                    Analyze using this resume:
-                  </Label>
-                  {userResumes.length > 0 ? (
-                    <Select value={selectedResume} onValueChange={setSelectedResume}>
-                      <SelectTrigger className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]">
-                        <SelectValue placeholder="Select a resume to analyze">
-                          {selectedResume && userResumes.find(r => r.resume_id === selectedResume)?.file_name}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userResumes.map((resume) => (
-                          <SelectItem key={resume.resume_id} value={resume.resume_id}>
-                            <div className="flex items-center space-x-2">
-                              <FileText className="w-4 h-4 text-gray-400" />
-                              <span>{resume.file_name || 'Unnamed Resume'}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 mb-2">No resumes uploaded yet</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[#FF5722] border-[#FF5722] hover:bg-[#FF5722] hover:text-white"
-                        onClick={() => setShowUploadModal(true)}
-                      >
-                        Upload Resume
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Analyze Button */}
-                <div className="pt-4">
+            {/* Resume Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="resumeSelect" className="text-sm font-medium text-gray-700 flex items-center">
+                <FileText className="w-4 h-4 mr-2 text-[#FF5722]" />
+                Analyze using this resume:
+              </Label>
+              {userResumes.length > 0 ? (
+                <Select value={selectedResume} onValueChange={setSelectedResume}>
+                  <SelectTrigger className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]">
+                    <SelectValue placeholder="Select a resume to analyze">
+                      {selectedResume && userResumes.find(r => r.resume_id === selectedResume)?.file_name}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userResumes.map((resume) => (
+                      <SelectItem key={resume.resume_id} value={resume.resume_id}>
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span>{resume.file_name || 'Unnamed Resume'}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">No resumes uploaded yet</p>
                   <Button
-                    onClick={handleAnalyze}
-                    className="w-full bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#E64A19] hover:to-[#D84315] text-white font-medium py-4 text-base transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none"
-                    disabled={!jobTitle || !companyName || !jobDescription || !selectedResume || isAnalyzing}
+                    variant="outline"
+                    size="sm"
+                    className="text-[#FF5722] border-[#FF5722] hover:bg-[#FF5722] hover:text-white"
+                    onClick={() => setShowUploadModal(true)}
                   >
-                    {isAnalyzing ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Analyzing...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <Zap className="w-5 h-5" />
-                        <span>Analyze Now</span>
-                      </div>
-                    )}
+                    Upload Resume
                   </Button>
                 </div>
-                {/* Upload Resume Modal */}
-                <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-                  <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                      <DialogTitle>Upload Your Resume</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <ResumeUpload
-                        onUploadSuccess={async () => {
-                          setShowUploadModal(false)
-                          // Refresh the resumes list
-                          try {
-                            const resumesData = await fetchResumes()
-                            setUserResumes(resumesData)
-                          } catch (error) {
-                            console.error("Failed to refresh resumes:", error)
-                          }
-                        }}
-                        onUploadError={(error) => {
-                          console.error("Upload error:", error)
-                          // You could show a toast notification here
-                        }}
-                      />
-                    </div>
-                  </DialogContent>
-                </Dialog>
+              )}
+            </div>
 
-                {/* Additional Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Clock className="w-3 h-3 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm text-blue-900 mb-1">Analysis takes ~20 seconds</h4>
-                      <p className="text-xs text-blue-700">
-                        Our AI will analyze your resume against the job requirements and provide detailed insights.
-                      </p>
-                    </div>
+            {/* Analyze Button */}
+            <div className="pt-4">
+              <Button
+                onClick={handleAnalyze}
+                className="w-full bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#E64A19] hover:to-[#D84315] text-white font-medium py-4 text-base transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none"
+                disabled={!jobTitle || !companyName || !jobDescription || !selectedResume || isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Analyzing...</span>
                   </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Zap className="w-5 h-5" />
+                    <span>Analyze Now</span>
+                  </div>
+                )}
+              </Button>
+            </div>
+
+            {/* Upload Resume Modal */}
+            <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Upload Your Resume</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <ResumeUpload
+                    onUploadSuccess={async () => {
+                      setShowUploadModal(false)
+                      // Refresh the resumes list
+                      try {
+                        const resumesData = await fetchResumes()
+                        setUserResumes(resumesData)
+                      } catch (error) {
+                        console.error("Failed to refresh resumes:", error)
+                      }
+                    }}
+                    onUploadError={(error) => {
+                      console.error("Upload error:", error)
+                      // You could show a toast notification here
+                    }}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Additional Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock className="w-3 h-3 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm text-blue-900 mb-1">Analysis takes ~20 seconds</h4>
+                  <p className="text-xs text-blue-700">
+                    Our AI will analyze your resume against the job requirements and provide detailed insights.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   )

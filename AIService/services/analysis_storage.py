@@ -125,3 +125,69 @@ def generate_presigned_url_for_analysis(user_id: str, analysis_id: str, expirati
     except Exception as e:
         logger.error(f"Error generating presigned URL: {e}")
         raise
+    
+async def update_analysis_with_enhancement(
+    user_id: str,
+    analysis_id: str,
+    match_after_enhancement: int,
+    auth_token: str
+) -> Dict[str, Any]:
+    """
+    Update analysis record with the enhanced match score
+    """
+    try:
+        import httpx
+
+        async with httpx.AsyncClient(timeout=30.0) as client:  # Add timeout
+            headers = {
+                "Authorization": f"Bearer {auth_token}",
+                "Content-Type": "application/json"  # Explicit content type
+            }
+
+            # Validate input
+            if not isinstance(match_after_enhancement, int) or not (0 <= match_after_enhancement <= 100):
+                raise ValueError("match_after_enhancement must be an integer between 0 and 100")
+
+            # Update the analysis record in DynamoDB
+            update_data = {
+                "match_after_enhancement": match_after_enhancement,
+                "enhancement_generated_at": datetime.utcnow().isoformat(),
+                "enhancement_status": "completed"  # Track enhancement status
+            }
+
+            logger.info(f"Updating analysis {analysis_id} with enhancement score: {match_after_enhancement}%")
+
+            response = await client.patch(
+                f"http://localhost:8001/analyses/{analysis_id}",
+                headers=headers,
+                json=update_data
+            )
+
+            # More detailed error handling
+            if response.status_code == 404:
+                logger.error(f"Analysis {analysis_id} not found for user {user_id}")
+                raise Exception(f"Analysis {analysis_id} not found")
+            elif response.status_code == 403:
+                logger.error(f"Access denied for analysis {analysis_id}")
+                raise Exception("Access denied to update analysis")
+            elif response.status_code != 200:
+                logger.error(f"Failed to update analysis with enhancement score: {response.status_code} - {response.text}")
+                raise Exception(f"Failed to update analysis (HTTP {response.status_code})")
+
+            result = response.json()
+            logger.info(f"Successfully updated analysis {analysis_id} with enhancement data")
+            
+            return result
+
+    except httpx.TimeoutException:
+        logger.error(f"Timeout updating analysis {analysis_id}")
+        raise Exception("Request timeout while updating analysis")
+    except httpx.RequestError as e:
+        logger.error(f"Network error updating analysis {analysis_id}: {e}")
+        raise Exception("Network error while updating analysis")
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error updating analysis with enhancement: {e}")
+        raise

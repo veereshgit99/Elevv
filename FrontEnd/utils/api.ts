@@ -31,7 +31,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
 
 // Example usage functions
 export async function fetchUserProfile() {
-    const response = await authenticatedFetch('http://localhost:8001/users/me');
+    const response = await authenticatedFetch(`http://localhost:8001/users/me`);
     if (!response.ok) {
         throw new Error(`Failed to fetch user profile: ${response.status}`);
     }
@@ -39,7 +39,7 @@ export async function fetchUserProfile() {
 }
 
 export async function fetchResumes() {
-    const response = await authenticatedFetch('http://localhost:8001/resumes');
+    const response = await authenticatedFetch(`http://localhost:8001/resumes`);
     if (!response.ok) {
         throw new Error(`Failed to fetch resumes: ${response.status}`);
     }
@@ -77,4 +77,97 @@ export function useAuthenticatedFetch() {
     };
 
     return authenticatedFetch;
+}
+
+// Add this to your utils/api.ts
+export async function fetchAnalyses() {
+    const response = await authenticatedFetch(`http://localhost:8001/analyses`, {
+        method: 'GET',
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch analyses')
+    }
+
+    return response.json()
+}
+
+export async function updateUserProfile(profileData: any) {
+    const response = await authenticatedFetch(`http://localhost:8001/users/profile`, {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to update profile')
+    }
+
+    return response.json()
+}
+
+
+// Add these functions to your api.ts
+export async function deleteResume(resumeId: string) {
+    const response = await authenticatedFetch(`http://localhost:8001/resumes/${resumeId}`, {
+        method: 'DELETE',
+    })
+
+    if (!response.ok) {
+        const error = await response.text()
+        throw new Error(error || 'Failed to delete resume')
+    }
+
+    return response.json()
+}
+
+export async function updateResumePrimary(resumeId: string) {
+    const response = await authenticatedFetch(`http://localhost:8001/resumes/${resumeId}/make-primary`, {
+        method: 'PUT',
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to update primary resume')
+    }
+
+    return response.json()
+}
+
+// utils/api.ts
+
+export async function getResumeUploadUrl(filename: string, contentType: string, jobTitle: string) {
+    const response = await authenticatedFetch(`http://localhost:8001/resumes/upload-url`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename: filename,
+            content_type: contentType,
+            job_title: jobTitle
+        }),
+    })
+
+    if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Failed to get upload URL')
+    }
+
+    return response.json()
+}
+
+
+export async function updateResume(resumeId: string, name: string, jobTitle: string) {
+    const response = await authenticatedFetch(`http://localhost:8001/resumes/${resumeId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            name: name,
+            job_title: jobTitle
+        }),
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to update resume')
+    }
+
+    return response.json()
 }

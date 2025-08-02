@@ -1,6 +1,17 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { deleteResume, updateResumePrimary } from "@/utils/api"
+import { ResumeSkeleton } from "@/components/resume-skeleton"
+import { fetchAnalyses } from "@/utils/api"
+import { updateUserProfile } from "@/utils/api"
+import { updateResume } from "@/utils/api"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -44,14 +55,25 @@ import {
 import { useAnalysisNavigation } from "@/components/analysis-navigation-context"
 
 // Add this import with your other imports
-import { useSession } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import { fetchResumes, fetchUserProfile } from "@/utils/api"
 import { ResumeUpload } from "@/components/resume-upload"
+
+// Add this at the top of your profile page component, after imports
+interface UserProfile {
+  user_id: string
+  email: string
+  name: string
+  phone?: string
+  location?: string
+  linkedin?: string
+  website?: string
+}
 
 type EditSection = "personal" | "education" | "work-experience" | null
 
 export default function ProfilePage() {
-  const [showToRecruiters, setShowToRecruiters] = useState(true)
+  const { data: session, status } = useSession()
   const [activeSection, setActiveSection] = useState("personal")
   const [activeTab, setActiveTab] = useState("profile")
   const [primaryResumeId, setPrimaryResumeId] = useState("resume-1")
@@ -70,151 +92,288 @@ export default function ProfilePage() {
   // Add this with your other state declarations (around line 35-40)
   const [showUploadModal, setShowUploadModal] = useState(false)
 
-  // Add this with your other state declarations (around line 35)
+  // Add user profile state
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true)
 
-  // Sample resume data
-  const [resumes, setResumes] = useState([
-    {
-      id: "resume-1",
-      name: "Veeresh_Koliwad_Resume",
-      jobTitle: "Software Engineer",
-      created: "14 days ago",
-    },
-    {
-      id: "resume-2",
-      name: "Veeresh_Koliwad_Frontend",
-      jobTitle: "Frontend Developer",
-      created: "7 days ago",
-    },
-  ])
-
-  // Personal form data
+  // Update personal data to be dynamic
   const [personalData, setPersonalData] = useState({
-    firstName: "Veeresh",
-    lastName: "Koliwad",
-    email: "veeresh.koliwad@email.com",
-    phone: "+1 (555) 123-4567",
-    location: "Bangalore, Karnataka, India",
-    linkedin: "https://linkedin.com/in/veeresh-koliwad",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    location: "",
+    linkedin: "",
     website: "",
   })
 
+  // Add analysis history state with your other state declarations
+  const [analysisHistory, setAnalysisHistory] = useState<any[]>([])
+  const [isLoadingAnalyses, setIsLoadingAnalyses] = useState(false)
+
+  // Resume form data
+  const [resumes, setResumes] = useState<any[]>([])
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false)
+  const [isRefreshingResumes, setIsRefreshingResumes] = useState(false) // For upload refresh
+
   // Education form data
-  const [educationData, setEducationData] = useState([
-    {
-      id: 1,
-      institution: "Arizona State University",
-      degree: "M.S. in Computer Science",
-      startYear: "2019",
-      endYear: "2021",
-      location: "Tempe, AZ",
-      description:
-        "Specialized in Software Engineering and Data Structures. Relevant coursework: Advanced Algorithms, Database Systems, Software Architecture.",
-    },
-    {
-      id: 2,
-      institution: "RV College of Engineering",
-      degree: "B.S. in Computer Science",
-      startYear: "2015",
-      endYear: "2019",
-      location: "Bangalore, India",
-      description:
-        "Foundation in Computer Science fundamentals. Relevant coursework: Data Structures, Object-Oriented Programming, Computer Networks, Operating Systems.",
-    },
-  ])
+  const [educationData, setEducationData] = useState<any[]>([])
 
   // Work experience form data
-  const [workData, setWorkData] = useState([
-    {
-      id: 1,
-      title: "Associative Software Developer",
-      company: "SAP LABS",
-      startDate: "Jul 2021",
-      endDate: "Dec 2023",
-      location: "Bangalore, India",
-      type: "Full-Time",
-      description:
-        "Built a purchase order microservice for SAP ERP to automate manual workflows, reducing processing time by 90% for 5K+ monthly orders.\n\nMigrated legacy applications to SAP Cloud, cutting infrastructure costs by 20% and improving scalability.\n\nOptimized API response time by 30% using Redis caching, improving overall user engagement by 20%.\n\nCollaborated with cross-functional teams to deliver enterprise-grade solutions serving 10K+ users.",
-    },
-    {
-      id: 2,
-      title: "Software Engineering Intern",
-      company: "Tata Consultancy Services",
-      startDate: "Jun 2020",
-      endDate: "Aug 2020",
-      location: "Mumbai, India",
-      type: "Internship",
-      description:
-        "Developed and tested web applications using Java Spring Boot and React.js.\n\nParticipated in agile development processes and code reviews with senior developers.\n\nContributed to documentation and testing procedures for client-facing applications.",
-    },
-  ])
+  const [workData, setWorkData] = useState<any[]>([])
 
   // Update your useEffect or wherever you fetch data
   useEffect(() => {
+    const handleScroll = () => {
+      const sections = [
+        { id: 'personal', ref: personalRef },
+        { id: 'education', ref: educationRef },
+        { id: 'work-experience', ref: workExperienceRef }
+      ]
+
+      const scrollPosition = window.scrollY + 200 // Offset for sticky header
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i]
+        if (section.ref.current) {
+          const offsetTop = section.ref.current.offsetTop
+          if (scrollPosition >= offsetTop) {
+            setActiveSection(section.id)
+            break
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Update the useEffect for loading data
+  useEffect(() => {
     const loadProfileData = async () => {
+      if (status === "loading") return
+
+      if (!session) {
+        router.push('/auth/signin')
+        return
+      }
+
       setIsLoadingProfile(true)
+      setIsLoadingUserData(true)
+      setIsLoadingResumes(true)
+
       try {
-        // Fetch all your data here
+        // Fetch user profile and resumes
         const [profileData, resumesData] = await Promise.all([
           fetchUserProfile(),
           fetchResumes()
         ])
 
+        // Set user profile data
+        if (profileData) {
+          setUserProfile(profileData)
 
-        // Transform and set resumes
-        const transformedResumes = resumesData.map((resume: any) => ({
+          // Parse the name from DB
+          const nameParts = (profileData.name || '').split(' ')
+          setPersonalData({
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            email: profileData.email || '',
+            phone: profileData.phone || '',
+            location: profileData.location || '',
+            linkedin: profileData.linkedin || '',
+            website: profileData.website || ''
+          })
+        } else {
+          // Fallback to session data
+          const [firstName, ...lastNameParts] = (session.user?.name || '').split(' ')
+          setPersonalData(prev => ({
+            ...prev,
+            firstName: firstName || '',
+            lastName: lastNameParts.join(' ') || '',
+            email: session.user?.email || '',
+          }))
+        }
+
+        // Fix the date formatting
+        const transformedResumes = resumesData.map((resume: any, index: number) => ({
           id: resume.resume_id,
           name: resume.name || resume.file_name,
-          jobTitle: "Software Engineer",
-          created: new Date(resume.created_at).toLocaleDateString(),
+          jobTitle: resume.job_title || "Software Engineer", // Use stored job title
+          created: formatDate(resume.created_at), // Fix the date
+          isPrimary: resume.is_primary || false // First resume is primary
         }))
         setResumes(transformedResumes)
 
       } catch (error) {
         console.error("Failed to load profile data:", error)
+
+        // Fallback to session data if API fails
+        if (session.user) {
+          const [firstName, ...lastNameParts] = (session.user.name || '').split(' ')
+          setPersonalData(prev => ({
+            ...prev,
+            firstName: firstName || '',
+            lastName: lastNameParts.join(' ') || '',
+            email: session.user.email || '',
+          }))
+        }
       } finally {
         setIsLoadingProfile(false)
+        setIsLoadingUserData(false)
+        setIsLoadingResumes(false)
       }
     }
 
     loadProfileData()
-  }, [])
+  }, [status, session, router])
 
-  const scrollToSection = (sectionId: string) => {
-    const refs = {
-      personal: personalRef,
-      education: educationRef,
-      "work-experience": workExperienceRef,
+  // Fetch analysis history
+  useEffect(() => {
+    const loadAnalyses = async () => {
+      if (activeTab === "analysis-history" && session) {
+        setIsLoadingAnalyses(true)
+        try {
+          const analyses = await fetchAnalyses()
+
+          // Transform the data to match your UI needs
+          const transformedAnalyses = analyses
+            .filter((analysis: any) => analysis.match_after_enhancement) // Only show enhanced analyses
+            .map((analysis: any) => ({
+              id: analysis.analysis_id,
+              jobTitle: analysis.job_title,
+              company: analysis.company_name,
+              matchScore: analysis.match_after_enhancement,
+              date: getRelativeTime(analysis.enhancement_generated_at || analysis.created_at),
+              status: analysis.status || 'completed'
+            }))
+            .sort((a: any, b: any) => {
+              // Sort by date, most recent first
+              const dateA = new Date(a.enhancement_generated_at || a.created_at)
+              const dateB = new Date(b.enhancement_generated_at || b.created_at)
+              return dateB.getTime() - dateA.getTime()
+            })
+
+          setAnalysisHistory(transformedAnalyses)
+        } catch (error) {
+          console.error("Failed to load analyses:", error)
+        } finally {
+          setIsLoadingAnalyses(false)
+        }
+      }
     }
 
-    const targetRef = refs[sectionId as keyof typeof refs]
-    if (targetRef.current) {
-      const yOffset = -140 // Account for sticky header + navigation menu
-      const y = targetRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset
-      window.scrollTo({ top: y, behavior: "smooth" })
+    loadAnalyses()
+  }, [activeTab, session])
+
+
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return text.substring(0, maxLength) + "...";
+  };
+
+  // Add this helper function
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return 'Recently uploaded'
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return 'Recently uploaded'
     }
   }
 
-  const handleMakePrimary = (resumeId: string) => {
-    setPrimaryResumeId(resumeId)
+  // Helper function to format relative time
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMs = now.getTime() - date.getTime()
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24)) + 1 // +1 to include today
+
+    if (diffInDays === 0) return 'Today'
+    if (diffInDays === 1) return '1 day ago'
+    if (diffInDays < 7) return `${diffInDays} days ago`
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
+    return `${Math.floor(diffInDays / 30)} months ago`
   }
 
-  const handleDeleteResume = (resumeId: string) => {
-    setResumes(resumes.filter((resume) => resume.id !== resumeId))
-    if (primaryResumeId === resumeId) {
-      setPrimaryResumeId(resumes.find((r) => r.id !== resumeId)?.id || "")
+  // Helper functions for user data
+  const getUserInitials = () => {
+    // Prioritize DB data
+    const name = userProfile?.name || session?.user?.name || ''
+
+    if (name) {
+      return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    return 'U'
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return '#22c55e' // green
+    if (score >= 60) return '#f59e0b' // amber
+    return '#ef4444' // red
+  }
+
+  // Update handleDeleteResume to show loading
+  const handleDeleteResume = async (resumeId: string) => {
+    const resume = resumes.find(r => r.id === resumeId)
+    if (resume?.isPrimary) {
+      alert("Cannot delete primary resume. Please select another resume as primary first.")
+      return
+    }
+
+    setIsRefreshingResumes(true) // Show loading
+
+    try {
+      await deleteResume(resumeId)
+      // Refresh resumes list
+      const resumesData = await fetchResumes()
+      const transformedResumes = resumesData.map((resume: any, index: number) => ({
+        id: resume.resume_id,
+        name: resume.name || resume.file_name,
+        jobTitle: resume.job_title || "Software Engineer",
+        created: formatDate(resume.created_at),
+        isPrimary: resume.is_primary || false
+      }))
+      setResumes(transformedResumes)
+    } catch (error) {
+      console.error("Failed to delete resume:", error)
+    } finally {
+      setIsRefreshingResumes(false) // Hide loading
     }
   }
 
-  const handleExportResume = (resumeId: string) => {
-    // Handle resume export/download logic here
-    console.log("Export resume:", resumeId)
-  }
+  // Update handleMakePrimary to show loading
+  const handleMakePrimary = async (resumeId: string) => {
+    setIsRefreshingResumes(true) // Show loading
 
-  const handlePreviewResume = (resumeId: string) => {
-    // Handle resume preview logic here
-    console.log("Preview resume:", resumeId)
+    try {
+      await updateResumePrimary(resumeId)
+      // Update local state
+      setResumes(resumes.map(resume => ({
+        ...resume,
+        isPrimary: resume.id === resumeId
+      })))
+    } catch (error) {
+      console.error("Failed to update primary resume:", error)
+    } finally {
+      setIsRefreshingResumes(false) // Hide loading
+    }
   }
 
   const handleEditResume = (resumeId: string) => {
@@ -226,16 +385,33 @@ export default function ProfilePage() {
     }
   }
 
-  const handleSaveEdit = () => {
-    if (editingResume) {
-      setResumes(
-        resumes.map((resume) =>
-          resume.id === editingResume ? { ...resume, name: editForm.name, jobTitle: editForm.jobTitle } : resume,
-        ),
-      )
-      setEditingResume(null)
-      setEditForm({ name: "", jobTitle: "" })
-      setIsEditModalOpen(false)
+  // Update handleSaveEdit to show loading
+  const handleSaveEdit = async () => {
+    if (editingResume && editForm.name.trim() && editForm.jobTitle.trim()) {
+      setIsRefreshingResumes(true) // Show loading
+
+      try {
+        await updateResume(editingResume, editForm.name, editForm.jobTitle)
+
+        // Update local state
+        setResumes(
+          resumes.map((resume) =>
+            resume.id === editingResume
+              ? { ...resume, name: editForm.name, jobTitle: editForm.jobTitle }
+              : resume
+          )
+        )
+
+        // Reset form and close modal
+        setEditingResume(null)
+        setEditForm({ name: "", jobTitle: "" })
+        setIsEditModalOpen(false)
+
+      } catch (error) {
+        console.error("Failed to update resume:", error)
+      } finally {
+        setIsRefreshingResumes(false) // Hide loading
+      }
     }
   }
 
@@ -245,17 +421,40 @@ export default function ProfilePage() {
     setIsEditModalOpen(false)
   }
 
+  const getUserFullName = () => {
+    return userProfile?.name || session?.user?.name || 'User'
+  }
+
+  const getUserEmail = () => {
+    return userProfile?.email || session?.user?.email || ''
+  }
+
   const handleSignOut = () => {
-    // Handle sign out logic here
-    router.push("/")
+    signOut({ callbackUrl: '/' })
   }
 
   const handleEditSection = (section: EditSection) => {
     setEditingSection(section)
   }
 
-  const handleSaveSection = () => {
-    // Save logic would go here
+  const handleSaveSection = async () => {
+    if (editingSection === "personal") {
+      try {
+        const updatedProfile = await updateUserProfile(personalData)
+
+        // Now TypeScript knows the type of 'prev'
+        setUserProfile(prev => ({
+          ...prev,
+          ...updatedProfile,
+          name: `${personalData.firstName} ${personalData.lastName}`.trim()
+        }))
+
+        setEditingSection(null)
+      } catch (error) {
+        console.error("Failed to update profile:", error)
+      }
+    }
+
     setEditingSection(null)
   }
 
@@ -587,27 +786,25 @@ export default function ProfilePage() {
     )
   }
 
-  if (isLoadingProfile) {
+  // Update the loading condition
+  if (status === "loading" || isLoadingProfile || isLoadingUserData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Persistent Header */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              {/* Left side - Logo and Navigation */}
               <div className="flex items-center space-x-10">
-                {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
+                <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
                   <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                     <Brain className="h-5 w-5 text-white" />
                   </div>
                   LexIQ
                 </Link>
-
-                {/* Primary Navigation */}
                 <nav className="flex items-center space-x-8">
+
+                  {/* FUNCTIONAL LINKS - Not skeletons */}
                   <Link
-                    href={lastAnalysisPage}
+                    href="/dashboard"
                     className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
                   >
                     <BarChart3 className="w-5 h-5" />
@@ -615,7 +812,7 @@ export default function ProfilePage() {
                   </Link>
                   <Link
                     href="/profile"
-                    className="flex items-center space-x-2 text-base font-semibold text-black relative pb-4 border-b-2 border-[#FF5722] transition-colors"
+                    className="flex items-center space-x-2 text-base font-semibold text-black border-b-2 border-[#FF5722] transition-colors pb-4"
                   >
                     <User className="w-5 h-5" />
                     <span>Profile</span>
@@ -623,43 +820,12 @@ export default function ProfilePage() {
                 </nav>
               </div>
 
-              {/* Right side - User Menu */}
+              {/* ONLY the user avatar should be skeleton during loading */}
               <div className="flex items-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors">
-                      <div className="w-8 h-8 bg-[#FF5722] rounded-full flex items-center justify-center text-white font-medium">
-                        VK
-                      </div>
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <div className="px-3 py-2">
-                      <p className="text-sm font-medium text-gray-900">Veeresh Koliwad</p>
-                      <p className="text-xs text-gray-500">veeresh.koliwad@email.com</p>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
-                        <User className="w-4 h-4" />
-                        <span>Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="flex items-center space-x-2 cursor-pointer">
-                      <Settings className="w-4 h-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handleSignOut}
-                      className="flex items-center space-x-2 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Sign Out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </div>
               </div>
             </div>
           </div>
@@ -672,20 +838,35 @@ export default function ProfilePage() {
               <Card className="p-6">
                 <div className="animate-pulse">
                   <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4"></div>
-                  <div className="h-6 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3 mx-auto"></div>
+
+                  {/* Navigation skeleton */}
+                  <div className="space-y-2 mt-8">
+                    <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
                 </div>
               </Card>
             </div>
 
             {/* Skeleton for main content */}
             <div className="flex-1">
+
+              {/* Content skeleton */}
               <Card>
                 <CardContent className="p-6">
                   <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="h-10 bg-gray-200 rounded"></div>
+                      <div className="h-10 bg-gray-200 rounded"></div>
+                    </div>
                     <div className="h-10 bg-gray-200 rounded"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="h-10 bg-gray-200 rounded"></div>
+                      <div className="h-10 bg-gray-200 rounded"></div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -705,7 +886,7 @@ export default function ProfilePage() {
             {/* Left side - Logo and Navigation */}
             <div className="flex items-center space-x-10">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
+              <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
                 <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                   <Brain className="h-5 w-5 text-white" />
                 </div>
@@ -737,15 +918,15 @@ export default function ProfilePage() {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors">
                     <div className="w-8 h-8 bg-[#FF5722] rounded-full flex items-center justify-center text-white font-medium">
-                      VK
+                      {getUserInitials()}
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-gray-900">Veeresh Koliwad</p>
-                    <p className="text-xs text-gray-500">veeresh.koliwad@email.com</p>
+                    <p className="text-sm font-medium text-gray-900">{getUserFullName()}</p>
+                    <p className="text-xs text-gray-500">{getUserEmail()}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -775,18 +956,18 @@ export default function ProfilePage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-8">
+
           {/* Left Sidebar - Now Sticky */}
           <div className="w-72 flex-shrink-0">
             <div className="sticky top-24">
               <Card className="p-6">
+
                 {/* User Avatar and Info */}
                 <div className="text-center mb-8">
                   <div className="w-24 h-24 bg-[#FF5722] rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
-                    VK
+                    {getUserInitials()}
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Veeresh Koliwad</h2>
-                  <p className="text-gray-600 text-sm mb-4">Software Developer</p>
-                  <p className="text-gray-500 text-xs">Previously @ SAP LABS</p>
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">{getUserFullName()}</h2>
                 </div>
 
                 {/* Navigation Tabs */}
@@ -808,6 +989,14 @@ export default function ProfilePage() {
                     <FileText className="w-5 h-5" />
                     <span className="font-medium">Resume</span>
                   </button>
+                  <button
+                    onClick={() => setActiveTab("analysis-history")}
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "analysis-history" ? "bg-[#FF5722] text-white" : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                  >
+                    <BarChart3 className="w-5 h-5" />
+                    <span className="font-medium">Analysis History</span>
+                  </button>
                 </div>
               </Card>
             </div>
@@ -817,8 +1006,9 @@ export default function ProfilePage() {
           <div className="flex-1">
             {activeTab === "profile" && (
               <div className="space-y-6">
-                {/* Sticky Horizontal Navigation */}
-                <div className="sticky top-16 z-40 bg-white/95 backdrop-blur-sm rounded-lg border border-gray-200 p-4 shadow-sm mb-6">
+
+                {/* Commented menu bar - uncomment when Education and Work Experience sections are ready */}
+                {/* <div className="sticky top-16 z-40 bg-white/95 backdrop-blur-sm rounded-lg border border-gray-200 p-4 shadow-sm mb-6">
                   <nav className="flex space-x-8">
                     <button
                       onClick={() => scrollToSection("personal")}
@@ -851,7 +1041,7 @@ export default function ProfilePage() {
                       )}
                     </button>
                   </nav>
-                </div>
+                </div> */}
 
                 {/* Personal Section - Compact Layout */}
                 <div ref={personalRef} className="scroll-mt-32">
@@ -921,8 +1111,8 @@ export default function ProfilePage() {
                   </Card>
                 </div>
 
-                {/* Education Section */}
-                <div ref={educationRef} className="scroll-mt-32">
+                {/* Commented out Education Section - can uncomment later */}
+                {/* <div ref={educationRef} className="scroll-mt-32">
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                       <CardTitle className="text-xl font-bold">Education</CardTitle>
@@ -964,10 +1154,10 @@ export default function ProfilePage() {
                       ))}
                     </CardContent>
                   </Card>
-                </div>
+                </div> */}
 
-                {/* Work Experience Section */}
-                <div ref={workExperienceRef} className="scroll-mt-32">
+                {/* Commented out Work Experience Section - can uncomment later */}
+                {/* <div ref={workExperienceRef} className="scroll-mt-32">
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                       <CardTitle className="text-xl font-bold">Work Experience</CardTitle>
@@ -1021,7 +1211,7 @@ export default function ProfilePage() {
                       ))}
                     </CardContent>
                   </Card>
-                </div>
+                </div> */}
               </div>
             )}
 
@@ -1037,109 +1227,175 @@ export default function ProfilePage() {
                           Manage your resume versions and optimize for different roles
                         </p>
                       </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div>
+                              <Button
+                                onClick={() => setShowUploadModal(true)}
+                                className="bg-[#FF5722] hover:bg-[#E64A19] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={resumes.length >= 5 || isLoadingResumes || isRefreshingResumes}
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Resume
+                              </Button>
+                            </div>
+                          </TooltipTrigger>
+                          {resumes.length >= 5 && (
+                            <TooltipContent>
+                              <div className="flex items-center space-x-2">
+                                <Info className="w-4 h-4 flex-shrink-0" />
+                                <p>You have used all 5 resume slots. Delete a resume before uploading a new one.</p>
+                              </div>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </CardHeader>
+                </Card>
+
+
+
+                {/* --- UPDATED: Conditional Rendering --- */}
+                {/* If resumes are loading or refreshing, show the skeleton */}
+                {isLoadingResumes || isRefreshingResumes ? (
+                  <ResumeSkeleton />
+                ) : resumes.length === 0 ? (
+                  /* Empty State */
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileText className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No resumes uploaded yet</h3>
+                      <p className="text-gray-600 mb-6">
+                        Upload your first resume to get started with AI-powered job matching
+                      </p>
                       <Button
                         onClick={() => setShowUploadModal(true)}
                         className="bg-[#FF5722] hover:bg-[#E64A19] text-white"
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Resume
+                        Upload Resume
                       </Button>
-                    </div>
-                  </CardHeader>
-                </Card>
-
-                {/* Resume Table */}
-                <Card>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
-                          <tr>
-                            <th className="text-left p-4 font-medium text-gray-900">Resume</th>
-                            <th className="text-left p-4 font-medium text-gray-900">Job Title</th>
-                            <th className="text-left p-4 font-medium text-gray-900">Created</th>
-                            <th className="w-20 p-4"></th>
-                          </tr>
-                          <tr>
-                            <td colSpan={4} className="px-4 py-2 bg-blue-50 border-b">
-                              <div className="flex items-center space-x-2 text-sm text-blue-800">
-                                <Info className="w-4 h-4 flex-shrink-0" />
-                                <span>You can upload and manage a maximum of 5 resumes.</span>
-                              </div>
-                            </td>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {resumes.map((resume) => (
-                            <tr key={resume.id} className="border-b hover:bg-gray-50">
-                              <td className="p-4">
-                                <div className="relative inline-block">
-                                  <span className="font-medium">{resume.name}</span>
-                                  {primaryResumeId === resume.id && (
-                                    <span className="absolute -top-1 left-full ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full border border-green-200">
-                                      Default
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-4 text-gray-600">{resume.jobTitle}</td>
-                              <td className="p-4 text-gray-600">{resume.created}</td>
-                              <td className="p-4">
-                                <div className="flex items-center space-x-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handlePreviewResume(resume.id)}
-                                    className="p-1 hover:bg-gray-100 rounded"
-                                  >
-                                    <Eye className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-                                  </Button>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="p-1 hover:bg-gray-100 rounded">
-                                        <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() => handleEditResume(resume.id)}
-                                        className="flex items-center space-x-2"
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                        <span>Edit</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleExportResume(resume.id)}
-                                        className="flex items-center space-x-2"
-                                      >
-                                        <Download className="w-4 h-4" />
-                                        <span>Export</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleMakePrimary(resume.id)}
-                                        className="flex items-center space-x-2"
-                                      >
-                                        <Star className="w-4 h-4" />
-                                        <span>Make Primary</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleDeleteResume(resume.id)}
-                                        className="flex items-center space-x-2 text-red-600 hover:text-red-700"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                        <span>Delete</span>
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  // Otherwise, show the actual resume table
+                  <Card>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b">
+                            <tr>
+                              <th className="text-left p-4 font-medium text-gray-900">Resume</th>
+                              <th className="text-center p-4 font-medium text-gray-900">Job Title</th>
+                              <th className="text-left p-4 font-medium text-gray-900">Created</th>
+                              <th className="w-20 p-4"></th>
+                            </tr>
+                            <tr>
+                              <td colSpan={4} className="px-4 py-2 bg-blue-50 border-b">
+                                <div className="flex items-center space-x-2 text-sm text-blue-800">
+                                  <Info className="w-4 h-4 flex-shrink-0" />
+                                  <span>You can upload and manage a maximum of 5 resumes.</span>
                                 </div>
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
+                          </thead>
+                          <tbody>
+                            {resumes.map((resume) => (
+                              <tr key={resume.id} className="border-b hover:bg-gray-50">
+                                <td className="p-4">
+                                  <div className="relative inline-block">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="font-medium">
+                                            {truncateText(resume.name, 25)}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{resume.name}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    {resume.isPrimary && (
+                                      <span className="absolute -top-1 left-full ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full border border-green-200">
+                                        Primary
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-gray-600 text-center">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="p-4 text-gray-600">
+                                          {truncateText(resume.jobTitle, 25)}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{resume.jobTitle}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </td>
+                                <td className="p-4 text-gray-600">{resume.created}</td>
+                                <td className="p-4">
+                                  <div className="flex items-center space-x-2">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="p-1 hover:bg-gray-100 rounded">
+                                          <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() => handleEditResume(resume.id)}
+                                          className="flex items-center space-x-2"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                          <span>Edit</span>
+                                        </DropdownMenuItem>
+
+                                        {!resume.isPrimary && (
+                                          <DropdownMenuItem
+                                            onClick={() => handleMakePrimary(resume.id)}
+                                            className="flex items-center space-x-2"
+                                          >
+                                            <Star className="w-4 h-4" />
+                                            <span>Make Primary</span>
+                                          </DropdownMenuItem>
+                                        )}
+                                        <DropdownMenuItem
+                                          onClick={() => resume.isPrimary ? null : handleDeleteResume(resume.id)}
+                                          className={`flex items-center space-x-2 ${resume.isPrimary
+                                            ? 'text-gray-400 cursor-not-allowed'
+                                            : 'text-red-600 hover:text-red-700'
+                                            }`}
+                                          disabled={resume.isPrimary}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                          <span className="flex items-center gap-1">
+                                            Delete
+                                            {resume.isPrimary && (
+                                              <span className="text-xs text-gray-500">(Can't delete primary)</span>
+                                            )}
+                                          </span>
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Edit Resume Modal */}
                 <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
@@ -1171,7 +1427,11 @@ export default function ProfilePage() {
                       <Button variant="outline" onClick={handleCancelEdit}>
                         Cancel
                       </Button>
-                      <Button onClick={handleSaveEdit} className="bg-[#FF5722] hover:bg-[#E64A19] text-white">
+                      <Button
+                        onClick={handleSaveEdit}
+                        className="bg-[#FF5722] hover:bg-[#E64A19] text-white"
+                        disabled={!editForm.name.trim() || !editForm.jobTitle.trim()}
+                      >
                         Save Changes
                       </Button>
                     </DialogFooter>
@@ -1188,29 +1448,131 @@ export default function ProfilePage() {
                       <ResumeUpload
                         onUploadSuccess={async () => {
                           setShowUploadModal(false)
-                          // Refresh the resumes list
+                          setIsRefreshingResumes(true) // Show loading while refreshing
+
                           try {
                             const resumesData = await fetchResumes()
-                            const transformedResumes = resumesData.map((resume: any) => ({
+                            const transformedResumes = resumesData.map((resume: any, index: number) => ({
                               id: resume.resume_id,
                               name: resume.name || resume.file_name,
-                              jobTitle: "Software Engineer",
-                              created: new Date(resume.created_at).toLocaleDateString(),
-                              isPrimary: resume.is_primary
+                              jobTitle: resume.job_title || "Software Engineer",
+                              created: formatDate(resume.created_at),
+                              isPrimary: resume.is_primary || false
                             }))
                             setResumes(transformedResumes)
                           } catch (error) {
                             console.error("Failed to refresh resumes:", error)
+                          } finally {
+                            setIsRefreshingResumes(false) // Hide loading
                           }
                         }}
                         onUploadError={(error) => {
                           console.error("Upload error:", error)
-                          // You could show a toast notification here
+                          setIsRefreshingResumes(false) // Hide loading on error too
                         }}
                       />
                     </div>
                   </DialogContent>
                 </Dialog>
+              </div>
+            )}
+
+            {activeTab === "analysis-history" && (
+              <div className="space-y-6">
+                {/* Analysis History Header */}
+                <Card>
+                  <CardHeader>
+                    <div>
+                      <CardTitle className="text-2xl font-bold">Analysis History</CardTitle>
+                      <p className="text-gray-600 mt-1">
+                        View all your past resume analyses and track your progress
+                      </p>
+                    </div>
+                  </CardHeader>
+                </Card>
+
+                {/* Loading State */}
+                {isLoadingAnalyses ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Card key={i}>
+                        <CardContent className="p-6">
+                          <div className="animate-pulse">
+                            <div className="h-6 bg-gray-200 rounded w-1/3 mb-3"></div>
+                            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {/* Analysis History List */}
+                    <div className="space-y-4">
+                      {analysisHistory.map((analysis) => (
+                        <Card
+                          key={analysis.id}
+                          className="hover:shadow-sm transition-shadow cursor-pointer"
+                          onClick={() => {
+                            // Navigate to analysis results if you want
+                            // router.push(`/analysis-results/${analysis.id}`)
+                          }}
+                        >
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h3 className="text-lg font-semibold text-gray-900">
+                                    {analysis.jobTitle}
+                                  </h3>
+                                  <div className={`px-4 py-2 rounded-full text-lg font-bold ${analysis.matchScore >= 80 ? 'bg-green-100 text-green-800' :
+                                    analysis.matchScore >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-red-100 text-red-800'
+                                    }`}>
+                                    {analysis.matchScore}%
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                  <div className="flex items-center space-x-1">
+                                    <Building className="w-4 h-4" />
+                                    <span>{analysis.company}</span>
+                                  </div>
+                                  <span>•</span>
+                                  <div className="flex items-center space-x-1">
+                                    <Calendar className="w-4 h-4" />
+                                    <span>{analysis.date}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    {/* Empty State */}
+                    {analysisHistory.length === 0 && (
+                      <Card>
+                        <CardContent className="p-12 text-center">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <BarChart3 className="w-8 h-8 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">No enhanced analyses yet</h3>
+                          <p className="text-gray-600 mb-6">
+                            Complete the "Tailor Your Resume" step after analyzing a job to see your enhanced match scores here.
+                          </p>
+                          <Button
+                            onClick={() => router.push('/dashboard')}
+                            className="bg-[#FF5722] hover:bg-[#E64A19] text-white"
+                          >
+                            Start Your First Analysis
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>

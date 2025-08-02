@@ -110,8 +110,11 @@ export default function AnalysisResultsPage() {
 
   // Get user initials for avatar
   const getUserInitials = () => {
-    if (userProfile?.name) {
-      return userProfile.name
+    // Prioritize DB data
+    const name = userProfile?.name || session?.user?.name || ''
+
+    if (name) {
+      return name
         .split(' ')
         .map(n => n[0])
         .join('')
@@ -134,13 +137,87 @@ export default function AnalysisResultsPage() {
     return 'Needs Improvement'
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#FF5722] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading analysis results...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-10">
+                <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
+                  <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
+                    <Brain className="h-5 w-5 text-white" />
+                  </div>
+                  LexIQ
+                </Link>
+                <nav className="flex items-center space-x-8">
+
+                  {/* FUNCTIONAL LINKS - Not skeletons */}
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center space-x-2 text-base font-semibold text-black border-b-2 border-[#FF5722] transition-colors pb-4"
+                  >
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Analysis</span>
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
+                  >
+                    <User className="w-5 h-5" />
+                    <span>Profile</span>
+                  </Link>
+                </nav>
+              </div>
+
+              {/* ONLY the user avatar should be skeleton during loading */}
+              <div className="flex items-center">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content Skeleton */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back Button Skeleton */}
+          <div className="mb-6">
+            <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* Page Title Skeleton */}
+          <div className="mb-8">
+            <div className="h-8 w-96 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* Match Summary Card Skeleton */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8">
+            <div className="flex items-start space-x-8">
+              {/* Score Circle Skeleton */}
+              <div className="relative">
+                <div className="w-32 h-32 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="w-12 h-8 bg-gray-300 rounded animate-pulse mb-1"></div>
+                  <div className="w-16 h-4 bg-gray-300 rounded animate-pulse"></div>
+                </div>
+              </div>
+              {/* Summary Text Skeleton */}
+              <div className="flex-1">
+                <div className="h-7 w-80 bg-gray-200 rounded animate-pulse mb-3"></div>
+                <div className="space-y-2 mb-6">
+                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-5/6 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-10 w-40 bg-[#FF5722] opacity-30 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
@@ -158,8 +235,8 @@ export default function AnalysisResultsPage() {
   const matchedExperiences = analysisData.relationship_map.relationship_map.matched_experience_to_responsibilities
 
   // Get job title and company from the request data stored in session
-  const jobTitle = analysisData.job_description.content.match(/Software Engineer III|Senior Software Engineer/)?.[0] || 'Software Engineer'
-  const company = analysisData.job_description.entities.companies[0] || 'Company'
+  const jobTitle = analysisData.job_title
+  const company = analysisData.company_name || 'Company'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -168,7 +245,7 @@ export default function AnalysisResultsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-10">
-              <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
+              <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
                 <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                   <Brain className="h-5 w-5 text-white" />
                 </div>
@@ -205,8 +282,8 @@ export default function AnalysisResultsPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'User'}</p>
-                    <p className="text-xs text-gray-500">{session?.user?.email}</p>
+                    <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
+                    <p className="text-xs text-gray-500">{userProfile?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -257,30 +334,40 @@ export default function AnalysisResultsPage() {
           <CardContent className="p-8">
             <div className="flex items-start space-x-8">
               {/* Score Circle */}
-              <div className="relative">
-                <svg className="w-32 h-32 transform -rotate-90">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="#e5e7eb"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke={getScoreColor(matchPercentage)}
-                    strokeWidth="12"
-                    fill="none"
-                    strokeDasharray={`${(matchPercentage / 100) * 352} 352`}
-                    className="transition-all duration-1000"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold text-gray-900">{matchPercentage}%</span>
-                  <span className="text-sm text-gray-600">Match Score</span>
+              <div className="flex flex-col items-center"> {/* Add flex-col and items-center */}
+                <div className="relative">
+                  <svg className="w-32 h-32 transform -rotate-90">
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      stroke="#e5e7eb"
+                      strokeWidth="12"
+                      fill="none"
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      stroke={getScoreColor(matchPercentage)}
+                      strokeWidth="12"
+                      fill="none"
+                      strokeDasharray={`${(matchPercentage / 100) * 352} 352`}
+                      className="transition-all duration-1000"
+                    />
+                  </svg>
+
+                  {/* Only the percentage inside the circle */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <span className="text-3xl font-bold text-gray-900">
+                      {matchPercentage}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Label below the circle */}
+                <div className="mt-3 text-center">
+                  <span className="text-sm font-medium text-gray-700">Match Score</span>
                 </div>
               </div>
 
@@ -345,19 +432,26 @@ export default function AnalysisResultsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-3">
-                {gaps.slice(0, 5).map((gap, index) => (
-                  <li key={index} className="flex items-start space-x-3">
-                    <div className="w-1.5 h-1.5 bg-amber-600 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700">
-                      {gap.jd_requirement}
-                      {gap.type === 'experience_gap' && (
-                        <span className="text-xs text-amber-600 ml-2">(Experience)</span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {gaps && gaps.length > 0 ? (
+                <ul className="space-y-3">
+                  {gaps.slice(0, 5).map((gap, index) => (
+                    <li key={index} className="flex items-start space-x-3">
+                      <div className="w-1.5 h-1.5 bg-amber-600 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700">
+                        {gap.jd_requirement}
+                        {gap.type === 'experience_gap' && (
+                          <span className="text-xs text-amber-600 ml-2">(Experience)</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex items-center space-x-3 text-gray-600 py-4">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span>No critical gaps identified. Your profile aligns well with the job requirements!</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

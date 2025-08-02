@@ -5,6 +5,7 @@ import uuid, json
 import fitz # PyMuPDF for PDF text extraction
 import asyncio # For async operations - parallel processing
 import io
+import time
 from typing import Any, Dict, Optional
 
 # Add imports for making HTTP requests and handling S3
@@ -118,6 +119,7 @@ class DocumentAnalysisOrchestrator:
             raise
 
     # --- REFACTORED: Main orchestration method for parallel running of the agents---
+    # Need to add console logging to track the response times of each agent
     async def orchestrate_initial_analysis(
         self,
         user_id: str,
@@ -132,6 +134,11 @@ class DocumentAnalysisOrchestrator:
         """
         self.logger.info(f"Starting orchestration for user {user_id}")
         final_results = {}
+        
+        # --- PHASE 1: Resume Processing ---
+        response_time = time.time()
+        print(f"\n📄 PHASE 1: RESUME PROCESSING")
+        print(f"{'─'*40}")
 
         # --- PHASE 1 & 2: Process Resume and JD in Parallel ---
         # Get resume details first
@@ -147,9 +154,15 @@ class DocumentAnalysisOrchestrator:
         # Download the raw binary content from S3
         resume_binary_content = self._download_resume_from_s3(resume_s3_bucket, resume_s3_key)
 
+        print("Resume details fetched successfully. Time: ",  response_time)
+
         # --- NEW: Extract text from the binary content ---
         resume_content = self._extract_text_from_content(resume_binary_content, resume_mime_type)
 
+        # Process resume and JD in parallel
+        print(f"\n🔄 PHASE 2: PARALLEL PROCESSING")
+        print(f"{'─'*40}")
+        
         # Now that we have the resume content, proceed with analysis
         resume_task = asyncio.create_task(self.process_document_for_analysis(
             user_id=user_id,
@@ -181,6 +194,8 @@ class DocumentAnalysisOrchestrator:
         # Run both tasks concurrently
         resume_context, jd_context = await asyncio.gather(resume_task, jd_task)
         
+        print("parallel processing completed. Time: ", response_time)
+        
         final_results["resume_classification"] = resume_context.previous_results[AgentType.CLASSIFIER].data
         final_results["resume_entities"] = resume_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
         self.logger.info(f"Resume {resume_file_id} processed: {final_results['resume_classification']['primary_classification']}")
@@ -195,16 +210,51 @@ class DocumentAnalysisOrchestrator:
             'content': jd_content,
             'entities': jd_entity_data.get("entities", {})
         }
-
+        
         # --- PHASE 3: Cross-Document Analysis ---
-        relationship_map_result = await self._run_agent(AgentType.RELATIONSHIP_MAPPER, resume_context)
+        print(f"\n🔗 PHASE 3: CROSS-DOCUMENT ANALYSIS")
+        print(f"{'─'*40}")
+        # --- OPTIMIZATION 1: Create a lean context for the Relationship Mapper ---
+        # Instead of sending the full original documents again, we only send the extracted entities.
+        # This drastically reduces the token count.
+        mapper_context = DocumentContext(
+            user_id=user_id,
+            file_id=resume_context.file_id,
+            content="", # We no longer need the raw content
+            file_type="application/json",
+            metadata={
+                'resume_entities': final_results["resume_entities"]["entities"],
+                'jd_entities': final_results["jd_entities"]["entities"]
+            },
+            previous_results={}
+        )
+        relationship_map_result = await self._run_agent(AgentType.RELATIONSHIP_MAPPER, mapper_context)
         final_results["relationship_map"] = relationship_map_result.data
-
-        job_match_result = await self._run_agent(AgentType.JOB_MATCHER, resume_context)
+        
+        print("Relationship mapping completed. Time: ", response_time)
+        
+        
+        # --- Job Matching ---
+        # --- OPTIMIZATION 2: Create a lean context for the Job Matcher ---
+        # The matcher doesn't need the full resume or JD text. It only needs the
+        # high-level map of connections that the previous agent created.
+        matcher_context = DocumentContext(
+            user_id=user_id,
+            file_id=resume_context.file_id,
+            content="", # No raw content needed
+            file_type="application/json",
+            metadata={
+                'relationship_map': final_results["relationship_map"]
+            },
+            previous_results={}
+        )
+        job_match_result = await self._run_agent(AgentType.JOB_MATCHER, matcher_context)
         final_results["job_match_analysis"] = job_match_result.data
         final_results["overall_match_percentage"] = job_match_result.data.get("overall_match_percentage")
         
         final_results["resume content"] = resume_content  # Store the resume content for later use
+        
+        print("Job matching completed. Time: ", response_time)
         
         # --- ADD THESE LINES ---
         # Add the necessary IDs and content to the final results so they can be

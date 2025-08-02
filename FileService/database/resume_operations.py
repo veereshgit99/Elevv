@@ -31,30 +31,36 @@ async def save_resume_metadata(
     file_name: str,
     mime_type: str,
     status: str = "pending_upload",
-    is_primary: bool = False
-) -> bool:
+    is_primary: bool = False,
+    job_title: str = None  # Add this parameter
+) -> None:
     """
-    Saves or updates resume metadata in the Resumes table.
+    Save resume metadata to DynamoDB
     """
     table = _get_resume_table()
+    
+    item = {
+        'resume_id': resume_id,
+        'user_id': user_id,
+        's3_path': s3_path,
+        'file_name': file_name,
+        'mime_type': mime_type,
+        'status': status,
+        'is_primary': is_primary,
+        'created_at': datetime.utcnow().isoformat(),
+        'updated_at': datetime.utcnow().isoformat()
+    }
+    
+    # Add job_title if provided
+    if job_title:
+        item['job_title'] = job_title
+    
     try:
-        # This is correct. put_item includes all attributes.
-        item = {
-            'resume_id': resume_id,
-            'user_id': user_id,
-            's3_path': s3_path,
-            'file_name': file_name,
-            'mime_type': mime_type,
-            'upload_timestamp': datetime.utcnow().isoformat(),
-            'status': status,
-            'is_primary': is_primary
-        }
         table.put_item(Item=item)
-        logger.info(f"Resume metadata saved: {resume_id} for user {user_id}")
-        return True
+        logger.info(f"Saved resume metadata for user {user_id}, resume {resume_id}")
     except ClientError as e:
-        logger.error(f"Error saving resume metadata {resume_id}: {e}", exc_info=True)
-        return False
+        logger.error(f"Error saving resume metadata: {e}")
+        raise
 
 async def get_resume_metadata(user_id: str, resume_id: str) -> Optional[Dict[str, Any]]:
     """

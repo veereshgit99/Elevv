@@ -3,7 +3,9 @@
 import { useState, useRef } from 'react'
 import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { authenticatedFetch } from '@/utils/api'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { getResumeUploadUrl } from '@/utils/api'  // Import the API function
 
 interface ResumeUploadProps {
     onUploadSuccess?: () => void
@@ -12,6 +14,7 @@ interface ResumeUploadProps {
 
 export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadProps) {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [jobTitle, setJobTitle] = useState('')
     const [uploading, setUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
@@ -45,10 +48,6 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
     const uploadToS3 = async (url: string, formFields: Record<string, string>, file: File) => {
         const formData = new FormData()
 
-        // Log what we're sending
-        console.log('S3 Upload URL:', url)
-        console.log('Form Fields:', formFields)
-
         // Add all the form fields from the presigned URL
         Object.entries(formFields).forEach(([key, value]) => {
             formData.append(key, value)
@@ -56,11 +55,6 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
 
         // Add the file last (important for S3)
         formData.append('file', file)
-
-        // Log FormData contents
-        for (let [key, value] of formData.entries()) {
-            console.log(key, value)
-        }
 
         // Upload directly to S3
         const response = await fetch(url, {
@@ -71,54 +65,60 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
         if (!response.ok) {
             const text = await response.text()
             console.error('S3 Response:', text)
-            throw new Error(`Failed to upload file to S3: ${response.status} ${text}`)
+            throw new Error(`Failed to upload file to S3: ${response.status}`)
         }
     }
 
     const handleUpload = async () => {
-        if (!selectedFile) return
+        // Validate both file and job title
+        if (!selectedFile) {
+            setErrorMessage('Please select a file')
+            setUploadStatus('error')
+            return
+        }
+
+        if (!jobTitle.trim()) {
+            setErrorMessage('Please enter a job title')
+            setUploadStatus('error')
+            return
+        }
 
         setUploading(true)
         setUploadStatus('uploading')
         setUploadProgress(0)
 
         try {
-            // Step 1: Get presigned URL from your backend
+            // Step 1: Get presigned URL using the API function
             setUploadProgress(10)
 
-            // Create FormData with the file
-            const formData = new FormData()
-            formData.append('file', selectedFile)
-
-            const presignedResponse = await authenticatedFetch('http://localhost:8001/resumes/upload-url', {
-                method: 'POST',
-                body: formData,
+            console.log('Getting upload URL for:', {
+                filename: selectedFile.name,
+                contentType: selectedFile.type,
+                jobTitle: jobTitle.trim()
             })
 
-            if (!presignedResponse.ok) {
-                const error = await presignedResponse.text()
-                throw new Error(error || 'Failed to get upload URL')
-            }
+            const uploadData = await getResumeUploadUrl(
+                selectedFile.name,
+                selectedFile.type,
+                jobTitle.trim()
+            )
 
-            const { resume_id, s3_upload_url, s3_form_fields } = await presignedResponse.json()
+            const { resume_id, s3_upload_url, s3_form_fields } = uploadData
 
             // Step 2: Upload file directly to S3
             setUploadProgress(50)
             await uploadToS3(s3_upload_url, s3_form_fields, selectedFile)
 
-            // Step 3: Notify backend that upload is complete (if you have this endpoint)
-            setUploadProgress(90)
-            // Note: You might need to add this endpoint to your backend
-            //await authenticatedFetch(`http://localhost:8001/resumes/${resume_id}/confirm-upload`, {
-            //    method: 'POST',
-            //})
-
+            // Step 3: Complete
             setUploadProgress(100)
             setUploadStatus('success')
+
+            console.log('Resume uploaded successfully with ID:', resume_id)
 
             // Reset after success
             setTimeout(() => {
                 setSelectedFile(null)
+                setJobTitle('')
                 setUploadStatus('idle')
                 setUploadProgress(0)
                 if (fileInputRef.current) {
@@ -146,8 +146,34 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
         }
     }
 
+    const resetForm = () => {
+        removeFile()
+        setJobTitle('')
+    }
+
     return (
-        <div className="w-full">
+        <div className="w-full space-y-6">
+            {/* Job Title Input Field */}
+            <div className="space-y-2">
+                <Label htmlFor="jobTitle" className="text-sm font-medium text-gray-700">
+                    Job Title <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                    id="jobTitle"
+                    type="text"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="e.g. Software Engineer, Product Manager, Data Analyst"
+                    className="w-full"
+                    disabled={uploading}
+                    required
+                />
+                <p className="text-xs text-gray-500">
+                    This helps categorize your resume and improves matching accuracy
+                </p>
+            </div>
+
+            {/* File Upload Area */}
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
                 <input
                     ref={fileInputRef}
@@ -214,19 +240,29 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
                         )}
 
                         {uploadStatus === 'error' && (
-                            <div className="flex items-center justify-center space-x-2 text-red-600">
-                                <AlertCircle className="w-5 h-5" />
-                                <span className="text-sm">{errorMessage}</span>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-center space-x-2 text-red-600">
+                                    <AlertCircle className="w-5 h-5" />
+                                    <span className="text-sm">{errorMessage}</span>
+                                </div>
+                                <Button
+                                    onClick={resetForm}
+                                    variant="outline"
+                                    size="sm"
+                                    className="mx-auto"
+                                >
+                                    Try Again
+                                </Button>
                             </div>
                         )}
 
                         {uploadStatus === 'idle' && (
                             <Button
                                 onClick={handleUpload}
-                                disabled={uploading}
-                                className="w-full bg-[#FF5722] hover:bg-[#E64A19] text-white"
+                                disabled={uploading || !jobTitle.trim()}
+                                className="w-full bg-[#FF5722] hover:bg-[#E64A19] text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Upload Resume
+                                {!jobTitle.trim() ? 'Enter Job Title to Upload' : 'Upload Resume'}
                             </Button>
                         )}
                     </div>

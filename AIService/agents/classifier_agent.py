@@ -65,7 +65,7 @@ class DocumentClassifierAgent(BaseAgent):
 
             response = await self.llm_model.generate_content_async(
                 [system_prompt, user_prompt],  # Pass prompts as a list
-                generation_config={"response_mime_type": "application/json"},
+                generation_config={"response_mime_type": "application/json", "temperature": 0.0, "max_output_tokens": 1024},
                 safety_settings=GEMINI_SAFETY_SETTINGS
             )
             llm_output = json.loads(response.text)

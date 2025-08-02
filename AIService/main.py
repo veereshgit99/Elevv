@@ -10,6 +10,8 @@ from services.analysis_storage import store_analysis_complete
 import logging
 import os
 import uuid
+from services.analysis_storage import update_analysis_with_enhancement
+import asyncio
 
 # Load environment variables
 from dotenv import load_dotenv  
@@ -67,6 +69,8 @@ class JobMatchRequest(BaseModel):
 class OptimizationRequest(BaseModel):
     # This model will contain all the data from the first analysis
     user_id: str
+    analysis_id: str
+    job_title: str
     resume_id: str
     resume_content: str
     job_description: Dict[str, Any]
@@ -131,19 +135,60 @@ async def analyze_application(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
     
-# --- NEW: The Second, On-Demand Endpoint ---
 @app.post("/optimize-resume")
-async def optimize_resume(request: OptimizationRequest):
+async def optimize_resume(
+    request: OptimizationRequest,
+    user_id: str = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
+):
     """
     Takes the context from an initial analysis and generates resume suggestions.
+    Updates the analysis record with the predicted match score after enhancement.
     """
-    logger.info(f"Received optimization request for user_id: {request.user_id}")
+    logger.info(f"Received optimization request for user_id: {user_id}")
+    
     try:
-        # Call the new optimization-only method
+        # Call the optimization method
         optimization_results = await orchestrator.orchestrate_resume_optimization(
             analysis_context=request.dict()
         )
-        return JSONResponse(status_code=status.HTTP_200_OK, content=optimization_results)
+        
+        # Extract the predicted match score
+        match_after_enhancement = optimization_results.get("match_after_enhancement")
+        
+        # Prepare the response immediately
+        response_data = {
+            "enhancement_suggestions": optimization_results.get("enhancement_suggestions", []),
+            "overall_feedback": optimization_results.get("overall_feedback", ""),
+            "match_after_enhancement": match_after_enhancement,
+            "llm_model_used": optimization_results.get("llm_model_used", "")
+        }
+        
+        # Update analysis record asynchronously (fire-and-forget)
+        if request.analysis_id and match_after_enhancement is not None:
+            # Create a background task to update the analysis
+            async def update_analysis_background():
+                try:
+                    await update_analysis_with_enhancement(
+                        user_id=user_id,
+                        analysis_id=request.analysis_id,
+                        match_after_enhancement=int(match_after_enhancement),
+                        auth_token=token
+                    )
+                    logger.info(f"✅ Updated analysis {request.analysis_id} with enhanced match score: {match_after_enhancement}%")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to update analysis record {request.analysis_id}: {e}")
+                    # Don't fail the whole request if this update fails
+            
+            # Fire the background task without awaiting
+            asyncio.create_task(update_analysis_background())
+            logger.info(f"🚀 Background task started to update analysis {request.analysis_id}")
+        else:
+            logger.warning("⚠️ No analysis_id provided or match_after_enhancement is None - skipping database update")
+        
+        # Return response immediately
+        return JSONResponse(status_code=status.HTTP_200_OK, content=response_data)
+        
     except Exception as e:
-        logger.error(f"Error during resume optimization for user {request.user_id}: {str(e)}", exc_info=True)
+        logger.error(f"Error during resume optimization for user {user_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

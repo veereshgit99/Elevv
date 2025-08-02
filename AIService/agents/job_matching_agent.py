@@ -37,7 +37,7 @@ class JobMatchingAgent(BaseAgent):
             self.llm_model = genai.GenerativeModel('gemini-2.5-flash')
         else:
             self.llm_model = None
-        self.logger.info(f"JobMatchingAgent initialized with model: Gemini 1.5 Flash")
+        self.logger.info(f"JobMatchingAgent initialized with model: Gemini 2.5 Flash")
 
     async def process(self, context: DocumentContext) -> AgentResult:
         """Calculates a job match score and summary."""
@@ -45,12 +45,11 @@ class JobMatchingAgent(BaseAgent):
             raise RuntimeError("Gemini API key not configured. Cannot call the LLM.")
 
         try:
-            relationship_map_result = context.previous_results.get(AgentType.RELATIONSHIP_MAPPER)
-            if not relationship_map_result or not relationship_map_result.success:
-                raise ValueError("Failed to get relationship map results for job matching.")
+            # --- UPDATED: Get the relationship map directly from the lean context's metadata ---
+            relationship_map = context.metadata.get("relationship_map")
             
-            relationship_map = relationship_map_result.data.get("relationship_map", {})
-            jd_content = context.metadata.get('job_description', {}).get('content', 'Job Description content not available.')
+            if not relationship_map:
+                raise ValueError("JobMatchingAgent requires a relationship_map in its context metadata.")
 
             match_score_schema = {
                 "type": "object",
@@ -84,9 +83,7 @@ class JobMatchingAgent(BaseAgent):
 )
 
             user_prompt = (
-                f"Analyze the following job description and the relationship map (which details matches and gaps "
-                f"between the resume and JD) to calculate an overall match percentage and provide feedback.\n\n"
-                f"--- Job Description ---\n{jd_content[:5000]}\n\n"
+                f"Analyze the following relationship map to calculate an overall match percentage and provide feedback.\n\n"
                 f"--- Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
                 f"Output the match analysis as a JSON object strictly following this schema:\n"
                 f"{json.dumps(match_score_schema, indent=2)}"

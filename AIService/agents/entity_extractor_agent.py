@@ -43,7 +43,7 @@ class EntityExtractorAgent(BaseAgent):
             self.llm_model = genai.GenerativeModel("gemini-2.5-flash")
         else:
             self.llm_model = None
-        self.logger.info("LLM-based EntityExtractorAgent initialized with model: Gemini 1.5 Flash")
+        self.logger.info("LLM-based EntityExtractorAgent initialized with model: Gemini 2.5 Flash")
 
         
     async def process(self, context: DocumentContext) -> AgentResult:
@@ -80,6 +80,7 @@ class EntityExtractorAgent(BaseAgent):
                 "Your goal is to accurately identify and extract various types of entities from the provided text "
                 "according to the specified JSON schema. Ensure all extracted entities are clean, relevant, and deduplicated. "
                 "Do not include any conversational text outside the JSON output."
+                "Output ONLY a single valid JSON object. Follow the 'entity_schema' structure. Do NOT include any explanation, code fences, or preamble."
             )
             
             # Add more specific context if we know it's a JD
@@ -99,7 +100,7 @@ class EntityExtractorAgent(BaseAgent):
             # Make the LLM API call, enforcing JSON output
             response = await self.llm_model.generate_content_async(
                 [system_prompt, user_prompt],  # Pass prompts as a list
-                generation_config={"response_mime_type": "application/json"},
+                generation_config={"response_mime_type": "application/json", "temperature": 0.0, "max_output_tokens": 5000},
                 safety_settings=GEMINI_SAFETY_SETTINGS
             )
             llm_output = json.loads(response.text)

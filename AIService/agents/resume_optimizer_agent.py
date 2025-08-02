@@ -44,7 +44,7 @@ class ResumeOptimizerAgent(BaseAgent):
             self.llm_model = genai.GenerativeModel("gemini-2.5-pro")
         else:
             self.llm_model = None
-        self.logger.info("LLM-based ResumeOptimizerAgent initialized with model: Gemini 1.5 Pro")
+        self.logger.info("LLM-based ResumeOptimizerAgent initialized with model: Gemini 2.5 Pro")
 
     async def process(self, context: DocumentContext) -> AgentResult:
         """
@@ -94,20 +94,25 @@ class ResumeOptimizerAgent(BaseAgent):
                             "required": ["type", "target_section", "suggested_text", "reasoning", "priority"]
                         }
                     },
-                    "overall_feedback": {"type": "string", "description": "General feedback on the enhancement process and next steps."}
+                    "overall_feedback": {"type": "string", "description": "General feedback on the enhancement process and next steps."},
+                    "match_after_enhancement": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100,
+                        "description": "Predicted match score (%) if enhancement suggestions are fully implemented"
+                    }
                 },
-                "required": ["suggestions"]
+                "required": ["suggestions", "match_after_enhancement", "overall_feedback"],
             }
 
             # Construct the prompt for the LLM
             # Provide all relevant context for comprehensive suggestions
             
             system_prompt = (
-                "You are an expert Resume Optimization AI, acting as a seasoned executive recruiter with years of experience evaluating top-tier candidates, and if a human recruiter sees the enhanced resume, they should be impressed and hire the candidate. Your goal is to provide highly specific, actionable, "
-                "and semantically rich suggestions to enhance a candidate's resume for a given job description. "
-                "Base your suggestions on the provided resume content, job description, extracted entities, "
-                "the relationship map, job match analysis, and company context (if available). "
-                "Crucially, for each suggestion, provide clear reasoning, propose specific text, and identify the target section. "
+                "You are an expert Resume Optimization AI, acting as a seasoned executive recruiter with years of experience evaluating top-tier candidates. Your goal is to generate highly specific, actionable, and semantically rich suggestions to maximize a candidate's alignment with a given job description. Your output must impress even human recruiters while remaining strictly truthful.\n\n"
+                
+                "You will receive: extracted entities, relationship map, job match analysis, and possibly company context.\n"
+                "For every suggestion, give clear reasoning, tie it directly to job requirements or company values, and specify the resume section and a proposed edit.\n"
                 "Focus on quantification, alignment with JD requirements, and matching company values/needs. "
                 "CRITICAL RULE: Never invent or suggest adding a project or experience the user has not done.\n\n"
                 
@@ -115,7 +120,7 @@ class ResumeOptimizerAgent(BaseAgent):
                 "**Check for Existing Matches First**: Before making any suggestion, you MUST review the `relationship_map`. If a requirement from the job description has already been matched with a high confidence score, you are NOT allowed to make a suggestion about it. Your role is to fill gaps, not to elaborate on existing strengths.\n\n"
                 "1. ENHANCE EXISTING CONTENT:\n"
                 "   i. Rephrase bullet points to be more impactful, quantify achievements, and highlight existing skills that align with the job description.\n"
-                "   ii. Any suggested bullet points must be concise and if possible, start with a strong action verb.\n"
+                "   ii. Any suggested bullet points must be concise, strong, and action-oriented.\n"
                 "   iii. Only suggest a change if it provides a significant and meaningful improvement.** Do not suggest minor stylistic tweaks, if the original bullet point is already strong and clear.\n"
                 "   iv. If you suggest a new bullet point, it should be relevant and not random.\n"
                 "The 'ENHANCE EXISTING CONTENT' is your primary focus.\n"
@@ -133,18 +138,18 @@ class ResumeOptimizerAgent(BaseAgent):
                 "4. Address Gaps: Also check 'identified_gaps_in_resume' from 'relationship_map' - Identify and suggest enhancements for any missing critical skills or experiences that are explicitly required in the job description but not present in the resume.\n"
                     "CRITICAL: Make sure at the end, the enhanced resume has a strong, and relevant set of experiences that directly address the job description requirements, and that the candidate appears highly qualified for the role.\n\n"
 
-               "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
+                "After generating your enhancement suggestions, estimate what the match score would be if all the critical and high-priority suggestions are implemented. Output this as the field 'match_after_enhancement', a number between 0 and 100, in your final JSON object. Base 'match_after_enhancement' on the strengths, gaps, and prior match score in the job match analysis. Assume all actionable (critical, high) suggestions are implemented with high quality.\n"
+                "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
             )
             
             user_prompt = (
                 f"Optimize the following resume for the given job description:\n\n"
-                f"--- Original Resume (Partial) ---\n{resume_content[:5000]}\n\n"
-                f"--- Job Description ---\n{jd_content[:5000]}\n\n"
                 f"--- Resume's Extracted Entities ---\n{json.dumps(resume_entities, indent=2)}\n\n"
                 f"--- Job Description's Extracted Entities ---\n{json.dumps(jd_entities, indent=2)}\n\n"
                 f"--- Resume-JD Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
                 f"--- Job Match Analysis ---\n{json.dumps(match_analysis, indent=2)}\n\n"
                 f"--- Company Context (from Website) ---\n{json.dumps(company_info, indent=2)}\n\n"
+                f"Please, after providing your enhancement suggestions, estimate the new match score (out of 100) the candidate would have if all your critical and high suggestions were fully implemented, and include it as 'match_after_enhancement' in your final JSON.\n"
                 f"Provide your enhancement suggestions as a JSON object strictly following this schema:\n"
                 f"{json.dumps(enhancement_schema, indent=2)}"
             )
@@ -190,6 +195,7 @@ class ResumeOptimizerAgent(BaseAgent):
                 data={
                     "enhancement_suggestions": llm_output["suggestions"],
                     "overall_feedback": llm_output.get("overall_feedback", ""),
+                    "match_after_enhancement": llm_output.get("match_after_enhancement", None),
                     "llm_model_used": "gemini-2.5-pro"
                 },
                 confidence=overall_confidence,
@@ -212,8 +218,6 @@ class ResumeOptimizerAgent(BaseAgent):
             "name": "LLM-Powered Resume Optimizer",
             "description": "Generates actionable, contextualized suggestions for resume enhancement, including quantification and company-specific tailoring.",
             "input_requirements": [
-                "Original Resume content",
-                "Job Description content",
                 "Entity Extractor results (for Resume and JD)",
                 "Relationship Mapper Agent result",
                 "Job Matcher Agent result",

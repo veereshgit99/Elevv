@@ -5,8 +5,13 @@ from pydantic import BaseModel
 from typing import Optional
 from security import get_current_user_id
 from database.analysis_operations import save_analysis_summary, get_user_analyses, get_analysis_by_id
+import boto3
+import config
+import logging
 
 router = APIRouter()
+dynamodb = boto3.resource('dynamodb', region_name=config.AWS_REGION)
+table = dynamodb.Table('Analysis')
 
 class AnalysisSummaryRequest(BaseModel):
     analysis_id: str
@@ -69,3 +74,81 @@ async def get_analysis(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.patch("/analyses/{analysis_id}", tags=["Analysis"])
+async def update_analysis(
+    analysis_id: str,
+    update_data: dict,
+    user_id: str = Depends(get_current_user_id)  # This returns a string, not dict
+):
+    """
+    Update an existing analysis record
+    """
+    try:
+        # First, verify the analysis exists and belongs to the user
+        try:
+            existing_item = table.get_item(
+                Key={
+                    'analysis_id': analysis_id  # Partition key
+                }
+            )
+            
+            if 'Item' not in existing_item:
+                raise HTTPException(status_code=404, detail="Analysis not found")
+
+            # Check if the analysis belongs to the user
+            if existing_item['Item'].get('user_id') != user_id:
+                raise HTTPException(status_code=403, detail="Access denied")
+                
+        except Exception as get_error:
+            logging.error(f"Error checking existing analysis: {get_error}")
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        
+        # Build update expression for high-level resource API
+        update_expression = "SET "
+        expression_attribute_values = {}
+        expression_attribute_names = {}
+        
+        # Handle reserved keywords and build expression
+        for key, value in update_data.items():
+            # Handle reserved DynamoDB keywords
+            if key in ['status', 'timestamp', 'data', 'size', 'type']:
+                attr_name = f"#{key}"
+                expression_attribute_names[attr_name] = key
+                update_expression += f"{attr_name} = :{key}, "
+            else:
+                update_expression += f"{key} = :{key}, "
+            
+            expression_attribute_values[f":{key}"] = value
+        
+        # Remove trailing comma and space
+        update_expression = update_expression.rstrip(", ")
+        
+        # Prepare update arguments
+        update_args = {
+            'Key': {
+                'analysis_id': analysis_id
+            },
+            'UpdateExpression': update_expression,
+            'ExpressionAttributeValues': expression_attribute_values,
+            'ReturnValues': 'ALL_NEW'
+        }
+        
+        # Add ExpressionAttributeNames only if needed
+        if expression_attribute_names:
+            update_args['ExpressionAttributeNames'] = expression_attribute_names
+        
+        # Update the item using high-level resource API
+        response = table.update_item(**update_args)
+        
+        return {
+            "message": "Analysis updated successfully", 
+            "updated_item": response.get("Attributes"),
+            "analysis_id": analysis_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating analysis {analysis_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update analysis: {str(e)}")

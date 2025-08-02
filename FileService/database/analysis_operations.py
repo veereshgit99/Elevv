@@ -49,16 +49,17 @@ async def save_analysis_summary(
 
 async def get_user_analyses(user_id: str, limit: int = 20) -> List[Dict[str, Any]]:
     """
-    Get all analyses for a user, sorted by creation date
+    Get all analyses for a user using GSI, sorted by creation date
     """
     try:
+        # Query using the GSI 'user_id-created_at-index'
         response = table.query(
-            KeyConditionExpression='PK = :pk AND begins_with(SK, :sk_prefix)',
+            IndexName='user_id-created_at-index',  # Your GSI name
+            KeyConditionExpression='user_id = :user_id',
             ExpressionAttributeValues={
-                ':pk': f"USER#{user_id}",
-                ':sk_prefix': 'ANALYSIS#'
+                ':user_id': user_id
             },
-            ScanIndexForward=False,  # Sort descending by SK (newest first)
+            ScanIndexForward=False,  # Sort descending (newest first)
             Limit=limit
         )
         

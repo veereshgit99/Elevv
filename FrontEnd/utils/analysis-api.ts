@@ -106,15 +106,18 @@ interface AnalysisResponse {
 
     // Additional metadata
     user_id: string
+    analysis_id: string
+    job_title: string
     resume_id: string
     resume_content: string
     job_description: JobDescription
     resume_file_type: string
+    company_name: string
 }
 
 // API functions
 export async function analyzeJobApplication(data: AnalysisRequest): Promise<AnalysisResponse> {
-    const response = await authenticatedFetch('http://localhost:8000/analyze-application', {
+    const response = await authenticatedFetch(`http://localhost:8000/analyze-application`, {
         method: 'POST',
         body: JSON.stringify(data),
     })
@@ -128,10 +131,12 @@ export async function analyzeJobApplication(data: AnalysisRequest): Promise<Anal
 }
 
 export async function optimizeResume(analysisData: AnalysisResponse) {
-    const response = await authenticatedFetch('http://localhost:8000/optimize-resume', {
+    const response = await authenticatedFetch(`http://localhost:8000/optimize-resume`, {
         method: 'POST',
         body: JSON.stringify({
             user_id: analysisData.user_id,
+            analysis_id: analysisData.analysis_id,
+            job_title: analysisData.job_title,
             resume_id: analysisData.resume_id,
             resume_content: analysisData.resume_content,
             job_description: analysisData.job_description,

@@ -28,7 +28,6 @@ import {
   CheckCircle2
 } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
-import { getStoredAnalysisResults } from "@/utils/analysis-storage"
 
 interface EnhancementSuggestion {
   type: 'add' | 'rephrase' | 'quantify' | 'highlight' | 'remove' | 'style_adjust'
@@ -43,18 +42,53 @@ interface EnhancementSuggestion {
 interface OptimizationResponse {
   enhancement_suggestions: EnhancementSuggestion[]
   overall_feedback: string
+  match_after_enhancement: number // Estimated match score after implementing suggestions
   llm_model_used: string
+}
+
+// User Profile Interface
+import { fetchUserProfile } from "@/utils/api"
+interface UserProfile {
+  user_id: string
+  email: string
+  name: string
 }
 
 export default function EnhancementsPage() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [copiedText, setCopiedText] = useState<string | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [isLoadingData, setIsLoadingData] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [enhancementData, setEnhancementData] = useState<OptimizationResponse | null>(null)
 
   useEffect(() => {
+    const fetchData = async () => {
+      if (status === "authenticated" && session) {
+        setIsLoadingData(true)
+        setError(null)
+
+        try {
+          // Fetch user profile
+          const profileData = await fetchUserProfile()
+          setUserProfile(profileData)
+          console.log("User profile fetched:", profileData)
+
+        } catch (error) {
+          console.error("Failed to fetch dashboard data:", error)
+          setError("Failed to load user data. Please try refreshing the page.")
+        } finally {
+          setIsLoadingData(false)
+        }
+      }
+    }
+
+    if (status !== "loading") {
+      fetchData()
+    }
+
     const loadEnhancements = async () => {
       try {
         // Check if we already have enhancement data in session storage
@@ -76,7 +110,7 @@ export default function EnhancementsPage() {
     }
 
     loadEnhancements()
-  }, [router])
+  }, [status, session, router])
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -122,9 +156,13 @@ export default function EnhancementsPage() {
     }
   }
 
+  // Get user initials for avatar
   const getUserInitials = () => {
-    if (session?.user?.name) {
-      return session.user.name
+    // Prioritize DB data
+    const name = userProfile?.name || session?.user?.name || ''
+
+    if (name) {
+      return name
         .split(' ')
         .map(n => n[0])
         .join('')
@@ -140,13 +178,88 @@ export default function EnhancementsPage() {
     return '#ef4444' // red
   }
 
-  if (isLoading) {
+  // Loading state for authentication
+  // Loading state for enhancement data
+  if (isLoading || isLoadingData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#FF5722] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Generating enhancement suggestions...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-10">
+                <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
+                  <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
+                    <Brain className="h-5 w-5 text-white" />
+                  </div>
+                  LexIQ
+                </Link>
+                <nav className="flex items-center space-x-8">
+
+                  {/* FUNCTIONAL LINKS - Not skeletons */}
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center space-x-2 text-base font-semibold text-black border-b-2 border-[#FF5722] transition-colors pb-4"
+                  >
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Analysis</span>
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
+                  >
+                    <User className="w-5 h-5" />
+                    <span>Profile</span>
+                  </Link>
+                </nav>
+              </div>
+
+              {/* ONLY the user avatar should be skeleton during loading */}
+              <div className="flex items-center">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content Skeleton */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back Navigation Skeleton */}
+          <div className="mb-6">
+            <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* Page Header Skeleton */}
+          <div className="mb-8">
+            <div className="h-8 w-80 bg-gray-200 rounded animate-pulse mb-2"></div>
+          </div>
+
+          {/* Strategic Summary Skeleton */}
+          <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-2xl p-6 border border-gray-200 mb-8">
+            <div className="flex items-start space-x-6">
+              {/* Score Circle Skeleton */}
+              <div className="relative">
+                <div className="w-32 h-32 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="w-12 h-8 bg-gray-300 rounded animate-pulse mb-1"></div>
+                  <div className="w-16 h-4 bg-gray-300 rounded animate-pulse"></div>
+                </div>
+              </div>
+              {/* Summary Text Skeleton */}
+              <div className="flex-1 space-y-3">
+                <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+                <div className="space-y-2">
+                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-5/6 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-2/3 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
@@ -172,7 +285,7 @@ export default function EnhancementsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-10">
-              <Link href="/" className="flex items-center gap-2 font-bold text-xl text-black">
+              <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
                 <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                   <Brain className="h-5 w-5 text-white" />
                 </div>
@@ -209,8 +322,8 @@ export default function EnhancementsPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'User'}</p>
-                    <p className="text-xs text-gray-500">{session?.user?.email}</p>
+                    <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
+                    <p className="text-xs text-gray-500">{userProfile?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -261,31 +374,39 @@ export default function EnhancementsPage() {
         <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-2xl p-6 border border-gray-200 mb-8">
           <div className="flex items-start space-x-6">
 
-            {/* Score Circle */}
-            <div className="relative">
-              <svg className="w-32 h-32 transform -rotate-90">
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  stroke="#e5e7eb"
-                  strokeWidth="12"
-                  fill="none"
-                />
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  stroke={getScoreColor(85)}
-                  strokeWidth="12"
-                  fill="none"
-                  strokeDasharray={`${(85 / 100) * 352} 352`}
-                  className="transition-all duration-1000"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-gray-900">{85}%</span>
-                <span className="text-sm text-gray-600">Match Score</span>
+            {/* Score Circle with Label Below */}
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                <svg className="w-32 h-32 transform -rotate-90">
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="56"
+                    stroke="#e5e7eb"
+                    strokeWidth="12"
+                    fill="none"
+                  />
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="56"
+                    stroke={getScoreColor(enhancementData.match_after_enhancement)}
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${(enhancementData.match_after_enhancement / 100) * 352} 352`}
+                    className="transition-all duration-1000"
+                  />
+                </svg>
+                {/* Only the percentage inside the circle */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {enhancementData.match_after_enhancement}%
+                  </span>
+                </div>
+              </div>
+              {/* Label below the circle */}
+              <div className="mt-3 text-center">
+                <span className="text-sm font-medium text-gray-700">Projected Match Score</span>
               </div>
             </div>
 
@@ -364,9 +485,6 @@ export default function EnhancementsPage() {
 
         {/* Action Buttons */}
         <div className="flex justify-center space-x-4 mt-8">
-          <Button variant="outline" onClick={() => router.push("/analysis-results")} className="px-6 py-3 text-base">
-            Back to Analysis
-          </Button>
           <Button
             onClick={() => router.push("/dashboard")}
             className="bg-[#FF5722] hover:bg-[#E64A19] text-white px-6 py-3 text-base"
