@@ -80,7 +80,7 @@ class OptimizationRequest(BaseModel):
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
-    title="LexIQ Career AI Service",
+    title="Elevv Career AI Service",
     description="Analyzes resumes against job descriptions."
 )
 orchestrator = DocumentAnalysisOrchestrator()

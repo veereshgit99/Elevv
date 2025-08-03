@@ -12,7 +12,7 @@ from routes.users import router as users_router
 from routes.analysis import router as analysis_router
 
 app = FastAPI(
-    title="LexIQ File & User Service",
+    title="Elevv File & User Service",
     description="Handles user authentication, profile management, and file uploads.",
     version="1.0"
 )

@@ -163,7 +163,7 @@ export default function VerifyPage() {
             <div className="h-12 w-12 rounded bg-[#FF5722] flex items-center justify-center">
               <Brain className="h-7 w-7 text-white" />
             </div>
-            <span className="text-2xl font-bold text-black">LexIQ</span>
+            <span className="text-2xl font-bold text-black">Elevv</span>
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Check Your Email</h1>
@@ -197,7 +197,7 @@ export default function VerifyPage() {
             <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
               <Brain className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-black">LexIQ</span>
+            <span className="text-xl font-bold text-black">Elevv</span>
           </div>
 
           {/* Back Button */}

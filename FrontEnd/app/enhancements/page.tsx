@@ -191,7 +191,7 @@ export default function EnhancementsPage() {
                   <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                     <Brain className="h-5 w-5 text-white" />
                   </div>
-                  LexIQ
+                  Elevv
                 </Link>
                 <nav className="flex items-center space-x-8">
 
@@ -289,7 +289,7 @@ export default function EnhancementsPage() {
                 <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                   <Brain className="h-5 w-5 text-white" />
                 </div>
-                LexIQ
+                Elevv
               </Link>
 
               <nav className="flex items-center space-x-8">

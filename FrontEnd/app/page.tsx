@@ -14,7 +14,7 @@ export default function Home() {
             <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
               <Brain className="h-5 w-5 text-white" />
             </div>
-            LexIQ
+            Elevv
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <Link href="#features" className="text-sm font-medium hover:text-[#FF5722] transition-colors">
@@ -133,7 +133,7 @@ export default function Home() {
         <section className="container py-16 md:py-24">
           <div className="mx-auto max-w-6xl">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">See LexIQ in action</h2>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">See Elevv in action</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Upload your resume and a job description to get instant, expert-level analysis and strategic
                 recommendations.
@@ -149,13 +149,13 @@ export default function Home() {
                     <div className="h-3 w-3 rounded-full bg-green-400"></div>
                   </div>
                   <div className="flex-1 text-center text-sm text-muted-foreground">
-                    LexIQ Career Analysis Dashboard
+                    Elevv Career Analysis Dashboard
                   </div>
                 </div>
                 <div className="aspect-video">
                   <Image
                     src="/placeholder.svg?height=600&width=1000"
-                    alt="LexIQ Analysis Dashboard"
+                    alt="Elevv Analysis Dashboard"
                     width={1000}
                     height={600}
                     className="w-full h-full object-cover"
@@ -201,7 +201,7 @@ export default function Home() {
               </h2>
 
               <p className="text-lg text-muted-foreground">
-                Install the LexIQ Chrome extension to get instant resume analysis on LinkedIn, Indeed, and other job
+                Install the Elevv Chrome extension to get instant resume analysis on LinkedIn, Indeed, and other job
                 sites. See your match score without leaving the page.
               </p>
 
@@ -231,8 +231,8 @@ export default function Home() {
                   </div>
                   <div className="flex-1 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <Image src="/placeholder.svg?height=16&width=16" alt="LexIQ" width={16} height={16} />
-                      <span className="text-sm text-muted-foreground">LexIQ Analysis</span>
+                      <Image src="/placeholder.svg?height=16&width=16" alt="Elevv" width={16} height={16} />
+                      <span className="text-sm text-muted-foreground">Elevv Analysis</span>
                     </div>
                   </div>
                 </div>
@@ -321,7 +321,7 @@ export default function Home() {
                       <div className="h-3 w-3 rounded-full bg-green-400"></div>
                     </div>
                     <div className="flex-1 text-center">
-                      <span className="text-sm text-muted-foreground">LexIQ Analysis Dashboard</span>
+                      <span className="text-sm text-muted-foreground">Elevv Analysis Dashboard</span>
                     </div>
                   </div>
                   <div className="p-6">
@@ -413,7 +413,7 @@ export default function Home() {
                 <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
                   <Brain className="h-5 w-5 text-white" />
                 </div>
-                LexIQ
+                Elevv
               </div>
               <p className="text-sm text-slate-400">
                 Your personal career strategist powered by AI. Get expert-level insights to land your dream job.
@@ -481,7 +481,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-12 pt-6 border-t border-slate-800 text-center text-sm text-slate-400">
-            &copy; {new Date().getFullYear()} LexIQ. All rights reserved.
+            &copy; {new Date().getFullYear()} Elevv. All rights reserved.
           </div>
         </div>
       </footer>

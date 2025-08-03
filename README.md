@@ -1,2 +1,2 @@
-# LexIQ
+# Elevv
 LLM powered Cloud Storage
