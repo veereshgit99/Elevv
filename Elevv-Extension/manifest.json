@@ -1,0 +1,23 @@
+{
+    "manifest_version": 3,
+    "name": "Elevv",
+    "version": "1.0",
+    "description": "Get AI-powered analysis of any job description against your resume.",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage"
+    ],
+    "host_permissions": [
+        "https://*.linkedin.com/jobs/view/*"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "images/icon16.png"
+        }
+    },
+    "icons": {
+        "16": "images/icon16.png"
+    }
+}
