@@ -91,14 +91,6 @@ export default function Home() {
 
                   {/* Subtle overlay for better text contrast if needed */}
                   <div className="absolute inset-0 bg-black/10"></div>
-
-                  {/* Video Caption - positioned like Unreal Engine */}
-                  <div className="absolute bottom-6 right-6 z-10">
-                    <div className="bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
-                      <p className="text-white text-sm font-medium">AI Resume Analysis</p>
-                      <p className="text-white/70 text-xs">Demo Preview</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

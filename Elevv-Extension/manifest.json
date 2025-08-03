@@ -12,12 +12,22 @@
         "https://*.linkedin.com/jobs/view/*"
     ],
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "popup-build/index.html",
         "default_icon": {
             "16": "images/icon16.png"
         }
     },
     "icons": {
         "16": "images/icon16.png"
-    }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "popup-build/assets/*"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
 }
