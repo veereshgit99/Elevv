@@ -1,13 +1,19 @@
+import path from "path" // <-- Add this import
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // --- ADD THIS LINE ---
-  base: './', // Use relative paths for assets
+  base: './',
   build: {
     outDir: '../Elevv-Extension/popup-build',
     emptyOutDir: true,
-  }
+  },
+  // --- ADD THIS ENTIRE 'resolve' BLOCK ---
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  // ---
 })
