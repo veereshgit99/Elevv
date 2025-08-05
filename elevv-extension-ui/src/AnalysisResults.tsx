@@ -6,13 +6,14 @@ import { ArrowLeft, CheckCircle, AlertTriangle, ChevronRight } from "lucide-reac
 
 interface AnalysisResultsProps {
     onBack: () => void
+    onTailorResume: () => void
     matchScore: number
     summary: string
     strengths: string[]
     gaps: string[]
 }
 
-export function AnalysisResults({ onBack, matchScore, summary, strengths, gaps }: AnalysisResultsProps) {
+export function AnalysisResults({ onBack, onTailorResume, matchScore, summary, strengths, gaps }: AnalysisResultsProps) {
     const [expandedSection, setExpandedSection] = useState<'strengths' | 'gaps' | null>('gaps')
 
     const circleLength = 2 * Math.PI * 30;
@@ -56,6 +57,7 @@ export function AnalysisResults({ onBack, matchScore, summary, strengths, gaps }
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
+                        onClick={onTailorResume}
                         className="tailor-button"
                     >
                         Tailor Your Resume

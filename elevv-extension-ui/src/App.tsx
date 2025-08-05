@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Brain, Loader2, FileText } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { AnalysisResults } from "./AnalysisResults" // Your new results component
+import { EnhancementsPage } from "./EnhancementsPage" // Your new enhancements component
 
 export default function ChromeExtensionPopup() {
   // --- STATE MANAGEMENT ---
@@ -13,7 +14,7 @@ export default function ChromeExtensionPopup() {
   const [jobDescription, setJobDescription] = useState("")
   const [selectedResume, setSelectedResume] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [showResults, setShowResults] = useState(false)
+  const [currentView, setCurrentView] = useState<'form' | 'results' | 'enhancements'>('form')
 
   const [analysisData, setAnalysisData] = useState<{
     matchScore: number;
@@ -103,12 +104,20 @@ export default function ChromeExtensionPopup() {
       });
 
       setIsAnalyzing(false);
-      setShowResults(true);
+      setCurrentView('results');
     }, 2000);
   }
 
   const handleBackToForm = () => {
-    setShowResults(false);
+    setCurrentView('form');
+  }
+
+  const handleTailorResume = () => {
+    setCurrentView('enhancements');
+  }
+
+  const handleBackToResults = () => {
+    setCurrentView('results');
   }
 
   // --- RENDER LOGIC ---
@@ -120,19 +129,66 @@ export default function ChromeExtensionPopup() {
           <span>Elevv</span>
         </div>
         <h1 className="header-subtitle">
-          {showResults ? "Analysis Results" : "Start a New Analysis"}
+          {currentView === 'results'
+            ? "Analysis Results"
+            : currentView === 'enhancements'
+              ? "Resume Enhancements"
+              : "Start a New Analysis"}
         </h1>
       </header>
 
       <main className="app-content">
         <AnimatePresence mode="wait">
-          {showResults ? (
+          {currentView === 'results' ? (
             <AnalysisResults
               onBack={handleBackToForm}
+              onTailorResume={handleTailorResume}
               matchScore={analysisData.matchScore}
               summary={analysisData.summary}
               strengths={analysisData.strengths}
               gaps={analysisData.gaps}
+            />
+          ) : currentView === 'enhancements' ? (
+            <EnhancementsPage
+              onBack={handleBackToResults}
+              data={{
+                projectedScore: 88,
+                strategicSummary: "Your resume has a strong foundation with excellent quantifiable achievements. The key opportunity is to reframe your experience using the specific language of the job description.",
+                suggestions: [
+                  {
+                    id: 's1',
+                    priority: "Critical",
+                    context: "In your Projects",
+                    currentText: "Built a purchase order microservice for SAP ERP to automate manual workflows, reducing processing time by 90% for 5K+ monthly orders.",
+                    suggestedText: "Engineered a high-throughput purchase order microservice, establishing a real-time data processing pipeline that handled 5K+ monthly orders and slashed processing time by 90%.",
+                    rationale: "This addresses a critical gap. The job description explicitly requires experience building 'efficient and reliable data pipelines'."
+                  },
+                  {
+                    id: 's4',
+                    priority: "Critical",
+                    context: "In your Experience",
+                    currentText: "Built a purchase order microservice for SAP ERP to automate manual workflows, reducing processing time by 90% for 5K+ monthly orders.",
+                    suggestedText: "Engineered a high-throughput purchase order microservice, establishing a real-time data processing pipeline that handled 5K+ monthly orders and slashed processing time by 90%.",
+                    rationale: "This addresses a critical gap. The job description explicitly requires experience building 'efficient and reliable data pipelines'."
+                  },
+                  {
+                    id: 's2',
+                    priority: "High",
+                    context: "In your EXPERIENCE",
+                    currentText: "Built a purchase order microservice for SAP ERP to automate manual workflows, reducing processing time by 90% for 5K+ monthly orders.",
+                    suggestedText: "Engineered a high-throughput purchase order microservice, establishing a real-time data processing pipeline that handled 5K+ monthly orders and slashed processing time by 90%.",
+                    rationale: "This addresses a critical gap. The job description explicitly requires experience building 'efficient and reliable data pipelines'."
+                  },
+                  {
+                    id: 's3',
+                    priority: "Medium",
+                    context: "In your EXPERIENCE",
+                    currentText: "Built a purchase order microservice for SAP ERP to automate manual workflows, reducing processing time by 90% for 5K+ monthly orders.",
+                    suggestedText: "Engineered a high-throughput purchase order microservice, establishing a real-time data processing pipeline that handled 5K+ monthly orders and slashed processing time by 90%.",
+                    rationale: "This addresses a critical gap. The job description explicitly requires experience building 'efficient and reliable data pipelines'."
+                  }
+                ]
+              }}
             />
           ) : (
             <motion.div
@@ -180,7 +236,7 @@ export default function ChromeExtensionPopup() {
         </AnimatePresence>
       </main>
 
-      {!showResults && (
+      {currentView === 'form' && (
         <footer className="app-footer">
           <motion.button
             onClick={handleAnalyze}
