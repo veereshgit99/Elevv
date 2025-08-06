@@ -1,6 +1,7 @@
 // utils/api.ts
 
 import { getSession } from "next-auth/react";
+const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL;
 
 // API client with authentication
 export async function authenticatedFetch(url: string, options: RequestInit = {}) {
@@ -31,7 +32,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
 
 // Example usage functions
 export async function fetchUserProfile() {
-    const response = await authenticatedFetch(`http://localhost:8001/users/me`);
+    const response = await authenticatedFetch(`${FILES_API_URL}/users/me`);
     if (!response.ok) {
         throw new Error(`Failed to fetch user profile: ${response.status}`);
     }
@@ -39,7 +40,7 @@ export async function fetchUserProfile() {
 }
 
 export async function fetchResumes() {
-    const response = await authenticatedFetch(`http://localhost:8001/resumes`);
+    const response = await authenticatedFetch(`${FILES_API_URL}/resumes`);
     if (!response.ok) {
         throw new Error(`Failed to fetch resumes: ${response.status}`);
     }
@@ -81,7 +82,7 @@ export function useAuthenticatedFetch() {
 
 // Add this to your utils/api.ts
 export async function fetchAnalyses() {
-    const response = await authenticatedFetch(`http://localhost:8001/analyses`, {
+    const response = await authenticatedFetch(`${FILES_API_URL}/analyses`, {
         method: 'GET',
     })
 
@@ -93,7 +94,7 @@ export async function fetchAnalyses() {
 }
 
 export async function updateUserProfile(profileData: any) {
-    const response = await authenticatedFetch(`http://localhost:8001/users/profile`, {
+    const response = await authenticatedFetch(`${FILES_API_URL}/users/profile`, {
         method: 'PUT',
         body: JSON.stringify(profileData),
     })
@@ -108,7 +109,7 @@ export async function updateUserProfile(profileData: any) {
 
 // Add these functions to your api.ts
 export async function deleteResume(resumeId: string) {
-    const response = await authenticatedFetch(`http://localhost:8001/resumes/${resumeId}`, {
+    const response = await authenticatedFetch(`${FILES_API_URL}/resumes/${resumeId}`, {
         method: 'DELETE',
     })
 
@@ -121,7 +122,7 @@ export async function deleteResume(resumeId: string) {
 }
 
 export async function updateResumePrimary(resumeId: string) {
-    const response = await authenticatedFetch(`http://localhost:8001/resumes/${resumeId}/make-primary`, {
+    const response = await authenticatedFetch(`${FILES_API_URL}/resumes/${resumeId}/make-primary`, {
         method: 'PUT',
     })
 
@@ -135,7 +136,7 @@ export async function updateResumePrimary(resumeId: string) {
 // utils/api.ts
 
 export async function getResumeUploadUrl(filename: string, contentType: string, jobTitle: string) {
-    const response = await authenticatedFetch(`http://localhost:8001/resumes/upload-url`, {
+    const response = await authenticatedFetch(`${FILES_API_URL}/resumes/upload-url`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -157,7 +158,7 @@ export async function getResumeUploadUrl(filename: string, contentType: string, 
 
 
 export async function updateResume(resumeId: string, name: string, jobTitle: string) {
-    const response = await authenticatedFetch(`http://localhost:8001/resumes/${resumeId}`, {
+    const response = await authenticatedFetch(`${FILES_API_URL}/resumes/${resumeId}`, {
         method: 'PUT',
         body: JSON.stringify({
             name: name,

@@ -1,6 +1,7 @@
 # AIService/agents/orchestrator.py
 
 import logging
+import os
 import uuid, json
 import fitz # PyMuPDF for PDF text extraction
 import asyncio # For async operations - parallel processing
@@ -22,6 +23,13 @@ from agents.resume_optimizer_agent import ResumeOptimizerAgent
 from agents.web_scraper_agent import WebScraperAgent
 
 logger = logging.getLogger(__name__)
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
+FILES_API_URL = os.getenv("FILES_API_URL") 
+
 
 
 class DocumentAnalysisOrchestrator:
@@ -78,7 +86,7 @@ class DocumentAnalysisOrchestrator:
         """
         Calls the FileService to get the metadata for a specific resume.
         """
-        file_service_url = f"http://localhost:8001/users/{user_id}/resume/{resume_id}/s3-link"
+        file_service_url = f"{FILES_API_URL}/users/{user_id}/resume/{resume_id}/s3-link"
         try:
             self.logger.info(f"Fetching resume details for user {user_id}, resume {resume_id}")
             

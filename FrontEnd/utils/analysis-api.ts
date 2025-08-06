@@ -2,6 +2,8 @@
 
 import { authenticatedFetch } from './api'
 
+const AI_API_URL = process.env.NEXT_PUBLIC_AI_API_URL
+
 // Request types
 interface AnalysisRequest {
     job_title: string
@@ -117,7 +119,7 @@ interface AnalysisResponse {
 
 // API functions
 export async function analyzeJobApplication(data: AnalysisRequest): Promise<AnalysisResponse> {
-    const response = await authenticatedFetch(`http://localhost:8000/analyze-application`, {
+    const response = await authenticatedFetch(`http://${AI_API_URL}/analyze-application`, {
         method: 'POST',
         body: JSON.stringify(data),
     })
@@ -131,7 +133,7 @@ export async function analyzeJobApplication(data: AnalysisRequest): Promise<Anal
 }
 
 export async function optimizeResume(analysisData: AnalysisResponse) {
-    const response = await authenticatedFetch(`http://localhost:8000/optimize-resume`, {
+    const response = await authenticatedFetch(`http://${AI_API_URL}/optimize-resume`, {
         method: 'POST',
         body: JSON.stringify({
             user_id: analysisData.user_id,

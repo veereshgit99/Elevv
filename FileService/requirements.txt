@@ -1,9 +1,8 @@
-fastapi
-uvicorn
-boto3
-python-dotenv
-pydantic
-requests # For WebScraperAgent, if it were in FileService, but keep here if used elsewhere
-beautifulsoup4 # For WebScraperAgent
-# playwright # If dynamic scraping is enabled
-# Or selenium # If dynamic scraping is enabled
+boto3==1.36.21
+botocore==1.36.21
+fastapi==0.116.1
+pydantic==2.11.7
+python-dotenv==1.1.1
+python_jose==3.5.0
+Requests==2.32.4
+uvicorn[standard]

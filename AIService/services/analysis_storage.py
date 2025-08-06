@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 s3_client = boto3.client('s3', region_name=os.getenv("AWS_REGION", "us-east-2"))
 S3_BUCKET = os.getenv("S3_BUCKET", "awsbucket288518840771-files")
+FILES_API_URL = os.getenv("FILES_API_URL")  # Default to local if not set
 
 async def store_analysis_complete(
     user_id: str,
@@ -74,7 +75,7 @@ async def store_analysis_complete(
             }
 
             response = await client.post(
-                "http://localhost:8001/analyses",
+                f"{FILES_API_URL}/analyses",
                 headers=headers,
                 json=summary
             )
@@ -158,7 +159,7 @@ async def update_analysis_with_enhancement(
             logger.info(f"Updating analysis {analysis_id} with enhancement score: {match_after_enhancement}%")
 
             response = await client.patch(
-                f"http://localhost:8001/analyses/{analysis_id}",
+                f"{FILES_API_URL}/analyses/{analysis_id}",
                 headers=headers,
                 json=update_data
             )

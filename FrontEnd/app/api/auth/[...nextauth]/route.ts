@@ -8,6 +8,7 @@ import LinkedInProvider from "next-auth/providers/linkedin";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 
+const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL;
 // Add environment variable validation
 if (!process.env.NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET.length < 32) {
     throw new Error("NEXTAUTH_SECRET must be at least 32 characters long");
@@ -90,7 +91,7 @@ const handler = NextAuth({
 
                 try {
                     // Use environment variable for backend URL
-                    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8001';
+                    const backendUrl = FILES_API_URL;
                     const response = await fetch(`${backendUrl}/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -206,7 +207,7 @@ const handler = NextAuth({
                 if (createUserResponse.User) {
                     const cognitoUserId = createUserResponse.User.Attributes?.find(attr => attr.Name === 'sub')?.Value;
                     if (cognitoUserId) {
-                        const backendUrl = process.env.BACKEND_URL || 'http://localhost:8001';
+                        const backendUrl = FILES_API_URL;
                         await fetch(`${backendUrl}/auth/social-signup`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },

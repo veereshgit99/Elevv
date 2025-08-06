@@ -21,6 +21,7 @@ app = FastAPI(
 # This tells the backend to allow requests from your frontend (running on port 3000)
 origins = [
     "http://localhost:3000",
+    "https://elevv.net"
 ]
 
 app.add_middleware(

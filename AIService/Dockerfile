@@ -1,38 +1,30 @@
-# AIService/Dockerfile
+# Start with an official Python image. 3.10 is a stable choice.
+FROM python:3.10-slim
 
-# Use an official AWS Lambda Python base image for your desired Python version
-FROM public.ecr.aws/lambda/python:3.11-x86_64
+# Install system dependencies needed for PyMuPDF and other packages
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory in the container
-WORKDIR /var/task
+# Set the working directory inside the container
+WORKDIR /app
 
-# Copy requirements file and install dependencies
-COPY requirements.txt .
+# Copy only the requirements file first to leverage Docker's layer caching
+COPY requirements.txt ./
+
+# Install Python dependencies from your requirements.txt
+# --no-cache-dir keeps the image smaller
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Add after pip install
-RUN python -m spacy download en_core_web_sm || echo "SpaCy model download skipped"
-
-# --- PRE-DOWNLOAD HUGGING FACE MODEL (IMPLEMENT THIS NOW) ---
-# Create a dedicated directory for the Hugging Face cache within the image
-ENV HF_HOME = /usr/local/huggingface_cache # Set cache directory within the image
-RUN mkdir -p ${HF_HOME}
-# Set TMPDIR for temporary files during the build, if needed by download tools
-ENV TMPDIR = /tmp
-# Use Python to download the model files directly into the specified cache directory
-RUN python -c "from transformers import pipeline; pipeline('summarization', model='facebook/bart-large-cnn')"
-# --- END PRE-DOWNLOAD ---
-
-# --- Configure Runtime Environment Variables ---
-# These are for the running Lambda, not just during build
-ENV TMPDIR = /tmp # Still essential for other temporary files at runtime
-# Point HF_HOME to /tmp for runtime even though model is pre-downloaded,
-# in case other cache operations happen. Model will be loaded from the pre-downloaded path.
-ENV HF_HOME = /tmp
-ENV HUGGINGFACE_HUB_CACHE = /tmp
-
-# Copy your application code
+# Copy the rest of your application code into the container
 COPY . .
 
-# Set the Lambda handler.
-CMD ["main.lambda_handler"]
+# Expose the port your AIService runs on (assuming 8000)
+EXPOSE 8000
+
+# Define the command to run your app in production
+# This assumes your app instance is named `app` in your `main.py` file.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

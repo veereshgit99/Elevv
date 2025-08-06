@@ -10,6 +10,8 @@ import { Brain, ArrowLeft, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL
+
 export default function VerifyPage() {
   const [code, setCode] = useState(["", "", "", "", "", ""])
   const [isLoading, setIsLoading] = useState(false)
@@ -102,7 +104,7 @@ export default function VerifyPage() {
     setError("")
 
     try {
-      const response = await fetch("http://localhost:8001/auth/confirm-signup", {
+      const response = await fetch(`${FILES_API_URL}/auth/confirm-signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

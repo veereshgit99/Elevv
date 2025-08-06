@@ -1,22 +1,15 @@
-# AIService/requirements.txt
-fastapi
-uvicorn
-requests
-boto3
-pydantic
-transformers
-torch
-PyMuPDF==1.22.3
-numpy==1.24.4
-python-docx
-beautifulsoup4
-pandas
-openpyxl
-Pillow
-pytesseract
-mangum
-python-dotenv
+beautifulsoup4==4.12.3
+boto3==1.34.48
+fastapi==0.110.0
+PyMuPDF==1.24.1
+httpx==0.27.0
+pydantic==2.6.4
+python-dotenv==1.0.1
+python-jose[cryptography]==3.3.0
+requests==2.31.0
+uvicorn[standard]==0.27.1
 google-generativeai # <--- Add this for Google API access
 asyncio
 dataclasses
-python-jose[cryptography]
+python-docx
+botocore
