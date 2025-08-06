@@ -119,7 +119,7 @@ interface AnalysisResponse {
 
 // API functions
 export async function analyzeJobApplication(data: AnalysisRequest): Promise<AnalysisResponse> {
-    const response = await authenticatedFetch(`http://${AI_API_URL}/analyze-application`, {
+    const response = await authenticatedFetch(`${AI_API_URL}/analyze-application`, {
         method: 'POST',
         body: JSON.stringify(data),
     })
@@ -133,7 +133,7 @@ export async function analyzeJobApplication(data: AnalysisRequest): Promise<Anal
 }
 
 export async function optimizeResume(analysisData: AnalysisResponse) {
-    const response = await authenticatedFetch(`http://${AI_API_URL}/optimize-resume`, {
+    const response = await authenticatedFetch(`${AI_API_URL}/optimize-resume`, {
         method: 'POST',
         body: JSON.stringify({
             user_id: analysisData.user_id,
