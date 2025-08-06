@@ -74,33 +74,29 @@ export default function DashboardPage() {
   // Add this with your other state declarations
   const [showUploadModal, setShowUploadModal] = useState(false)
 
-  // Fetch user data when session is available
+  // In dashboard/page.tsx
   useEffect(() => {
     const fetchData = async () => {
-      if (status === "authenticated" && session?.accessToken) { // Check for accessToken
+      // Make sure we have both authenticated status AND the token
+      if (status === "authenticated" && session?.accessToken) {
         setIsLoadingData(true)
         setError(null)
 
-        // Get the token from the session object
-        const token = session.accessToken as string
-
         try {
-          // Pass the token to your API calls
+          // Use the token directly from the session
+          const token = session.accessToken as string
+
+          // Use the newer functions that accept token
           const profileData = await fetchUserProfile(token)
           setUserProfile(profileData)
-          console.log("User profile fetched:", profileData)
 
-          // Fetch user resumes
           const resumesData = await fetchResumes(token)
           setUserResumes(resumesData)
-          console.log("User resumes fetched:", resumesData)
 
-          // If there's a primary resume, select it by default
           const primaryResume = resumesData.find((r: Resume) => r.is_primary)
           if (primaryResume) {
             setSelectedResume(primaryResume.resume_id)
           }
-
         } catch (error) {
           console.error("Failed to fetch dashboard data:", error)
           setError("Failed to load user data. Please try refreshing the page.")
@@ -110,10 +106,8 @@ export default function DashboardPage() {
       }
     }
 
-    if (status !== "loading") {
-      fetchData()
-    }
-  }, [status, session, router])
+    fetchData()
+  }, [status, session]) // Depend on both status and session
 
   const handleAnalyze = async () => {
     if (!jobTitle || !companyName || !jobDescription || !selectedResume) {

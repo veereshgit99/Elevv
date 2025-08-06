@@ -38,9 +38,16 @@ export async function fetchUserProfile(token: string) {
             'Content-Type': 'application/json',
         },
     });
+
+    if (response.status === 401) {
+        // Token might be expired, trigger re-authentication
+        throw new Error('Authentication expired. Please sign in again.');
+    }
+
     if (!response.ok) {
         throw new Error(`Failed to fetch user profile: ${response.status}`);
     }
+
     return response.json();
 }
 
@@ -85,15 +92,12 @@ export function useAuthenticatedFetch() {
             throw new Error('No authentication token found');
         }
 
-        // Special handling for FormData - don't set Content-Type
         const isFormData = options.body instanceof FormData;
-
         const headers: any = {
             ...options.headers,
             'Authorization': `Bearer ${session.accessToken}`,
         };
 
-        // Only set Content-Type if it's not FormData
         if (!isFormData) {
             headers['Content-Type'] = 'application/json';
         }
@@ -104,7 +108,7 @@ export function useAuthenticatedFetch() {
         });
     };
 
-    return authenticatedFetch;
+    return { authenticatedFetch, isAuthenticated: !!session?.accessToken };
 }
 
 // Add this to your utils/api.ts - Updated to accept token
