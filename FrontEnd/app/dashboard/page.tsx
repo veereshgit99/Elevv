@@ -77,18 +77,21 @@ export default function DashboardPage() {
   // Fetch user data when session is available
   useEffect(() => {
     const fetchData = async () => {
-      if (status === "authenticated" && session) {
+      if (status === "authenticated" && session?.accessToken) { // Check for accessToken
         setIsLoadingData(true)
         setError(null)
 
+        // Get the token from the session object
+        const token = session.accessToken as string
+
         try {
-          // Fetch user profile
-          const profileData = await fetchUserProfile()
+          // Pass the token to your API calls
+          const profileData = await fetchUserProfile(token)
           setUserProfile(profileData)
           console.log("User profile fetched:", profileData)
 
           // Fetch user resumes
-          const resumesData = await fetchResumes()
+          const resumesData = await fetchResumes(token)
           setUserResumes(resumesData)
           console.log("User resumes fetched:", resumesData)
 
@@ -534,12 +537,14 @@ export default function DashboardPage() {
                   <ResumeUpload
                     onUploadSuccess={async () => {
                       setShowUploadModal(false)
-                      // Refresh the resumes list
-                      try {
-                        const resumesData = await fetchResumes()
-                        setUserResumes(resumesData)
-                      } catch (error) {
-                        console.error("Failed to refresh resumes:", error)
+                      // Refresh the resumes list with token
+                      if (session?.accessToken) {
+                        try {
+                          const resumesData = await fetchResumes(session.accessToken as string)
+                          setUserResumes(resumesData)
+                        } catch (error) {
+                          console.error("Failed to refresh resumes:", error)
+                        }
                       }
                     }}
                     onUploadError={(error) => {
