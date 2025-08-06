@@ -7,11 +7,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { deleteResume, updateResumePrimary } from "@/utils/api"
+import { deleteResume, updateResumePrimary, fetchAnalyses, updateUserProfile, updateResume, fetchUserProfile, fetchResumes } from "@/utils/api"
 import { ResumeSkeleton } from "@/components/resume-skeleton"
-import { fetchAnalyses } from "@/utils/api"
-import { updateUserProfile } from "@/utils/api"
-import { updateResume } from "@/utils/api"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -56,7 +53,6 @@ import { useAnalysisNavigation } from "@/components/analysis-navigation-context"
 
 // Add this import with your other imports
 import { signOut, useSession } from "next-auth/react"
-import { fetchResumes, fetchUserProfile } from "@/utils/api"
 import { ResumeUpload } from "@/components/resume-upload"
 
 // Add this at the top of your profile page component, after imports
@@ -160,15 +156,24 @@ export default function ProfilePage() {
         return
       }
 
+      // Make sure we have the access token
+      if (!session.accessToken) {
+        console.error('No access token available')
+        return
+      }
+
       setIsLoadingProfile(true)
       setIsLoadingUserData(true)
       setIsLoadingResumes(true)
 
       try {
-        // Fetch user profile and resumes
+        // Use the token directly from the session
+        const token = session.accessToken as string
+
+        // Fetch user profile and resumes with token
         const [profileData, resumesData] = await Promise.all([
-          fetchUserProfile(),
-          fetchResumes()
+          fetchUserProfile(token),
+          fetchResumes(token)
         ])
 
         // Set user profile data
@@ -233,10 +238,12 @@ export default function ProfilePage() {
   // Fetch analysis history
   useEffect(() => {
     const loadAnalyses = async () => {
-      if (activeTab === "analysis-history" && session) {
+      if (activeTab === "analysis-history" && session?.accessToken) {
         setIsLoadingAnalyses(true)
         try {
-          const analyses = await fetchAnalyses()
+          // Use the token directly from the session
+          const token = session.accessToken as string
+          const analyses = await fetchAnalyses(token)
 
           // Transform the data to match your UI needs
           const transformedAnalyses = analyses
@@ -337,12 +344,18 @@ export default function ProfilePage() {
       return
     }
 
+    if (!session?.accessToken) {
+      console.error('No access token available')
+      return
+    }
+
     setIsRefreshingResumes(true) // Show loading
 
     try {
-      await deleteResume(resumeId)
+      const token = session.accessToken as string
+      await deleteResume(token, resumeId)
       // Refresh resumes list
-      const resumesData = await fetchResumes()
+      const resumesData = await fetchResumes(token)
       const transformedResumes = resumesData.map((resume: any, index: number) => ({
         id: resume.resume_id,
         name: resume.name || resume.file_name,
@@ -360,10 +373,16 @@ export default function ProfilePage() {
 
   // Update handleMakePrimary to show loading
   const handleMakePrimary = async (resumeId: string) => {
+    if (!session?.accessToken) {
+      console.error('No access token available')
+      return
+    }
+
     setIsRefreshingResumes(true) // Show loading
 
     try {
-      await updateResumePrimary(resumeId)
+      const token = session.accessToken as string
+      await updateResumePrimary(token, resumeId)
       // Update local state
       setResumes(resumes.map(resume => ({
         ...resume,
@@ -388,10 +407,16 @@ export default function ProfilePage() {
   // Update handleSaveEdit to show loading
   const handleSaveEdit = async () => {
     if (editingResume && editForm.name.trim() && editForm.jobTitle.trim()) {
+      if (!session?.accessToken) {
+        console.error('No access token available')
+        return
+      }
+
       setIsRefreshingResumes(true) // Show loading
 
       try {
-        await updateResume(editingResume, editForm.name, editForm.jobTitle)
+        const token = session.accessToken as string
+        await updateResume(token, editingResume, editForm.name, editForm.jobTitle)
 
         // Update local state
         setResumes(
@@ -440,7 +465,13 @@ export default function ProfilePage() {
   const handleSaveSection = async () => {
     if (editingSection === "personal") {
       try {
-        const updatedProfile = await updateUserProfile(personalData)
+        if (!session?.accessToken) {
+          console.error('No access token available')
+          return
+        }
+
+        const token = session.accessToken as string
+        const updatedProfile = await updateUserProfile(token, personalData)
 
         // Now TypeScript knows the type of 'prev'
         setUserProfile(prev => ({
@@ -1451,15 +1482,18 @@ export default function ProfilePage() {
                           setIsRefreshingResumes(true) // Show loading while refreshing
 
                           try {
-                            const resumesData = await fetchResumes()
-                            const transformedResumes = resumesData.map((resume: any, index: number) => ({
-                              id: resume.resume_id,
-                              name: resume.name || resume.file_name,
-                              jobTitle: resume.job_title || "Software Engineer",
-                              created: formatDate(resume.created_at),
-                              isPrimary: resume.is_primary || false
-                            }))
-                            setResumes(transformedResumes)
+                            if (session?.accessToken) {
+                              const token = session.accessToken as string
+                              const resumesData = await fetchResumes(token)
+                              const transformedResumes = resumesData.map((resume: any, index: number) => ({
+                                id: resume.resume_id,
+                                name: resume.name || resume.file_name,
+                                jobTitle: resume.job_title || "Software Engineer",
+                                created: formatDate(resume.created_at),
+                                isPrimary: resume.is_primary || false
+                              }))
+                              setResumes(transformedResumes)
+                            }
                           } catch (error) {
                             console.error("Failed to refresh resumes:", error)
                           } finally {

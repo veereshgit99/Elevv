@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getResumeUploadUrl } from '@/utils/api'  // Import the API function
+import { useSession } from 'next-auth/react'
 
 interface ResumeUploadProps {
     onUploadSuccess?: () => void
@@ -20,6 +21,7 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
     const [errorMessage, setErrorMessage] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const { data: session } = useSession()
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -88,6 +90,11 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
         setUploadProgress(0)
 
         try {
+            // Check for session token
+            if (!session?.accessToken) {
+                throw new Error('Authentication required. Please sign in again.')
+            }
+
             // Step 1: Get presigned URL using the API function
             setUploadProgress(10)
 
@@ -97,7 +104,9 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
                 jobTitle: jobTitle.trim()
             })
 
+            const token = session.accessToken as string
             const uploadData = await getResumeUploadUrl(
+                token,
                 selectedFile.name,
                 selectedFile.type,
                 jobTitle.trim()

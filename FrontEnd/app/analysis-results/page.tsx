@@ -47,13 +47,17 @@ export default function AnalysisResultsPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (status === "authenticated" && session) {
+      // Make sure we have both authenticated status AND the token
+      if (status === "authenticated" && session?.accessToken) {
         setIsLoadingData(true)
         setError(null)
 
         try {
-          // Fetch user profile
-          const profileData = await fetchUserProfile()
+          // Use the token directly from the session
+          const token = session.accessToken as string
+
+          // Fetch user profile with token
+          const profileData = await fetchUserProfile(token)
           setUserProfile(profileData)
           console.log("User profile fetched:", profileData)
 
@@ -66,9 +70,7 @@ export default function AnalysisResultsPage() {
       }
     }
 
-    if (status !== "loading") {
-      fetchData()
-    }
+    fetchData()
 
     const loadAnalysisData = async () => {
       const data = getStoredAnalysisResults()
@@ -82,7 +84,7 @@ export default function AnalysisResultsPage() {
     }
 
     loadAnalysisData()
-  }, [status, session, router])
+  }, [status, session, router]) // Depend on both status and session
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
