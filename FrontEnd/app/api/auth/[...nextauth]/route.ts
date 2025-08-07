@@ -202,6 +202,7 @@ const handler = NextAuth({
                         { Name: 'given_name', Value: givenName },
                         { Name: 'family_name', Value: familyName },
                     ],
+                    MessageAction: 'SUPPRESS'
                 }));
 
                 if (createUserResponse.User) {

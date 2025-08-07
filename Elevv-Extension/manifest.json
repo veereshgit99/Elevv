@@ -1,15 +1,16 @@
 {
     "manifest_version": 3,
-    "name": "Elevv - AI Resume Analysis",
+    "name": "Elevv",
     "version": "1.0.0",
-    "description": "Get instant AI-powered resume analysis on any job site",
+    "description": "Get instant AI-powered resume analysis against any job description.",
     "permissions": [
         "activeTab",
-        "storage"
+        "storage",
+        "alarms"
     ],
     "action": {
         "default_popup": "popup-build/index.html",
-        "default_title": "Elevv - Analyze Job"
+        "default_title": "Elevv"
     },
     "content_scripts": [
         {
@@ -34,5 +35,8 @@
     },
     "icons": {
         "16": "icons/icon.png"
-    }
+    },
+    "host_permissions": [
+        "https://elevv.net/*"
+    ]
 }

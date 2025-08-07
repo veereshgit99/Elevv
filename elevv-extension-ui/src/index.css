@@ -31,6 +31,7 @@ body {
 
 .app-header {
   padding: 0.75rem 1rem;
+  padding-bottom: 0rem;
   background-color: var(--header-bg);
   color: var(--text-light);
   border-bottom: 1px solid var(--header-bg);
@@ -52,9 +53,9 @@ body {
 }
 
 .header-subtitle {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
 }
 
 /* This is now our single source of truth for scrolling */
@@ -756,4 +757,138 @@ select {
   /* Dark Gray */
   background-color: #F9FAFB;
   /* ADDED: Light Gray background */
+}
+
+/* Add these styles to your existing index.css file */
+
+/* Authentication Styles */
+.auth-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem 1rem;
+}
+
+.auth-content {
+  text-align: center;
+  max-width: 300px;
+  width: 100%;
+}
+
+.auth-icon {
+  margin-bottom: 1rem;
+}
+
+.auth-brain-icon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--accent);
+}
+
+.auth-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.auth-content p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.auth-features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.feature-bullet {
+  width: 0.375rem;
+  height: 0.375rem;
+  background-color: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.feature-item span {
+  font-size: 0.875rem;
+  color: var(--text-dark);
+}
+
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sign-in-button {
+  background-color: var(--accent);
+  color: white;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.sign-in-button:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.refresh-button {
+  background-color: transparent;
+  color: var(--text-muted);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.refresh-button:hover {
+  background-color: #F9FAFB;
+  color: var(--text-dark);
+  border-color: var(--accent);
+}
+
+.button-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.user-info {
+  margin-left: auto;
+  padding: 0.25rem 0.75rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.375rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-name {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
 }

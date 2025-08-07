@@ -24,7 +24,9 @@ async def log_requests(request: Request, call_next):
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", 
+                   "https://elevv.net", 
+                   "chrome-extension://cfbjpbpglpenbmlndohaldffnjfncjfm"],  # Adjust as needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
