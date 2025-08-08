@@ -1,3 +1,21 @@
+// This script manages the extension's side panel behavior.
+
+// 1. Open the side panel when the user clicks the toolbar icon.
+chrome.action.onClicked.addListener((tab) => {
+    chrome.sidePanel.open({ tabId: tab.id });
+});
+
+// 2. A listener to keep the side panel alive and check auth.
+//    This replaces the previous 'popup' connection logic.
+chrome.runtime.onConnect.addListener(port => {
+    if (port.name === 'sidepanel') {
+        // This can be used for long-lived connections if needed.
+        // For now, it's a good place to trigger an auth refresh.
+        checkAuthStatus();
+    }
+});
+
+
 let user = null; // Caches the user's session data
 const SESSION_URL = 'https://elevv.net/api/auth/session';
 

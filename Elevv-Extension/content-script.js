@@ -5,154 +5,434 @@ class JobParser {
       "linkedin.com": this.parseLinkedIn.bind(this),
       "indeed.com": this.parseIndeed.bind(this),
       "glassdoor.com": this.parseGlassdoor.bind(this),
-      "jobs.google.com": this.parseGoogleJobs.bind(this),
-      "monster.com": this.parseMonster.bind(this),
     }
   }
 
-  // Main parsing function
+  /**
+   * Helper function to try multiple selectors in order.
+   * @param {string[]} selectors - An array of CSS selectors to try.
+   * @returns {string|null} - The text content of the first matching element, or null.
+   */
+
+  async _trySelectorsWithRetry(selectors, maxRetries = 3, delay = 1000) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const result = this._trySelectors(selectors);
+      if (result) return result;
+
+      // Wait for dynamic content to load
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    return null;
+  }
+
+  _trySelectorsWithDelay(selectors, delay = 1000) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const result = this._trySelectors(selectors);
+        resolve(result);
+      }, delay);
+    });
+  }
+
+
+
+  _trySelectors(selectors) {
+    for (const selector of selectors) {
+      try {
+        const elements = document.querySelectorAll(selector);
+        for (const element of elements) {
+          const text = element.innerText || element.textContent;
+          if (text && text.trim().length > 0) {
+            return text.trim();
+          }
+        }
+      } catch (error) {
+        console.warn(`Selector failed: ${selector}`, error);
+        continue;
+      }
+    }
+    return null;
+  }
+
+
   parseCurrentPage() {
-    const hostname = window.location.hostname.replace("www.", "")
-    const parser = this.parsers[hostname]
-
-    if (parser) {
-      return parser()
-    }
-
-    return this.parseGeneric()
+    const hostname = window.location.hostname.replace("www.", "");
+    const parser = this.parsers[hostname];
+    return parser ? parser() : this.parseGeneric();
   }
 
-  // LinkedIn job parsing
+  // In your content-script.js file
+
   parseLinkedIn() {
-    const jobTitle =
-      document.querySelector(".top-card-layout__title")?.textContent?.trim() ||
-      document.querySelector("h1")?.textContent?.trim()
+    const jobTitle = this._trySelectors([
+      // Most current LinkedIn selectors (2025)
+      '.top-card-layout__title h1',
+      '.top-card-layout__title a',
+      '.top-card-layout__entity-info h1',
+      '.job-details-jobs-unified-top-card__job-title h1',
+      '.jobs-unified-top-card__job-title h1',
 
-    const companyName =
-      document.querySelector(".topcard__flavor-row .topcard__flavor--black-link")?.textContent?.trim() ||
-      document.querySelector(".top-card-layout__card .topcard__org-name-link")?.textContent?.trim()
+      // Alternative current selectors
+      'h1[data-automation-id="job-title"]',
+      '.jobs-unified-top-card__job-title a',
+      '.topcard__title',
 
-    const jobDescription =
-      document.querySelector(".description__text")?.textContent?.trim() ||
-      document.querySelector(".jobs-box__html-content")?.textContent?.trim()
+      // Fallback patterns
+      'h1[class*="job-title"]',
+      'h1[class*="title"]',
+      '[data-tracking-control-name="public_jobs_topcard_job_title"] h1',
+
+      // Generic fallbacks
+      '.top-card h1',
+      'main h1'
+    ]);
+
+    const companyName = this._trySelectors([
+      // Most current LinkedIn selectors (2024/2025)
+      '.job-details-jobs-unified-top-card__company-name a',
+      '.job-details-jobs-unified-top-card__company-name',
+      '.jobs-unified-top-card__company-name a',
+      '.jobs-unified-top-card__company-name',
+
+      // Alternative current selectors
+      'a[data-tracking-control-name="public_jobs_topcard_company_link"]',
+      'a[data-tracking-control-name="public_jobs_topcard-org-name"]',
+
+      // Fallback selectors for different LinkedIn layouts
+      '.top-card-layout__second-subline a',
+      '.jobs-top-card__company-url',
+      '.topcard__org-name-link',
+      '.topcard__flavor-row .topcard__flavor--black-link',
+
+      // Generic fallbacks
+      'a[href*="/company/"]',
+      '[class*="company"] a',
+      '[class*="company-name"]'
+    ]);
+
+
+    // Try multiple selectors for job description
+    let jobDescription = this._trySelectors([
+      // Current LinkedIn selectors
+      '.description__text',
+      '.jobs-description__content',
+      '.jobs-box__html-content',
+      '.jobs-description-content__text',
+
+      // Alternative selectors
+      '[data-automation-id="job-description"]',
+      '.jobs-unified-description',
+      '.jobs-description',
+
+      // Fallback patterns
+      '[class*="description"] div[class*="text"]',
+      '[class*="job-description"]',
+
+      // Generic fallbacks
+      '.description',
+      '[id*="description"]'
+    ]);
+
+    // Clean up the description
+    if (jobDescription) {
+      // Remove excessive whitespace and clean HTML artifacts
+      jobDescription = jobDescription
+        .replace(/\s+/g, ' ')
+        .replace(/•/g, '\n•')
+        .replace(/\n\s*\n/g, '\n')
+        .trim();
+    }
 
     return {
       jobTitle: jobTitle || "",
       companyName: companyName || "",
       jobDescription: jobDescription || "",
-    }
+    };
   }
 
   // Indeed job parsing
   parseIndeed() {
-    const jobTitle =
-      document.querySelector('[data-testid="jobsearch-JobInfoHeader-title"]')?.textContent?.trim() ||
-      document.querySelector("h1")?.textContent?.trim()
+    const jobTitle = this._trySelectors([
+      // Current Indeed selectors
+      '[data-jk] h1',
+      '.jobsearch-JobInfoHeader-title',
+      '.jobsearch-JobInfoHeader-title span[title]',
+      'h1[data-testid="job-title"]',
 
-    const companyName =
-      document.querySelector('[data-testid="inlineHeader-companyName"]')?.textContent?.trim() ||
-      document.querySelector(".icl-u-lg-mr--sm")?.textContent?.trim()
+      // Alternative selectors
+      '.jobsearch-DesktopStickyContainer h1',
+      '[data-testid="job-details"] h1',
+      '.jobsearch-JobComponent-description h1',
 
-    const jobDescription =
-      document.querySelector("#jobDescriptionText")?.textContent?.trim() ||
-      document.querySelector(".jobsearch-jobDescriptionText")?.textContent?.trim()
+      // Fallback patterns
+      'h1[class*="title"]',
+      'h1[class*="job"]',
+
+      // Generic fallbacks
+      'main h1',
+      'article h1'
+    ]);
+
+    const companyName = this._trySelectors([
+      '[data-testid="inlineHeader-companyName"]',
+      'div[data-company-name="true"]',
+      '.icl-u-lg-mr--sm'
+    ]);
+
+    let jobDescription = this._trySelectors([
+      // Current Indeed selectors
+      '#jobDescriptionText',
+      '.jobsearch-jobDescriptionText',
+      '[data-testid="job-description"]',
+      '.jobsearch-JobComponent-description div[id*="description"]',
+
+      // Alternative selectors
+      '.jobsearch-DesktopStickyContainer [id*="description"]',
+      '.jobsearch-JobInfoHeader-jobDescription',
+
+      // Fallback patterns
+      '[class*="job-description"]',
+      '[class*="description-text"]',
+
+      // Generic fallbacks
+      '.description',
+      '[id*="description"]'
+    ]);
+
+    // Clean up the description
+    if (jobDescription) {
+      jobDescription = jobDescription
+        .replace(/\s+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
 
     return {
       jobTitle: jobTitle || "",
       companyName: companyName || "",
-      jobDescription: jobDescription || "",
-    }
+      jobDescription: jobDescription || ""
+    };
   }
 
   // Glassdoor job parsing
   parseGlassdoor() {
-    const jobTitle =
-      document.querySelector('[data-test="job-title"]')?.textContent?.trim() ||
-      document.querySelector("h2")?.textContent?.trim()
+    const jobTitle = this._trySelectors([
+      // Current Glassdoor selectors
+      '[data-test="job-title"]',
+      '[data-test="jobTitle"]',
+      '.JobDetails_jobTitle__Rw_gn',
+      '.JobDetails_blurDescription__jJSsM h1',
 
-    const companyName =
-      document.querySelector('[data-test="employer-name"]')?.textContent?.trim() ||
-      document.querySelector(".strong")?.textContent?.trim()
+      // Alternative selectors
+      'h1[data-automation="job-title"]',
+      '.jobTitle',
+      '[class*="job-title"] h1',
+      '[class*="jobTitle"]',
 
-    const jobDescription =
-      document.querySelector('[data-test="jobDescriptionContent"]')?.textContent?.trim() ||
-      document.querySelector(".desc")?.textContent?.trim()
+      // Fallback patterns
+      'h1[class*="title"]',
+      'h2[class*="title"]',
+      'h1',
+      'h2'
+    ]);
+
+    const companyName = this._trySelectors([
+      // Current Glassdoor selectors
+      '[data-test="employer-name"]',
+      '[data-test="employerName"]',
+      '.JobDetails_companyName__j1dKn',
+      '.EmployerProfile_employerName__Xemli',
+
+      // Alternative selectors
+      'a[data-test="employer-name"]',
+      '.employerName',
+      '[class*="employer-name"]',
+      '[class*="company-name"]',
+
+      // Fallback patterns
+      '.strong',
+      '[class*="employer"]',
+      '[class*="company"]',
+      'a[href*="/Overview/Working-at"]'
+    ]);
+
+    let jobDescription = this._trySelectors([
+      // Current Glassdoor selectors
+      '[data-test="jobDescriptionContent"]',
+      '[data-test="job-description"]',
+      '.JobDetails_jobDescription__uW_fK',
+      '.JobDetails_blurDescription__jJSsM',
+
+      // Alternative selectors
+      '.jobDescriptionContent',
+      '[class*="job-description"]',
+      '[class*="jobDescription"]',
+      '.desc',
+
+      // Fallback patterns
+      '[class*="description"]',
+      '[id*="description"]',
+      '.description'
+    ]);
+
+    // Clean up the description
+    if (jobDescription) {
+      jobDescription = jobDescription
+        .replace(/\s+/g, ' ')
+        .replace(/•/g, '\n•')
+        .replace(/\n\s*\n/g, '\n')
+        .trim();
+    }
 
     return {
       jobTitle: jobTitle || "",
       companyName: companyName || "",
       jobDescription: jobDescription || "",
-    }
+    };
   }
 
-  // Google Jobs parsing
-  parseGoogleJobs() {
-    const jobTitle =
-      document.querySelector('h2[jsname="r4nke"]')?.textContent?.trim() ||
-      document.querySelector("h1")?.textContent?.trim()
-
-    const companyName = document.querySelector('[jsname="qLeWe"]')?.textContent?.trim()
-
-    const jobDescription = document.querySelector('[jsname="WbUQNb"]')?.textContent?.trim()
-
-    return {
-      jobTitle: jobTitle || "",
-      companyName: companyName || "",
-      jobDescription: jobDescription || "",
-    }
-  }
-
-  // Monster job parsing
-  parseMonster() {
-    const jobTitle =
-      document.querySelector('h1[data-testid="svx-job-title"]')?.textContent?.trim() ||
-      document.querySelector("h1")?.textContent?.trim()
-
-    const companyName = document.querySelector('[data-testid="svx-job-company-name"]')?.textContent?.trim()
-
-    const jobDescription = document.querySelector('[data-testid="svx-job-description-content"]')?.textContent?.trim()
-
-    return {
-      jobTitle: jobTitle || "",
-      companyName: companyName || "",
-      jobDescription: jobDescription || "",
-    }
-  }
 
   // Generic fallback parser
   parseGeneric() {
-    // Try to find job title in common selectors
-    const jobTitle =
-      document.querySelector("h1")?.textContent?.trim() ||
-      document.querySelector('[class*="title"]')?.textContent?.trim() ||
-      document.querySelector('[class*="job-title"]')?.textContent?.trim()
+    const jobTitle = this._trySelectors([
+      // Specific job title patterns
+      '[data-testid*="job-title"]',
+      '[data-test*="job-title"]',
+      '[class*="job-title"] h1',
+      '[class*="jobTitle"] h1',
+      '[id*="job-title"]',
 
-    // Try to find company name
-    const companyName =
-      document.querySelector('[class*="company"]')?.textContent?.trim() ||
-      document.querySelector('[class*="employer"]')?.textContent?.trim()
+      // Heading patterns
+      'h1[class*="title"]',
+      'h2[class*="title"]',
+      'h1[class*="job"]',
+      'h2[class*="job"]',
 
-    // Try to find job description
-    const jobDescription =
-      document.querySelector('[class*="description"]')?.textContent?.trim() ||
-      document.querySelector('[class*="job-desc"]')?.textContent?.trim()
+      // Generic patterns
+      'main h1',
+      'article h1',
+      'section h1',
+      '[role="main"] h1',
+
+      // Broader fallbacks
+      'h1',
+      'h2',
+      '[class*="title"]'
+    ]);
+
+    const companyName = this._trySelectors([
+      // Specific company patterns
+      '[data-testid*="company"]',
+      '[data-test*="company"]',
+      '[data-testid*="employer"]',
+      '[class*="company-name"]',
+      '[class*="companyName"]',
+      '[id*="company"]',
+
+      // Link patterns
+      'a[href*="/company/"]',
+      'a[href*="/employer/"]',
+      'a[href*="/organization/"]',
+
+      // Generic patterns
+      '[class*="company"]',
+      '[class*="employer"]',
+      '[class*="org"]',
+      '[class*="organization"]',
+
+      // Broader fallbacks
+      '.company',
+      '.employer'
+    ]);
+
+    let jobDescription = this._trySelectors([
+      // Specific description patterns
+      '[data-testid*="description"]',
+      '[data-test*="description"]',
+      '[class*="job-description"]',
+      '[class*="jobDescription"]',
+      '[id*="job-description"]',
+      '[id*="description"]',
+
+      // Content patterns
+      '[class*="description-content"]',
+      '[class*="job-content"]',
+      '[class*="content"] [class*="description"]',
+
+      // Generic patterns
+      '[class*="description"]',
+      '[class*="desc"]',
+      '[class*="content"]',
+
+      // Broader fallbacks
+      '.description',
+      '.content',
+      'main [class*="text"]',
+      'article [class*="text"]'
+    ]);
+
+    // Clean up the description
+    if (jobDescription) {
+      jobDescription = jobDescription
+        .replace(/\s+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
 
     return {
       jobTitle: jobTitle || "",
       companyName: companyName || "",
       jobDescription: jobDescription || "",
-    }
+    };
   }
 }
 
 // Listen for messages from popup
 window.chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "parseJob") {
-    const parser = new JobParser()
-    const jobData = parser.parseCurrentPage()
-    sendResponse(jobData)
+    const parser = new JobParser();
+    const jobData = parser.parseCurrentPage();
+    sendResponse(jobData);
   }
-})
+});
 
-// Initialize parser
-const jobParser = new JobParser()
+// --- THIS IS THE NEW LOGIC TO ADD AT THE BOTTOM ---
+
+let lastUrl = location.href;
+const parser = new JobParser();
+
+// Function to run the parser and send data if the URL has changed
+function handleUrlChange() {
+  // A short delay to ensure the new page content has loaded
+  setTimeout(() => {
+    const jobData = parser.parseCurrentPage();
+    // Send the new data to the extension's UI
+    chrome.runtime.sendMessage({ type: "JOB_DATA_UPDATED", payload: jobData });
+  }, 500); // 500ms delay
+}
+
+// Set up a MutationObserver to watch for changes in the page body
+const observer = new MutationObserver((mutations) => {
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
+    console.log("URL changed to:", lastUrl);
+    handleUrlChange();
+  }
+});
+
+// Start observing the body for changes
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
+});
+
+// Listen for the initial request from the popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "parseJob") {
+    const jobData = parser.parseCurrentPage();
+    sendResponse(jobData);
+  }
+});
+

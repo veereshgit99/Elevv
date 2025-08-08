@@ -15,6 +15,7 @@ export interface Suggestion {
     id: string;
     context: string;
     priority: Priority;
+    type: 'add' | 'rephrase' | 'quantify' | 'highlight' | 'remove' | 'style_adjust';
     currentText: string;
     suggestedText: string;
     rationale: string;
@@ -56,11 +57,8 @@ export const EnhancementsPage: React.FC<EnhancementsPageProps> = ({ onBack, data
                     <ArrowLeftIcon />
                     <span>Back to Analysis Results</span>
                 </button>
-            </div>
-
-            <section className="enhancements-summary-section">
-                <div className="score-gauge">
-                    <svg className="gauge-svg" viewBox="0 0 80 80">
+                <div className="header-score-gauge">
+                    <svg className="header-gauge-svg" viewBox="0 0 80 80">
                         <circle className="gauge-bg" cx="40" cy="40" r="30" />
                         <motion.circle
                             className="gauge-fg"
@@ -73,9 +71,12 @@ export const EnhancementsPage: React.FC<EnhancementsPageProps> = ({ onBack, data
                             transition={{ duration: 1.5, ease: "circOut", delay: 0.5 }}
                         />
                     </svg>
-                    <div className="score-text">{data.projectedScore}%</div>
-                    <span className="score-label">Projected Score</span>
+                    <div className="header-score-text">{data.projectedScore}%</div>
+                    <span className="header-score-label">Projected Score</span>
                 </div>
+            </div>
+
+            <section className="enhancements-summary-section">
                 <p className="enhancements-strategic-summary">{data.strategicSummary}</p>
             </section>
 
@@ -89,16 +90,26 @@ export const EnhancementsPage: React.FC<EnhancementsPageProps> = ({ onBack, data
                                 className="suggestion-accordion-trigger"
                                 onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
                             >
-                                {/* NEW: Accordion title format */}
-                                <div className="accordion-trigger-title">
-                                    <span className={`priority-label priority-${suggestion.priority.toLowerCase()}`}>
+                                {/* Updated: Match the UI from the images */}
+                                <div className="accordion-trigger-left">
+                                    <span className={`priority-badge priority-${suggestion.priority.toLowerCase()}`}>
                                         {suggestion.priority}
                                     </span>
-                                    <span>- {suggestion.context}</span>
+                                    <span className={`action-type-badge ${suggestion.type}`}>
+                                        {suggestion.type === 'add' ? 'Add New Content' :
+                                            suggestion.type === 'rephrase' ? 'Rephrase Existing' :
+                                                suggestion.type === 'quantify' ? 'Add Metrics' :
+                                                    'Modify Content'}
+                                    </span>
                                 </div>
-                                <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
-                                    <ChevronDownIcon />
-                                </motion.div>
+                                <div className="accordion-trigger-right">
+                                    <span className="section-indicator">
+                                        {suggestion.context.replace(/^(In your |section)/gi, '').trim().toUpperCase()}
+                                    </span>
+                                    <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
+                                        <ChevronDownIcon />
+                                    </motion.div>
+                                </div>
                             </button>
                             <AnimatePresence>
                                 {isExpanded && (
@@ -110,23 +121,30 @@ export const EnhancementsPage: React.FC<EnhancementsPageProps> = ({ onBack, data
                                         className="suggestion-accordion-content"
                                     >
                                         <div className="suggestion-change-block">
-                                            <label>Current Text</label>
-                                            <p className="suggestion-current-text">{suggestion.currentText}</p>
+                                            {/* Only show current text if it's not blank */}
+                                            {suggestion.currentText && suggestion.currentText.trim() && (
+                                                <>
+                                                    <label>Current Text</label>
+                                                    <p className="suggestion-current-text">{suggestion.currentText}</p>
+                                                </>
+                                            )}
                                         </div>
 
                                         <div className="suggestion-change-block">
                                             <div className="suggestion-suggested-header">
                                                 <label>Suggested Improvement</label>
+                                            </div>
+                                            <div className="suggestion-text-container">
+                                                <p className="suggestion-suggested-text">{suggestion.suggestedText}</p>
                                                 <button
                                                     onClick={() => handleCopy(suggestion.suggestedText, suggestion.id)}
-                                                    className="suggestion-copy-button"
+                                                    className="suggestion-copy-icon"
                                                     disabled={copiedId === suggestion.id}
+                                                    title={copiedId === suggestion.id ? 'Copied!' : 'Copy text'}
                                                 >
                                                     {copiedId === suggestion.id ? <CheckIcon /> : <CopyIcon />}
-                                                    <span>{copiedId === suggestion.id ? 'Copied!' : 'Copy'}</span>
                                                 </button>
                                             </div>
-                                            <p className="suggestion-suggested-text">{suggestion.suggestedText}</p>
                                         </div>
 
                                         <div className="suggestion-rationale-block">

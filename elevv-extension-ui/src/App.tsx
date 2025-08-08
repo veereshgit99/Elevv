@@ -35,7 +35,12 @@ export default function ChromeExtensionPopup() {
   const [jobDescription, setJobDescription] = useState("")
   const [selectedResume, setSelectedResume] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isGeneratingEnhancements, setIsGeneratingEnhancements] = useState(false)
   const [currentView, setCurrentView] = useState<'form' | 'results' | 'enhancements'>('form')
+
+  // --- NEW: Track if user came from enhancements page ---
+  const [cameFromEnhancements, setCameFromEnhancements] = useState(false)
+  const [hasExistingEnhancements, setHasExistingEnhancements] = useState(false)
 
   const [analysisData, setAnalysisData] = useState<{
     matchScore: number;
@@ -59,6 +64,7 @@ export default function ChromeExtensionPopup() {
       id: string;
       context: string;
       priority: 'Critical' | 'High' | 'Medium' | 'Low';
+      type: 'add' | 'rephrase' | 'quantify' | 'highlight' | 'remove' | 'style_adjust';
       currentText: string;
       suggestedText: string;
       rationale: string;
@@ -248,6 +254,44 @@ export default function ChromeExtensionPopup() {
     }, 500);
   }, [isAuthenticated, isCheckingAuth])
 
+  // --- NEW: Check for existing enhancement results ---
+  useEffect(() => {
+    const checkExistingEnhancements = () => {
+      const storedEnhancements = sessionStorage.getItem('enhancement_results');
+      setHasExistingEnhancements(!!storedEnhancements);
+    };
+
+    checkExistingEnhancements();
+  }, [currentView]) // Check when view changes
+
+  // --- Listen for live job data updates from content script/background ---
+  useEffect(() => {
+    const messageListener = (
+      message: any,
+      _sender: chrome.runtime.MessageSender,
+      _sendResponse: (response?: any) => void
+    ) => {
+      if (message?.type === "JOB_DATA_UPDATED") {
+        console.log("Received updated job data:", message.payload);
+        const { jobTitle, companyName, jobDescription } = message.payload || {};
+        setJobTitle(jobTitle || "");
+        setCompanyName(companyName || "");
+        setJobDescription(jobDescription || "");
+      }
+    };
+
+    // Guard for development environment
+    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
+      chrome.runtime.onMessage.addListener(messageListener);
+    }
+
+    return () => {
+      if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.removeListener) {
+        chrome.runtime.onMessage.removeListener(messageListener);
+      }
+    };
+  }, []); // Run once when component mounts
+
   // --- HELPER FUNCTION: Map backend response to extension UI format ---
   const mapEnhancementData = (optimizationResponse: OptimizationResponse) => {
     const priorityMapping: Record<string, 'Critical' | 'High' | 'Medium' | 'Low'> = {
@@ -257,6 +301,15 @@ export default function ChromeExtensionPopup() {
       'low': 'Low'
     };
 
+    const typeMapping: Record<string, 'add' | 'rephrase' | 'quantify' | 'highlight' | 'remove' | 'style_adjust'> = {
+      'add': 'add',
+      'rephrase': 'rephrase',
+      'quantify': 'quantify',
+      'highlight': 'highlight',
+      'remove': 'remove',
+      'style_adjust': 'style_adjust'
+    };
+
     return {
       projectedScore: optimizationResponse.match_after_enhancement,
       strategicSummary: optimizationResponse.overall_feedback,
@@ -264,14 +317,13 @@ export default function ChromeExtensionPopup() {
         id: `suggestion-${index}`,
         context: suggestion.target_section,
         priority: priorityMapping[suggestion.priority] || 'Medium',
+        type: typeMapping[suggestion.type] || 'rephrase',
         currentText: suggestion.original_text_snippet,
         suggestedText: suggestion.suggested_text,
         rationale: suggestion.reasoning
       }))
     };
-  };
-
-  // --- UPDATED handleAnalyze function to call BOTH APIs ---
+  };  // --- UPDATED handleAnalyze function to call ONLY analysis API ---
   const handleAnalyze = async () => {
     if (!user?.accessToken || !selectedResume) {
       console.error('Authentication error or no resume selected.');
@@ -290,12 +342,12 @@ export default function ChromeExtensionPopup() {
 
       // Check if this is development mode
       if (user.accessToken === 'dev-mock-token-12345') {
-        console.log('Development mode: Using mock analysis and enhancement data');
+        console.log('Development mode: Using mock analysis data');
 
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Mock analysis data
+        // Mock analysis data only
         setAnalysisData({
           matchScore: 78,
           summary: "Your profile shows strong technical skills and relevant experience for this Senior Software Engineer role at Google. Your background in full-stack development and cloud technologies aligns well with the position requirements.",
@@ -310,8 +362,85 @@ export default function ChromeExtensionPopup() {
             "Could benefit from more leadership experience",
             "GraphQL experience not clearly demonstrated"
           ],
-          rawData: null,
+          rawData: {
+            // Mock raw data for enhancement API
+            user_id: 'dev-user',
+            analysis_id: 'dev-analysis-123',
+            job_title: jobTitle,
+            resume_id: selectedResume,
+            resume_content: "Mock resume content...",
+            job_description: { content: jobDescription },
+            relationship_map: { relationship_map: {} },
+            job_match_analysis: { match_analysis: {} },
+            resume_file_type: 'pdf'
+          },
         });
+
+        console.log('Mock analysis data set successfully');
+        setCurrentView('results');
+        return;
+      }
+
+      // Step 1: Get analysis results only (production mode)
+      console.log('Starting job analysis...');
+      const analysisResult = await startJobAnalysis(user.accessToken, analysisRequestData);
+
+      // Map analysis data for the results view
+      setAnalysisData({
+        matchScore: analysisResult.overall_match_percentage,
+        summary: analysisResult.job_match_analysis.match_analysis.strength_summary,
+        strengths: analysisResult.relationship_map.relationship_map.strong_points_in_resume,
+        gaps: analysisResult.relationship_map.relationship_map.identified_gaps_in_resume.map((g: any) => g.jd_requirement),
+        rawData: analysisResult, // Store for enhancement generation
+      });
+
+      console.log('Analysis completed successfully');
+      setCurrentView('results');
+
+    } catch (error) {
+      console.error("Analysis API failed:", error);
+      // TODO: Add error state handling for user feedback
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }; const handleBackToForm = () => {
+    setCurrentView('form');
+  }
+
+  // --- NEW: Handle viewing existing enhancements ---
+  const handleViewEnhancements = () => {
+    const storedEnhancements = sessionStorage.getItem('enhancement_results');
+    if (storedEnhancements) {
+      try {
+        const parsedEnhancements = JSON.parse(storedEnhancements);
+        setEnhancementsData(parsedEnhancements);
+        setCurrentView('enhancements');
+      } catch (error) {
+        console.error('Failed to parse stored enhancement results:', error);
+        // Fallback to generate new enhancements
+        handleTailorResume();
+      }
+    } else {
+      // No stored enhancements, generate new ones
+      handleTailorResume();
+    }
+  };
+
+  const handleTailorResume = async () => {
+    if (!user?.accessToken || !analysisData.rawData) {
+      console.error('No analysis data available for enhancement generation');
+      return;
+    }
+
+    setIsGeneratingEnhancements(true);
+
+    try {
+      // Check if this is development mode
+      if (user.accessToken === 'dev-mock-token-12345') {
+        console.log('Development mode: Using mock enhancement data');
+
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         // Mock enhancement data
         setEnhancementsData({
@@ -322,6 +451,7 @@ export default function ChromeExtensionPopup() {
               id: 'suggestion-1',
               context: 'Technical Skills Section',
               priority: 'Critical',
+              type: 'rephrase',
               currentText: 'Experienced with JavaScript frameworks',
               suggestedText: 'Expert in React.js with 5+ years building scalable web applications serving 100K+ users',
               rationale: 'Quantifying your experience with specific metrics and user scale demonstrates the impact of your work.'
@@ -329,7 +459,8 @@ export default function ChromeExtensionPopup() {
             {
               id: 'suggestion-2',
               context: 'Professional Experience',
-              priority: 'High',
+              priority: 'Critical',
+              type: 'add',
               currentText: 'Worked on various backend services',
               suggestedText: 'Architected and developed microservices handling 1M+ requests/day using Node.js and AWS Lambda',
               rationale: 'Adding specific scale metrics and technology details shows your ability to handle enterprise-level systems.'
@@ -337,7 +468,8 @@ export default function ChromeExtensionPopup() {
             {
               id: 'suggestion-3',
               context: 'Leadership Experience',
-              priority: 'Medium',
+              priority: 'High',
+              type: 'rephrase',
               currentText: 'Collaborated with team members',
               suggestedText: 'Led cross-functional team of 4 developers, mentored 2 junior engineers, and delivered projects 15% ahead of schedule',
               rationale: 'Highlighting leadership and mentoring experience is crucial for senior roles and shows your growth potential.'
@@ -345,57 +477,45 @@ export default function ChromeExtensionPopup() {
           ]
         });
 
-        console.log('Mock analysis and enhancements data set successfully');
-        setCurrentView('results');
+        // Store mock enhancement results in sessionStorage
+        sessionStorage.setItem('enhancement_results', JSON.stringify({
+          projectedScore: 88,
+          strategicSummary: "Your resume is already strong, showcasing impressive projects and quantified achievements. The key opportunity is to more explicitly align your existing experience with the specific language used in the Google job description, particularly around 'ML infrastructure', 'model evaluation/optimization', and 'large-scale systems'. By reframing your accomplishments using these keywords, you will transform your resume from 'strong candidate' to 'ideal candidate' and significantly increase your chances of passing the initial screening.",
+          suggestions: [
+            { id: '1', context: 'Summary', priority: 'Critical' as const, type: 'rephrase' as const, currentText: 'Software Engineer with 2.5+ years of experience, currently building a full-stack, AI-powered career intelligence platform using a sophisticated multi-agent architecture. Led ML-driven automation, and built microservices that cut order processing time by 90%.', suggestedText: 'Software Engineer with 2.5+ years of experience building and scaling enterprise-grade microservices for a leading ERP provider (SAP). Proven expertise in full-stack development, distributed systems, and enhancing application reliability. Drove a 90% reduction in order processing time and improved system monitoring, directly impacting customer success.', rationale: 'The current summary leads with a personal project. This revision immediately highlights your most relevant experience (SAP enterprise software), which is a direct parallel to Microsoft Dynamics. It incorporates keywords from the job description like "scaling", "enterprise-grade", "reliability", and "customer success" to create immediate alignment with the recruiter\'s needs.' },
+            { id: '2', context: 'Technical Skills', priority: 'High' as const, type: 'add' as const, currentText: '', suggestedText: 'ML Infrastructure: Model deployment, evaluation pipelines, large-scale data processing', rationale: 'Adding explicit ML infrastructure keywords directly matches the job requirements and showcases your relevant experience in a way that will be immediately recognized by both automated screening systems and human recruiters.' }
+          ]
+        }));
+
+        console.log('Mock enhancement data set successfully');
+        setCurrentView('enhancements');
         return;
       }
 
-      // Step 1: Get analysis results (production mode)
-      console.log('Starting job analysis...');
-      const analysisResult = await startJobAnalysis(user.accessToken, analysisRequestData);
-
-      // Step 2: Get enhancement suggestions using the analysis results
+      // Production mode - call the enhancement API
       console.log('Getting enhancement suggestions...');
-      const enhancementResult = await optimizeResume(user.accessToken, analysisResult);
+      const enhancementResult = await optimizeResume(user.accessToken, analysisData.rawData);
 
-      // Step 3: Map analysis data for the results view
-      setAnalysisData({
-        matchScore: analysisResult.overall_match_percentage,
-        summary: analysisResult.job_match_analysis.match_analysis.strength_summary,
-        strengths: analysisResult.relationship_map.relationship_map.strong_points_in_resume,
-        gaps: analysisResult.relationship_map.relationship_map.identified_gaps_in_resume.map((g: any) => g.jd_requirement),
-        rawData: analysisResult, // Store for potential future use
-      });
-
-      // Step 4: Map enhancement data for the enhancements view  
+      // Map enhancement data for the enhancements view  
       const mappedEnhancementData = mapEnhancementData(enhancementResult);
       setEnhancementsData(mappedEnhancementData);
 
-      console.log('Analysis and enhancements completed successfully');
-      setCurrentView('results');
+      // Store enhancement results in sessionStorage
+      sessionStorage.setItem('enhancement_results', JSON.stringify(mappedEnhancementData));
+
+      console.log('Enhancement generation completed successfully');
+      setCurrentView('enhancements');
 
     } catch (error) {
-      console.error("Analysis or enhancement API failed:", error);
+      console.error("Enhancement API failed:", error);
       // TODO: Add error state handling for user feedback
     } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleBackToForm = () => {
-    setCurrentView('form');
-  }
-
-  const handleTailorResume = () => {
-    if (enhancementsData) {
-      setCurrentView('enhancements');
-    } else {
-      console.error('No enhancement data available');
-      // Optionally show a message to the user
+      setIsGeneratingEnhancements(false);
     }
   }
 
   const handleBackToResults = () => {
+    setCameFromEnhancements(true);
     setCurrentView('results');
   }
 
@@ -530,6 +650,9 @@ export default function ChromeExtensionPopup() {
             <AnalysisResults
               onBack={handleBackToForm}
               onTailorResume={handleTailorResume}
+              onViewEnhancements={handleViewEnhancements}
+              showViewEnhancements={cameFromEnhancements && hasExistingEnhancements}
+              isGeneratingEnhancements={isGeneratingEnhancements}
               matchScore={analysisData.matchScore}
               summary={analysisData.summary}
               strengths={analysisData.strengths}
@@ -594,9 +717,16 @@ export default function ChromeExtensionPopup() {
             onClick={handleAnalyze}
             disabled={isLoading || isAnalyzing || !selectedResume}
             whileTap={{ scale: 0.98 }}
-            className="analyze-button"
+            className={`analyze-button ${isAnalyzing ? 'analyzing' : ''}`}
           >
-            {isAnalyzing ? <Loader2 className="loader-spinner-button" /> : "Analyze Now"}
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="loader-spinner-button" />
+                Analyzing...
+              </>
+            ) : (
+              "Analyze Now"
+            )}
           </motion.button>
         </footer>
       )}

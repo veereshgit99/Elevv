@@ -2,18 +2,32 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, CheckCircle, AlertTriangle, ChevronRight } from "lucide-react"
+import { ArrowLeft, CheckCircle, AlertTriangle, ChevronRight, Loader2 } from "lucide-react"
 
 interface AnalysisResultsProps {
     onBack: () => void
     onTailorResume: () => void
+    isGeneratingEnhancements?: boolean
     matchScore: number
     summary: string
     strengths: string[]
     gaps: string[]
+    // NEW: Props for enhancement viewing logic
+    showViewEnhancements?: boolean
+    onViewEnhancements?: () => void
 }
 
-export function AnalysisResults({ onBack, onTailorResume, matchScore, summary, strengths, gaps }: AnalysisResultsProps) {
+export function AnalysisResults({
+    onBack,
+    onTailorResume,
+    isGeneratingEnhancements = false,
+    matchScore,
+    summary,
+    strengths,
+    gaps,
+    showViewEnhancements = false,
+    onViewEnhancements
+}: AnalysisResultsProps) {
     const [expandedSection, setExpandedSection] = useState<'strengths' | 'gaps' | null>('gaps')
 
     const circleLength = 2 * Math.PI * 30;
@@ -55,12 +69,20 @@ export function AnalysisResults({ onBack, onTailorResume, matchScore, summary, s
 
                 <div className="score-button-section">
                     <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={onTailorResume}
-                        className="tailor-button"
+                        whileHover={{ scale: isGeneratingEnhancements ? 1 : 1.02 }}
+                        whileTap={{ scale: isGeneratingEnhancements ? 1 : 0.98 }}
+                        onClick={showViewEnhancements ? onViewEnhancements : onTailorResume}
+                        disabled={isGeneratingEnhancements}
+                        className={`tailor-button ${isGeneratingEnhancements ? 'loading' : ''}`}
                     >
-                        Tailor Your Resume
+                        {isGeneratingEnhancements ? (
+                            <>
+                                <Loader2 className="spinner" />
+                                <span className="loading-text">Generating...</span>
+                            </>
+                        ) : (
+                            showViewEnhancements ? 'View Enhancements' : 'Tailor Your Resume'
+                        )}
                     </motion.button>
                 </div>
             </div>
