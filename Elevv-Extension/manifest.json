@@ -30,9 +30,7 @@
                 "https://www.linkedin.com/*",
                 "https://linkedin.com/*",
                 "https://www.indeed.com/*",
-                "https://indeed.com/*",
-                "https://www.glassdoor.com/*",
-                "https://glassdoor.com/*"
+                "https://indeed.com/*"
             ],
             "js": [
                 "content-script.js"

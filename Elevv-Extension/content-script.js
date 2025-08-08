@@ -4,7 +4,6 @@ class JobParser {
     this.parsers = {
       "linkedin.com": this.parseLinkedIn.bind(this),
       "indeed.com": this.parseIndeed.bind(this),
-      "glassdoor.com": this.parseGlassdoor.bind(this),
     }
   }
 
@@ -213,83 +212,6 @@ class JobParser {
       jobTitle: jobTitle || "",
       companyName: companyName || "",
       jobDescription: jobDescription || ""
-    };
-  }
-
-  // Glassdoor job parsing
-  parseGlassdoor() {
-    const jobTitle = this._trySelectors([
-      // Current Glassdoor selectors
-      '[data-test="job-title"]',
-      '[data-test="jobTitle"]',
-      '.JobDetails_jobTitle__Rw_gn',
-      '.JobDetails_blurDescription__jJSsM h1',
-
-      // Alternative selectors
-      'h1[data-automation="job-title"]',
-      '.jobTitle',
-      '[class*="job-title"] h1',
-      '[class*="jobTitle"]',
-
-      // Fallback patterns
-      'h1[class*="title"]',
-      'h2[class*="title"]',
-      'h1',
-      'h2'
-    ]);
-
-    const companyName = this._trySelectors([
-      // Current Glassdoor selectors
-      '[data-test="employer-name"]',
-      '[data-test="employerName"]',
-      '.JobDetails_companyName__j1dKn',
-      '.EmployerProfile_employerName__Xemli',
-
-      // Alternative selectors
-      'a[data-test="employer-name"]',
-      '.employerName',
-      '[class*="employer-name"]',
-      '[class*="company-name"]',
-
-      // Fallback patterns
-      '.strong',
-      '[class*="employer"]',
-      '[class*="company"]',
-      'a[href*="/Overview/Working-at"]'
-    ]);
-
-    let jobDescription = this._trySelectors([
-      // Current Glassdoor selectors
-      '[data-test="jobDescriptionContent"]',
-      '[data-test="job-description"]',
-      '.JobDetails_jobDescription__uW_fK',
-      '.JobDetails_blurDescription__jJSsM',
-
-      // Alternative selectors
-      '.jobDescriptionContent',
-      '[class*="job-description"]',
-      '[class*="jobDescription"]',
-      '.desc',
-
-      // Fallback patterns
-      '[class*="description"]',
-      '[id*="description"]',
-      '.description'
-    ]);
-
-    // Clean up the description
-    if (jobDescription) {
-      jobDescription = jobDescription
-        .replace(/\s+/g, ' ')
-        .replace(/•/g, '\n•')
-        .replace(/\n\s*\n/g, '\n')
-        .trim();
-    }
-
-    return {
-      jobTitle: jobTitle || "",
-      companyName: companyName || "",
-      jobDescription: jobDescription || "",
     };
   }
 
