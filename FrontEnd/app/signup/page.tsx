@@ -3,7 +3,8 @@
 import type React from "react"
 
 import { useEffect, useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Eye, EyeOff, Brain } from "lucide-react"
 
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui/button"
 // Import the signIn function at the top
 import { signIn } from "next-auth/react";
 
-import { useSearchParams } from 'next/navigation';
 const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL;
 
 // Reusable ChatGPT-like floating label input
@@ -75,6 +75,7 @@ function FloatingInput({
 }
 
 export default function SignUpPage() {
+  const { data: session, status } = useSession()
   const [showPassword, setShowPassword] = useState(false)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -88,6 +89,13 @@ export default function SignUpPage() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // If user is authenticated, redirect to dashboard
+    if (status === "authenticated" && session) {
+      router.push("/dashboard")
+    }
+  }, [session, status, router])
+
+  useEffect(() => {
     // This hook will run when the page loads
     // It checks the URL for an 'error' parameter and sets it as the error message
     const urlError = searchParams.get('error');
@@ -95,6 +103,11 @@ export default function SignUpPage() {
       setError(urlError);
     }
   }, [searchParams]);
+
+  // Only render the signup page if user is not authenticated
+  if (status === "authenticated") {
+    return null // Will redirect anyway
+  }
 
   // Email validation function
   const validateEmail = (email: string) => {

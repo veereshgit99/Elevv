@@ -1,9 +1,28 @@
+"use client"
+
+import { useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Brain, Chrome, BarChart3 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
 export default function Home() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    // If user is authenticated, redirect to dashboard
+    if (status === "authenticated" && session) {
+      router.push("/dashboard")
+    }
+  }, [session, status, router])
+
+  // Only render the landing page if user is not authenticated
+  if (status === "authenticated") {
+    return null // Will redirect anyway
+  }
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
       {/* Header Navigation */}

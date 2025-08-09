@@ -3,14 +3,12 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
+import { useSession, signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Eye, EyeOff, Brain } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-
-// Import the signIn function at the top
-import { signIn } from "next-auth/react";
 
 // Reusable ChatGPT-like floating label input
 function FloatingInput({
@@ -60,6 +58,7 @@ function FloatingInput({
 }
 
 export default function LoginPage() {
+  const { data: session, status } = useSession()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -69,6 +68,13 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // If user is authenticated, redirect to dashboard
+    if (status === "authenticated" && session) {
+      router.push("/dashboard")
+    }
+  }, [session, status, router])
+
+  useEffect(() => {
     // This hook will run when the page loads
     // It checks the URL for an 'error' parameter and sets it as the error message
     const urlError = searchParams.get('error');
@@ -76,6 +82,11 @@ export default function LoginPage() {
       setError(urlError);
     }
   }, [searchParams]);
+
+  // Only render the login page if user is not authenticated
+  if (status === "authenticated") {
+    return null // Will redirect anyway
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
