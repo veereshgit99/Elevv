@@ -1256,8 +1256,8 @@ export default function ProfilePage() {
                                     onClick={() => setShowUploadModal(true)}
                                     disabled={resumes.length >= 5}
                                     className={`w-full border text-white ${resumes.length >= 5
-                                        ? 'bg-gray-400 border-gray-400 cursor-not-allowed'
-                                        : 'bg-black border-black hover:bg-gray-800'
+                                      ? 'bg-gray-400 border-gray-400 cursor-not-allowed'
+                                      : 'bg-black border-black hover:bg-gray-800'
                                       }`}
                                   >
                                     <Plus className="w-4 h-4 mr-2" />
@@ -1552,10 +1552,7 @@ export default function ProfilePage() {
                                       <h3 className="text-lg font-semibold text-gray-900">
                                         {analysis.jobTitle}
                                       </h3>
-                                      <div className={`px-4 py-2 rounded-full text-lg font-bold ${analysis.matchScore >= 80 ? 'bg-green-100 text-green-800' :
-                                        analysis.matchScore >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                                          'bg-red-100 text-red-800'
-                                        }`}>
+                                      <div className="px-4 py-2 rounded-full text-lg font-bold bg-blue-100 text-blue-800">
                                         {analysis.matchScore}%
                                       </div>
                                     </div>

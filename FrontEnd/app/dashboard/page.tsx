@@ -59,6 +59,16 @@ function FloatingInput({
   autoComplete?: string
   placeholder?: string
 }) {
+  const [isFocused, setIsFocused] = useState(false)
+  const hasAsterisk = label.includes('*')
+  const cleanLabel = hasAsterisk ? label.replace(' *', '') : label
+
+  const getAsteriskColor = () => {
+    if (isFocused) return "text-blue-600"
+    if (value) return "text-gray-500"
+    return "text-red-500"
+  }
+
   return (
     <div className="relative">
       <input
@@ -69,6 +79,8 @@ function FloatingInput({
         autoComplete={autoComplete}
         placeholder=""
         style={{ backgroundColor: 'white !important' }}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         className="peer w-full h-12 rounded-2xl border border-gray-300 bg-white px-4 text-[15px] text-gray-900 shadow-sm transition-all outline-none
                    focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30
                    [&:-webkit-autofill]:!bg-white [&:-webkit-autofill]:shadow-[0_0_0_1000px_white_inset]
@@ -78,10 +90,13 @@ function FloatingInput({
       <label
         htmlFor={id}
         className={`pointer-events-none absolute left-3 px-1 text-[15px] transition-all bg-white
-                   ${value ? "top-0 -translate-y-1/2 text-xs text-gray-500" : "top-1/2 -translate-y-1/2 text-gray-500"}
-                   peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-blue-600`}
+                   ${value || isFocused ? "top-0 -translate-y-1/2 text-xs" : "top-1/2 -translate-y-1/2"}
+                   ${isFocused ? "text-blue-600" : "text-gray-500"}`}
       >
-        {label}
+        {cleanLabel}
+        {hasAsterisk && (
+          <span className={`ml-1 transition-all ${getAsteriskColor()}`}>*</span>
+        )}
       </label>
     </div>
   )
@@ -103,6 +118,16 @@ function FloatingTextarea({
   placeholder?: string
   rows?: number
 }) {
+  const [isFocused, setIsFocused] = useState(false)
+  const hasAsterisk = label.includes('*')
+  const cleanLabel = hasAsterisk ? label.replace(' *', '') : label
+
+  const getAsteriskColor = () => {
+    if (isFocused) return "text-blue-600"
+    if (value) return "text-gray-500"
+    return "text-red-500"
+  }
+
   return (
     <div className="relative">
       <textarea
@@ -111,16 +136,21 @@ function FloatingTextarea({
         onChange={onChange}
         placeholder=""
         rows={rows}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         className="peer w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-[15px] text-gray-900 shadow-sm transition-all outline-none resize-none
                    focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
       />
       <label
         htmlFor={id}
         className={`pointer-events-none absolute left-3 px-1 text-[15px] transition-all bg-white
-                   ${value ? "top-0 -translate-y-1/2 text-xs text-gray-500" : "top-3 text-gray-500"}
-                   peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-blue-600`}
+                   ${value || isFocused ? "top-0 -translate-y-1/2 text-xs" : "top-3"}
+                   ${isFocused ? "text-blue-600" : "text-gray-500"}`}
       >
-        {label}
+        {cleanLabel}
+        {hasAsterisk && (
+          <span className={`ml-1 transition-all ${getAsteriskColor()}`}>*</span>
+        )}
       </label>
     </div>
   )
@@ -404,7 +434,7 @@ export default function DashboardPage() {
                 {/* Job Title */}
                 <FloatingInput
                   id="job-title"
-                  label="Job Title"
+                  label="Job Title *"
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   placeholder="e.g. Senior Software Engineer"
@@ -413,7 +443,7 @@ export default function DashboardPage() {
                 {/* Company Name */}
                 <FloatingInput
                   id="company-name"
-                  label="Company Name"
+                  label="Company Name *"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="e.g. Google, Microsoft, Airbnb"
@@ -422,7 +452,7 @@ export default function DashboardPage() {
                 {/* Job Description */}
                 <FloatingTextarea
                   id="job-description"
-                  label="Job Description"
+                  label="Job Description *"
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                   placeholder="Paste the full job description here..."
