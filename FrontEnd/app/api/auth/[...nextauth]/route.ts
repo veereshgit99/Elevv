@@ -104,6 +104,10 @@ const handler = NextAuth({
                     const data = await response.json();
 
                     if (!response.ok) {
+                        // Handle specific error for unconfirmed user
+                        if (response.status === 401 && data.detail === "USER_NOT_CONFIRMED") {
+                            throw new Error("ACCOUNT_NOT_VERIFIED");
+                        }
                         throw new Error(data.detail || 'Authentication failed');
                     }
 

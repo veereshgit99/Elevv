@@ -8,8 +8,7 @@ import Link from "next/link"
 import { Brain } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-
-const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL
+import { resendVerificationEmail, confirmSignup } from "@/utils/api"
 
 // Reusable ChatGPT-like floating label input
 function FloatingInput({
@@ -105,28 +104,13 @@ export default function VerifyPage() {
     setError("")
 
     try {
-      const response = await fetch(`${FILES_API_URL}/auth/confirm-signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email,
-          confirmation_code: code,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Invalid verification code.");
-      }
-
+      await confirmSignup(email, code)
       // On successful verification, redirect to the login page
-      router.push("/login");
-
+      router.push("/login")
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 
@@ -136,25 +120,13 @@ export default function VerifyPage() {
     setIsResending(true)
 
     try {
-      // Replace this with your actual API call
-      const response = await fetch("/api/resend-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      })
-
-      if (response.ok) {
-        setResendCooldown(60) // 60 second cooldown
-        setError("")
-        // Clear current code
-        setCode("")
-      } else {
-        setError("Failed to resend code. Please try again.")
-      }
-    } catch (error) {
-      setError("Something went wrong. Please try again.")
+      await resendVerificationEmail(email)
+      setResendCooldown(60) // 60 second cooldown
+      setError("")
+      // Clear current code
+      setCode("")
+    } catch (error: any) {
+      setError(error.message || "Failed to resend code. Please try again.")
     } finally {
       setIsResending(false)
     }

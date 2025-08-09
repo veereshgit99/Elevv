@@ -91,8 +91,17 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        // If the 'authorize' function in the backend threw an error
-        setError(result.error);
+        // Handle specific error for unconfirmed account
+        if (result.error === "ACCOUNT_NOT_VERIFIED") {
+          setError("Your account is not verified. Please check your email for a verification code.");
+          // Redirect to verify page after a delay
+          setTimeout(() => {
+            router.push(`/verify?email=${email}`);
+          }, 3000);
+        } else {
+          // If the 'authorize' function in the backend threw an error
+          setError(result.error);
+        }
         setIsLoading(false);
       } else if (result?.ok) {
         // If the sign-in was successful, redirect to the dashboard

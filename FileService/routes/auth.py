@@ -51,6 +51,17 @@ class UserSignupRequest(BaseModel):
 class UserLoginRequest(BaseModel):
     email: str
     password: str
+    
+class ResendConfirmationRequest(BaseModel):
+    email: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ConfirmForgotPasswordRequest(BaseModel):
+    email: str
+    confirmation_code: str
+    new_password: str
 
 # --- User Authentication Endpoints ---
 
@@ -101,6 +112,13 @@ async def login_user(request: UserLoginRequest):
             }
         )
         return response['AuthenticationResult']
+    except cognito_client.exceptions.UserNotConfirmedException:
+        raise HTTPException(
+            status_code=401,
+            detail="USER_NOT_CONFIRMED"  # Send a specific error code
+        )
+    except cognito_client.exceptions.NotAuthorizedException:
+        raise HTTPException(status_code=401, detail="Incorrect username or password.")
     except ClientError as e:
         raise HTTPException(status_code=400, detail=e.response['Error']['Message'])
     
@@ -120,3 +138,55 @@ async def confirm_signup(request: ConfirmSignupRequest):
         return {"message": "User account confirmed successfully. You can now log in."}
     except ClientError as e:
         raise HTTPException(status_code=400, detail=e.response['Error']['Message'])
+    
+    
+# --- ADD THIS NEW ENDPOINT FOR RESENDING CONFIRMATION ---
+@router.post("/resend-verification")
+def resend_verification_email(request: ResendConfirmationRequest):
+    try:
+        cognito_client.resend_confirmation_code(
+            ClientId=config.COGNITO_APP_CLIENT_ID,
+            Username=request.email,
+            SecretHash=get_secret_hash(request.email)  # Added SecretHash
+        )
+        return {"message": "A new verification email has been sent."}
+    except cognito_client.exceptions.UserNotFoundException:
+        # It's good practice not to reveal if a user exists
+        return {"message": "If an account with that email exists, a new verification email has been sent."}
+    except Exception as e:
+        print(f"Error resending confirmation code: {e}")
+        raise HTTPException(status_code=500, detail="Failed to resend verification email.")
+
+# --- ADD THIS NEW ENDPOINT FOR INITIATING FORGOT PASSWORD ---
+@router.post("/forgot-password")
+def forgot_password(request: ForgotPasswordRequest):
+    try:
+        cognito_client.forgot_password(
+            ClientId=config.COGNITO_APP_CLIENT_ID,
+            Username=request.email,
+            SecretHash=get_secret_hash(request.email)  # Added SecretHash
+        )
+        return {"message": "If an account with that email exists, a password reset code has been sent."}
+    except cognito_client.exceptions.UserNotFoundException:
+        return {"message": "If an account with that email exists, a password reset code has been sent."}
+    except Exception as e:
+        print(f"Error in forgot password flow: {e}")
+        raise HTTPException(status_code=500, detail="Failed to initiate password reset.")
+
+# --- ADD THIS NEW ENDPOINT FOR CONFIRMING THE NEW PASSWORD ---
+@router.post("/confirm-forgot-password")
+def confirm_forgot_password(request: ConfirmForgotPasswordRequest):
+    try:
+        cognito_client.confirm_forgot_password(
+            ClientId=config.COGNITO_APP_CLIENT_ID,
+            Username=request.email,
+            ConfirmationCode=request.confirmation_code,
+            Password=request.new_password,
+            SecretHash=get_secret_hash(request.email)  # Added SecretHash
+        )
+        return {"message": "Your password has been successfully reset."}
+    except cognito_client.exceptions.CodeMismatchException:
+        raise HTTPException(status_code=400, detail="Invalid confirmation code.")
+    except Exception as e:
+        print(f"Error confirming forgot password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset password.")

@@ -353,3 +353,17 @@ export async function confirmForgotPassword(email: string, confirmation_code: st
     }
     return response.json();
 }
+
+export async function confirmSignup(email: string, confirmation_code: string) {
+    const response = await fetch(`${FILES_API_URL}/auth/confirm-signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, confirmation_code }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Invalid verification code.');
+    }
+    return response.json();
+}
