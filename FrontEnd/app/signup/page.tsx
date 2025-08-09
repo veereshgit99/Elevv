@@ -91,7 +91,7 @@ export default function SignUpPage() {
   useEffect(() => {
     // If user is authenticated, redirect to dashboard
     if (status === "authenticated" && session) {
-      router.push("/dashboard")
+      router.replace("/dashboard")
     }
   }, [session, status, router])
 
@@ -103,11 +103,6 @@ export default function SignUpPage() {
       setError(urlError);
     }
   }, [searchParams]);
-
-  // Only render the signup page if user is not authenticated
-  if (status === "authenticated") {
-    return null // Will redirect anyway
-  }
 
   // Email validation function
   const validateEmail = (email: string) => {
@@ -190,6 +185,11 @@ export default function SignUpPage() {
       setIsLoading(false);
     }
   };
+
+  // Show minimal placeholder while redirecting authenticated users
+  if (status === "authenticated") {
+    return <div className="min-h-screen bg-white"></div>
+  }
 
   return (
     <div className="min-h-screen bg-white">

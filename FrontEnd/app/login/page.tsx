@@ -70,7 +70,7 @@ export default function LoginPage() {
   useEffect(() => {
     // If user is authenticated, redirect to dashboard
     if (status === "authenticated" && session) {
-      router.push("/dashboard")
+      router.replace("/dashboard")
     }
   }, [session, status, router])
 
@@ -82,11 +82,6 @@ export default function LoginPage() {
       setError(urlError);
     }
   }, [searchParams]);
-
-  // Only render the login page if user is not authenticated
-  if (status === "authenticated") {
-    return null // Will redirect anyway
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +118,11 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // Show minimal placeholder while redirecting authenticated users
+  if (status === "authenticated") {
+    return <div className="min-h-screen bg-white"></div>
+  }
 
   return (
     <div className="min-h-screen bg-white">

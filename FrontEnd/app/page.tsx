@@ -19,10 +19,11 @@ export default function Home() {
     }
   }, [session, status, router])
 
-  // Only render the landing page if user is not authenticated
+  // Show minimal placeholder while redirecting authenticated users
   if (status === "authenticated") {
-    return null // Will redirect anyway
+    return <div className="min-h-screen bg-black"></div> // Match the landing page background
   }
+
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
       {/* Header Navigation */}
