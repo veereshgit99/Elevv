@@ -192,42 +192,33 @@ export default function EnhancementsPage() {
   if (isLoading || isLoadingData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <header className="bg-black">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-10">
-                <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
-                  <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
-                    <Brain className="h-5 w-5 text-white" />
+              {/* Left side - Logo and Navigation */}
+              <div className="flex items-center gap-8">
+                {/* Logo */}
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                    <span className="text-black font-bold text-sm">E</span>
                   </div>
-                  Elevv
-                </Link>
-                <nav className="flex items-center space-x-8">
+                  <span className="text-2xl font-semibold text-white">Elevv</span>
+                </div>
 
-                  {/* FUNCTIONAL LINKS - Not skeletons */}
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center space-x-2 text-base font-semibold text-black border-b-2 border-[#FF5722] transition-colors pb-4"
-                  >
-                    <BarChart3 className="w-5 h-5" />
-                    <span>Analysis</span>
+                {/* Navigation */}
+                <nav className="hidden md:flex items-center gap-8">
+                  <Link href="/dashboard" className="text-sm font-medium text-white border-b-2 border-white pb-1">
+                    Analysis
                   </Link>
-                  <Link
-                    href="/profile"
-                    className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
-                  >
-                    <User className="w-5 h-5" />
-                    <span>Profile</span>
+                  <Link href="/profile" className="text-sm font-medium text-gray-300 hover:text-white">
+                    Profile
                   </Link>
                 </nav>
               </div>
 
               {/* ONLY the user avatar should be skeleton during loading */}
               <div className="flex items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                </div>
+                <div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse"></div>
               </div>
             </div>
           </div>
@@ -294,72 +285,60 @@ export default function EnhancementsPage() {
       ) : (
         <>
           {/* Header */}
-          <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <header className="bg-black">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center h-16">
-                <div className="flex items-center space-x-10">
-                  <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
-                    <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
-                      <Brain className="h-5 w-5 text-white" />
+                {/* Left side - Logo and Navigation */}
+                <div className="flex items-center gap-8">
+                  {/* Logo */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                      <span className="text-black font-bold text-sm">E</span>
                     </div>
-                    Elevv
-                  </Link>
+                    <span className="text-2xl font-semibold text-white">Elevv</span>
+                  </div>
 
-                  <nav className="flex items-center space-x-8">
-                    <Link
-                      href="/dashboard"
-                      className="flex items-center space-x-2 text-base font-semibold text-black relative pb-4 border-b-2 border-[#FF5722] transition-colors"
-                    >
-                      <BarChart3 className="w-5 h-5" />
-                      <span>Analysis</span>
+                  {/* Navigation */}
+                  <nav className="hidden md:flex items-center gap-8">
+                    <Link href="/dashboard" className="text-sm font-medium text-white border-b-2 border-white pb-1">
+                      Analysis
                     </Link>
-                    <Link
-                      href="/profile"
-                      className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
-                    >
-                      <User className="w-5 h-5" />
-                      <span>Profile</span>
+                    <Link href="/profile" className="text-sm font-medium text-gray-300 hover:text-white">
+                      Profile
                     </Link>
                   </nav>
                 </div>
 
-                <div className="flex items-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors">
-                        <div className="w-8 h-8 bg-[#FF5722] rounded-full flex items-center justify-center text-white font-medium">
-                          {getUserInitials()}
-                        </div>
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <div className="px-3 py-2">
-                        <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
-                        <p className="text-xs text-gray-500">{userProfile?.email}</p>
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
-                          <User className="w-4 h-4" />
-                          <span>Profile</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center space-x-2 cursor-pointer">
-                        <Settings className="w-4 h-4" />
-                        <span>Settings</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={handleSignOut}
-                        className="flex items-center space-x-2 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign Out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                {/* User Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                      <User className="h-5 w-5 text-black" />
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <div className="px-3 py-2">
+                      <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
+                      <p className="text-xs text-gray-500">{userProfile?.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </header>
@@ -370,7 +349,12 @@ export default function EnhancementsPage() {
             <div className="mb-6">
               <Button
                 variant="ghost"
-                onClick={() => router.push("/analysis-results")}
+                onClick={() => {
+                  // Set a flag to indicate navigation came from enhancements page with timestamp
+                  sessionStorage.setItem('navigated_from_enhancements', 'true')
+                  sessionStorage.setItem('navigation_timestamp', Date.now().toString())
+                  router.push("/analysis-results")
+                }}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 p-0"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -403,7 +387,7 @@ export default function EnhancementsPage() {
                         cx="64"
                         cy="64"
                         r="56"
-                        stroke={getScoreColor(enhancementData.match_after_enhancement)}
+                        stroke="#2563eb"
                         strokeWidth="12"
                         fill="none"
                         strokeDasharray={`${(enhancementData.match_after_enhancement / 100) * 352} 352`}

@@ -209,7 +209,7 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
                 ) : (
                     <div className="space-y-4">
                         <div className="flex items-center justify-center space-x-3">
-                            <FileText className="w-8 h-8 text-[#FF5722]" />
+                            <FileText className="w-8 h-8 text-black" />
                             <div className="text-left">
                                 <p className="font-medium text-gray-900">{selectedFile.name}</p>
                                 <p className="text-sm text-gray-500">
@@ -234,7 +234,7 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div
-                                        className="bg-[#FF5722] h-2 rounded-full transition-all duration-300"
+                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                         style={{ width: `${uploadProgress}%` }}
                                     />
                                 </div>
@@ -242,7 +242,7 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
                         )}
 
                         {uploadStatus === 'success' && (
-                            <div className="flex items-center justify-center space-x-2 text-green-600">
+                            <div className="flex items-center justify-center space-x-2 text-blue-600">
                                 <CheckCircle className="w-5 h-5" />
                                 <span className="font-medium">Upload successful!</span>
                             </div>
@@ -269,7 +269,7 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
                             <Button
                                 onClick={handleUpload}
                                 disabled={uploading || !jobTitle.trim()}
-                                className="w-full bg-[#FF5722] hover:bg-[#E64A19] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-black hover:bg-gray-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {!jobTitle.trim() ? 'Enter Job Title to Upload' : 'Upload Resume'}
                             </Button>

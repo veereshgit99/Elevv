@@ -1,15 +1,13 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect } from "react"
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { Upload, BarChart3, User, Settings, LogOut, Brain, ChevronDown, Clock, FileText, Zap, Target, Building } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,19 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Brain,
-  BarChart3,
-  User,
-  Settings,
-  LogOut,
-  ChevronDown,
-  Clock,
-  FileText,
-  Zap,
-  Target,
-  Building,
-} from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAnalysisNavigation } from "@/components/analysis-navigation-context"
 import { fetchUserProfile, fetchResumes } from "@/utils/api"
 
@@ -55,6 +41,91 @@ interface Resume {
   is_primary: boolean
 }
 
+// Fixed floating label input
+function FloatingInput({
+  id,
+  type = "text",
+  value,
+  onChange,
+  label,
+  autoComplete,
+  placeholder,
+}: {
+  id: string
+  type?: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  label: string
+  autoComplete?: string
+  placeholder?: string
+}) {
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        autoComplete={autoComplete}
+        placeholder=""
+        style={{ backgroundColor: 'white !important' }}
+        className="peer w-full h-12 rounded-2xl border border-gray-300 bg-white px-4 text-[15px] text-gray-900 shadow-sm transition-all outline-none
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30
+                   [&:-webkit-autofill]:!bg-white [&:-webkit-autofill]:shadow-[0_0_0_1000px_white_inset]
+                   [&:-webkit-autofill:hover]:!bg-white [&:-webkit-autofill:hover]:shadow-[0_0_0_1000px_white_inset]
+                   [&:-webkit-autofill:focus]:!bg-white [&:-webkit-autofill:focus]:shadow-[0_0_0_1000px_white_inset]"
+      />
+      <label
+        htmlFor={id}
+        className={`pointer-events-none absolute left-3 px-1 text-[15px] transition-all bg-white
+                   ${value ? "top-0 -translate-y-1/2 text-xs text-gray-500" : "top-1/2 -translate-y-1/2 text-gray-500"}
+                   peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-blue-600`}
+      >
+        {label}
+      </label>
+    </div>
+  )
+}
+
+// Fixed floating label textarea
+function FloatingTextarea({
+  id,
+  value,
+  onChange,
+  label,
+  placeholder,
+  rows = 6,
+}: {
+  id: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+  label: string
+  placeholder?: string
+  rows?: number
+}) {
+  return (
+    <div className="relative">
+      <textarea
+        id={id}
+        value={value}
+        onChange={onChange}
+        placeholder=""
+        rows={rows}
+        className="peer w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-[15px] text-gray-900 shadow-sm transition-all outline-none resize-none
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+      />
+      <label
+        htmlFor={id}
+        className={`pointer-events-none absolute left-3 px-1 text-[15px] transition-all bg-white
+                   ${value ? "top-0 -translate-y-1/2 text-xs text-gray-500" : "top-3 text-gray-500"}
+                   peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-blue-600`}
+      >
+        {label}
+      </label>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const [jobTitle, setJobTitle] = useState("")
@@ -73,6 +144,13 @@ export default function DashboardPage() {
 
   // Add this with your other state declarations
   const [showUploadModal, setShowUploadModal] = useState(false)
+
+  // Redirect unauthenticated users to login
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login")
+    }
+  }, [status, router])
 
   // In dashboard/page.tsx
   useEffect(() => {
@@ -139,14 +217,13 @@ export default function DashboardPage() {
         matchedSkills: analysisData.relationship_map.relationship_map.matched_skills.length
       })
 
-      // Navigate to results page
+      // Navigate to results page - don't reset isAnalyzing here to prevent button flash
       router.push('/analysis-results')
 
     } catch (error) {
       console.error('Analysis failed:', error)
       setError(error instanceof Error ? error.message : 'Analysis failed. Please try again.')
-    } finally {
-      setIsAnalyzing(false)
+      setIsAnalyzing(false) // Only reset on error
     }
   }
 
@@ -173,121 +250,47 @@ export default function DashboardPage() {
     return 'U'
   }
 
-  // Redirect unauthenticated users to login
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login")
-    }
-  }, [status, router])
-
   if (status === "loading" || isLoadingData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <header className="bg-black sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-10">
-                <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
-                  <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
-                    <Brain className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-8">
+                <Link href="/dashboard" className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                    <span className="text-black font-bold text-sm">E</span>
                   </div>
-                  Elevv
+                  <span className="text-2xl font-semibold text-white">Elevv</span>
                 </Link>
-                <nav className="flex items-center space-x-8">
-
-                  {/* FUNCTIONAL LINKS - Not skeletons */}
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center space-x-2 text-base font-semibold text-black border-b-2 border-[#FF5722] transition-colors pb-4"
-                  >
-                    <BarChart3 className="w-5 h-5" />
-                    <span>Analysis</span>
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
-                  >
-                    <User className="w-5 h-5" />
-                    <span>Profile</span>
-                  </Link>
+                <nav className="hidden md:flex items-center gap-8">
+                  <Link href="/dashboard" className="text-sm font-medium text-white border-b-2 border-white pb-1">Analysis</Link>
+                  <Link href="/profile" className="text-sm font-medium text-gray-300 hover:text-white">Profile</Link>
                 </nav>
               </div>
-
-              {/* ONLY the user avatar should be skeleton during loading */}
-              <div className="flex items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                </div>
-              </div>
+              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
             </div>
           </div>
         </header>
 
-        {/* Main Content Skeleton - Updated to match your new layout */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
-
-            {/* Notice Banner Skeleton */}
-            <div className="mb-6 p-4 bg-gray-100 border border-gray-200 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-5 h-5 bg-gray-200 rounded flex-shrink-0"></div>
-                <div className="h-4 bg-gray-200 rounded flex-1"></div>
-              </div>
+            <div className="mb-8">
+              <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
+              <div className="h-5 bg-gray-200 rounded w-96"></div>
             </div>
-
-            {/* Main Card Skeleton */}
-            <Card className="shadow-lg max-w-4xl mx-auto">
-              {/* Card Header Skeleton */}
-              <CardHeader className="text-center pb-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
-                <div className="h-8 bg-gray-200 rounded w-64 mx-auto mb-2"></div>
-                <div className="h-5 bg-gray-200 rounded w-96 mx-auto"></div>
+            <Card className="shadow-sm border-gray-200">
+              <CardHeader className="pb-6">
+                <div className="h-6 bg-gray-200 rounded w-48 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-80"></div>
               </CardHeader>
-
-              {/* Card Content Skeleton */}
-              <CardContent className="p-8 space-y-6">
-                {/* Job Title Field Skeleton */}
-                <div className="space-y-2">
-                  <div className="h-5 bg-gray-200 rounded w-20"></div>
-                  <div className="h-10 bg-gray-200 rounded w-full"></div>
-                </div>
-
-                {/* Company Name Field Skeleton */}
-                <div className="space-y-2">
-                  <div className="h-5 bg-gray-200 rounded w-28"></div>
-                  <div className="h-10 bg-gray-200 rounded w-full"></div>
-                </div>
-
-                {/* Job Description Field Skeleton */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="h-5 bg-gray-200 rounded w-32"></div>
-                    <div className="h-4 bg-gray-200 rounded w-16"></div>
-                  </div>
-                  <div className="h-48 bg-gray-200 rounded w-full"></div>
-                </div>
-
-                {/* Resume Selector Skeleton */}
-                <div className="space-y-2">
-                  <div className="h-5 bg-gray-200 rounded w-40"></div>
-                  <div className="h-10 bg-gray-200 rounded w-full"></div>
-                </div>
-
-                {/* Analyze Button Skeleton */}
-                <div className="pt-4">
-                  <div className="h-12 bg-gray-200 rounded w-full"></div>
-                </div>
-
-                {/* Info Box Skeleton */}
-                <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-5 h-5 bg-gray-200 rounded-full flex-shrink-0 mt-0.5"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-40"></div>
-                      <div className="h-3 bg-gray-200 rounded w-full"></div>
-                    </div>
-                  </div>
-                </div>
+              <CardContent className="space-y-6">
+                <div className="h-12 bg-gray-200 rounded-2xl"></div>
+                <div className="h-12 bg-gray-200 rounded-2xl"></div>
+                <div className="h-32 bg-gray-200 rounded-2xl"></div>
+                <div className="h-12 bg-gray-200 rounded-2xl"></div>
+                <div className="h-24 bg-gray-200 rounded-2xl"></div>
+                <div className="h-12 bg-gray-200 rounded-2xl"></div>
               </CardContent>
             </Card>
           </div>
@@ -302,90 +305,80 @@ export default function DashboardPage() {
         <div /> // Safe placeholder while redirecting
       ) : (
         <>
-          {/* Persistent Header */}
-          <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          {/* Black Header */}
+          <header className="bg-black">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center h-16">
                 {/* Left side - Logo and Navigation */}
-                <div className="flex items-center space-x-10">
+                <div className="flex items-center gap-8">
                   {/* Logo */}
-                  <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
-                    <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
-                      <Brain className="h-5 w-5 text-white" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                      <span className="text-black font-bold text-sm">E</span>
                     </div>
-                    Elevv
-                  </Link>
+                    <span className="text-2xl font-semibold text-white">Elevv</span>
+                  </div>
 
-                  {/* Primary Navigation */}
-                  <nav className="flex items-center space-x-8">
-                    <Link
-                      href={lastAnalysisPage}
-                      className="flex items-center space-x-2 text-base font-semibold text-black relative pb-4 border-b-2 border-[#FF5722] transition-colors"
-                    >
-                      <BarChart3 className="w-5 h-5" />
-                      <span>Analysis</span>
+                  {/* Navigation */}
+                  <nav className="hidden md:flex items-center gap-8">
+                    <Link href="/dashboard" className="text-sm font-medium text-white border-b-2 border-white pb-1">
+                      Analysis
                     </Link>
-                    <Link
-                      href="/profile"
-                      className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
-                    >
-                      <User className="w-5 h-5" />
-                      <span>Profile</span>
+                    <Link href="/profile" className="text-sm font-medium text-gray-300 hover:text-white">
+                      Profile
                     </Link>
                   </nav>
                 </div>
 
-                {/* Right side - User Menu */}
-                <div className="flex items-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors">
-                        <div className="w-8 h-8 bg-[#FF5722] rounded-full flex items-center justify-center text-white font-medium">
-                          {getUserInitials()}
-                        </div>
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <div className="px-3 py-2">
-                        <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
-                        <p className="text-xs text-gray-500">{userProfile?.email}</p>
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
-                          <User className="w-4 h-4" />
-                          <span>Profile</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center space-x-2 cursor-pointer">
-                        <Settings className="w-4 h-4" />
-                        <span>Settings</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={handleSignOut}
-                        className="flex items-center space-x-2 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign Out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                {/* User Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                      <User className="h-5 w-5 text-black" />
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <div className="px-3 py-2">
+                      <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
+                      <p className="text-xs text-gray-500">{userProfile?.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </header>
 
-          {/* Main Content Area */}
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Welcome Header */}
-            {/* Welcome Header */}
+          {/* Main Content */}
+          <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Welcome Section */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Welcome, {userProfile?.name?.split(' ')[0] || 'there'}! 👋
               </h1>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                {error}
+              </div>
+            )}
 
             {/* Simple notice when no resumes are uploaded */}
             {userResumes.length === 0 && (
@@ -399,88 +392,56 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Error Message */}
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                {error}
-              </div>
-            )}
-
-            {/* Start New Analysis Card */}
-            <Card className="shadow-lg max-w-4xl mx-auto">
-              <CardHeader className="text-center pb-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
-                <CardTitle className="text-2xl font-bold text-gray-900 mb-2">Start a New Analysis</CardTitle>
-                <p className="text-gray-600">Get detailed analysis of your resume against any job description</p>
+            {/* Analysis Form */}
+            <Card className="shadow-sm border-gray-200">
+              <CardHeader className="pb-6 text-center">
+                <CardTitle className="text-xl font-semibold text-gray-900">Start a New Analysis</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Get detailed analysis of your resume against any job description
+                </CardDescription>
               </CardHeader>
-              <CardContent className="p-8 space-y-6">
+              <CardContent className="space-y-6">
                 {/* Job Title */}
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle" className="text-sm font-medium text-gray-700 flex items-center">
-                    <Target className="w-4 h-4 mr-2 text-[#FF5722]" />
-                    Job Title
-                  </Label>
-                  <Input
-                    id="jobTitle"
-                    type="text"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="e.g. Senior Software Engineer"
-                    className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
-                  />
-                </div>
+                <FloatingInput
+                  id="job-title"
+                  label="Job Title"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="e.g. Senior Software Engineer"
+                />
 
                 {/* Company Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="companyName" className="text-sm font-medium text-gray-700 flex items-center">
-                    <Building className="w-4 h-4 mr-2 text-[#FF5722]" />
-                    Company Name
-                  </Label>
-                  <Input
-                    id="companyName"
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Google, Microsoft, Airbnb"
-                    className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
-                  />
-                </div>
+                <FloatingInput
+                  id="company-name"
+                  label="Company Name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="e.g. Google, Microsoft, Airbnb"
+                />
 
                 {/* Job Description */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="jobDescription" className="text-sm font-medium text-gray-700 flex items-center">
-                      <FileText className="w-4 h-4 mr-2 text-[#FF5722]" />
-                      Job Description
-                    </Label>
-                    <span
-                      className={`text-xs ${characterCount > maxCharacters * 0.9 ? "text-red-500" : "text-gray-500"}`}
-                    >
-                      {characterCount}/{maxCharacters}
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <Textarea
-                      id="jobDescription"
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                      placeholder="Paste the full job description here..."
-                      className="w-full min-h-[200px] resize-none transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]"
-                      rows={8}
-                      maxLength={maxCharacters}
-                    />
-                  </div>
+                <FloatingTextarea
+                  id="job-description"
+                  label="Job Description"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  placeholder="Paste the full job description here..."
+                />
+
+                {/* Character count */}
+                <div className="text-right">
+                  <span className={`text-xs ${characterCount > maxCharacters * 0.9 ? "text-red-500" : "text-gray-500"}`}>
+                    {characterCount}/{maxCharacters}
+                  </span>
                 </div>
 
-                {/* Resume Selector */}
-                <div className="space-y-2">
-                  <Label htmlFor="resumeSelect" className="text-sm font-medium text-gray-700 flex items-center">
-                    <FileText className="w-4 h-4 mr-2 text-[#FF5722]" />
-                    Analyze using this resume:
-                  </Label>
+                {/* Resume Selection */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-700">Analyze using this resume:</label>
                   {userResumes.length > 0 ? (
                     <Select value={selectedResume} onValueChange={setSelectedResume}>
-                      <SelectTrigger className="w-full transition-all duration-200 focus:ring-2 focus:ring-[#FF5722] focus:border-[#FF5722]">
-                        <SelectValue placeholder="Select a resume to analyze">
+                      <SelectTrigger className="h-12 rounded-2xl border-gray-300 focus:border-blue-500 focus:ring-blue-500/30">
+                        <SelectValue placeholder="Select a resume">
                           {selectedResume && userResumes.find(r => r.resume_id === selectedResume)?.file_name}
                         </SelectValue>
                       </SelectTrigger>
@@ -502,7 +463,7 @@ export default function DashboardPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-[#FF5722] border-[#FF5722] hover:bg-[#FF5722] hover:text-white"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white"
                         onClick={() => setShowUploadModal(true)}
                       >
                         Upload Resume
@@ -511,72 +472,60 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Analyze Button */}
-                <div className="pt-4">
-                  <Button
-                    onClick={handleAnalyze}
-                    className="w-full bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#E64A19] hover:to-[#D84315] text-white font-medium py-4 text-base transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none"
-                    disabled={!jobTitle || !companyName || !jobDescription || !selectedResume || isAnalyzing}
-                  >
-                    {isAnalyzing ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Analyzing...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <Zap className="w-5 h-5" />
-                        <span>Analyze Now</span>
-                      </div>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Upload Resume Modal */}
-                <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-                  <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                      <DialogTitle>Upload Your Resume</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <ResumeUpload
-                        onUploadSuccess={async () => {
-                          setShowUploadModal(false)
-                          // Refresh the resumes list with token
-                          if (session?.accessToken) {
-                            try {
-                              const resumesData = await fetchResumes(session.accessToken as string)
-                              setUserResumes(resumesData)
-                            } catch (error) {
-                              console.error("Failed to refresh resumes:", error)
-                            }
-                          }
-                        }}
-                        onUploadError={(error) => {
-                          console.error("Upload error:", error)
-                          // You could show a toast notification here
-                        }}
-                      />
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                {/* Additional Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Clock className="w-3 h-3 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm text-blue-900 mb-1">Analysis takes ~20 seconds</h4>
-                      <p className="text-xs text-blue-700">
-                        Our AI will analyze your resume against the job requirements and provide detailed insights.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                {/* Analyze Button - Blue */}
+                <Button
+                  onClick={handleAnalyze}
+                  disabled={!jobTitle || !companyName || !jobDescription.trim() || !selectedResume || isAnalyzing}
+                  className={`w-full h-12 rounded-2xl text-white font-medium transition-all ${isAnalyzing
+                    ? 'bg-blue-600 cursor-not-allowed'
+                    : !jobTitle || !companyName || !jobDescription.trim() || !selectedResume
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <BarChart3 className="mr-2 h-5 w-5" />
+                      Analyze Now
+                    </>
+                  )}
+                </Button>
               </CardContent>
             </Card>
+
+            {/* Upload Resume Modal */}
+            <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Upload Your Resume</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <ResumeUpload
+                    onUploadSuccess={async () => {
+                      setShowUploadModal(false)
+                      // Refresh the resumes list with token
+                      if (session?.accessToken) {
+                        try {
+                          const resumesData = await fetchResumes(session.accessToken as string)
+                          setUserResumes(resumesData)
+                        } catch (error) {
+                          console.error("Failed to refresh resumes:", error)
+                        }
+                      }
+                    }}
+                    onUploadError={(error) => {
+                      console.error("Upload error:", error)
+                      // You could show a toast notification here
+                    }}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
           </main>
         </>
       )}

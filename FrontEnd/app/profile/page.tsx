@@ -807,7 +807,7 @@ export default function ProfilePage() {
               <Button variant="outline" onClick={handleCancelSection}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveSection} className="bg-[#FF5722] hover:bg-[#E64A19] text-white">
+              <Button onClick={handleSaveSection} className="bg-black hover:bg-gray-800 text-white">
                 Save Changes
               </Button>
             </div>
@@ -821,42 +821,39 @@ export default function ProfilePage() {
   if (status === "loading" || isLoadingProfile || isLoadingUserData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <header className="bg-black sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-10">
-                <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
-                  <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
-                    <Brain className="h-5 w-5 text-white" />
+              {/* Left side - Logo and Navigation */}
+              <div className="flex items-center gap-8">
+                {/* Logo */}
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                    <span className="text-black font-bold text-sm">E</span>
                   </div>
-                  Elevv
-                </Link>
-                <nav className="flex items-center space-x-8">
+                  <span className="text-2xl font-semibold text-white">Elevv</span>
+                </div>
 
-                  {/* FUNCTIONAL LINKS - Not skeletons */}
+                {/* Primary Navigation */}
+                <nav className="hidden md:flex items-center gap-8">
                   <Link
                     href="/dashboard"
-                    className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
+                    className="text-sm font-medium text-gray-300 hover:text-white"
                   >
-                    <BarChart3 className="w-5 h-5" />
-                    <span>Analysis</span>
+                    Analysis
                   </Link>
                   <Link
                     href="/profile"
-                    className="flex items-center space-x-2 text-base font-semibold text-black border-b-2 border-[#FF5722] transition-colors pb-4"
+                    className="text-sm font-medium text-white border-b-2 border-white pb-1"
                   >
-                    <User className="w-5 h-5" />
-                    <span>Profile</span>
+                    Profile
                   </Link>
                 </nav>
               </div>
 
-              {/* ONLY the user avatar should be skeleton during loading */}
+              {/* Right side - User Menu skeleton */}
               <div className="flex items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                </div>
+                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
               </div>
             </div>
           </div>
@@ -915,34 +912,32 @@ export default function ProfilePage() {
       ) : (
         <>
           {/* Persistent Header */}
-          <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <header className="bg-black">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center h-16">
                 {/* Left side - Logo and Navigation */}
-                <div className="flex items-center space-x-10">
+                <div className="flex items-center gap-8">
                   {/* Logo */}
-                  <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-black">
-                    <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
-                      <Brain className="h-5 w-5 text-white" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                      <span className="text-black font-bold text-sm">E</span>
                     </div>
-                    Elevv
-                  </Link>
+                    <span className="text-2xl font-semibold text-white">Elevv</span>
+                  </div>
 
                   {/* Primary Navigation */}
-                  <nav className="flex items-center space-x-8">
+                  <nav className="hidden md:flex items-center gap-8">
                     <Link
                       href={lastAnalysisPage}
-                      className="flex items-center space-x-2 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors pb-4"
+                      className="text-sm font-medium text-gray-300 hover:text-white"
                     >
-                      <BarChart3 className="w-5 h-5" />
-                      <span>Analysis</span>
+                      Analysis
                     </Link>
                     <Link
                       href="/profile"
-                      className="flex items-center space-x-2 text-base font-semibold text-black relative pb-4 border-b-2 border-[#FF5722] transition-colors"
+                      className="text-sm font-medium text-white border-b-2 border-white pb-1"
                     >
-                      <User className="w-5 h-5" />
-                      <span>Profile</span>
+                      Profile
                     </Link>
                   </nav>
                 </div>
@@ -951,12 +946,9 @@ export default function ProfilePage() {
                 <div className="flex items-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors">
-                        <div className="w-8 h-8 bg-[#FF5722] rounded-full flex items-center justify-center text-white font-medium">
-                          {getUserInitials()}
-                        </div>
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
-                      </button>
+                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                        <User className="h-5 w-5 text-black" />
+                      </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
                       <div className="px-3 py-2">
@@ -975,12 +967,9 @@ export default function ProfilePage() {
                         <span>Settings</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={handleSignOut}
-                        className="flex items-center space-x-2 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign Out</span>
+                      <DropdownMenuItem onClick={handleSignOut}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -999,7 +988,7 @@ export default function ProfilePage() {
 
                     {/* User Avatar and Info */}
                     <div className="text-center mb-8">
-                      <div className="w-24 h-24 bg-[#FF5722] rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
+                      <div className="w-24 h-24 bg-white rounded-full border border-gray-200 flex items-center justify-center text-black text-3xl font-bold mx-auto mb-4">
                         {getUserInitials()}
                       </div>
                       <h2 className="text-xl font-bold text-gray-900 mb-2">{getUserFullName()}</h2>
@@ -1009,8 +998,7 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <button
                         onClick={() => setActiveTab("profile")}
-                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "profile" ? "bg-[#FF5722] text-white" : "text-gray-600 hover:bg-gray-100"
-                          }`}
+                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "profile" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
                       >
                         <User className="w-5 h-5" />
                         <span className="font-medium">Profile</span>
@@ -1018,16 +1006,14 @@ export default function ProfilePage() {
 
                       <button
                         onClick={() => setActiveTab("resume")}
-                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "resume" ? "bg-[#FF5722] text-white" : "text-gray-600 hover:bg-gray-100"
-                          }`}
+                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "resume" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
                       >
                         <FileText className="w-5 h-5" />
                         <span className="font-medium">Resume</span>
                       </button>
                       <button
                         onClick={() => setActiveTab("analysis-history")}
-                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "analysis-history" ? "bg-[#FF5722] text-white" : "text-gray-600 hover:bg-gray-100"
-                          }`}
+                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "analysis-history" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
                       >
                         <BarChart3 className="w-5 h-5" />
                         <span className="font-medium">Analysis History</span>
@@ -1091,13 +1077,13 @@ export default function ProfilePage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
                               <Label className="text-sm">First Name</Label>
-                              <div className="h-9 px-3 py-2 border rounded-md bg-gray-50 text-sm">
+                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
                                 {personalData.firstName}
                               </div>
                             </div>
                             <div className="space-y-1">
                               <Label className="text-sm">Last Name</Label>
-                              <div className="h-9 px-3 py-2 border rounded-md bg-gray-50 text-sm">
+                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
                                 {personalData.lastName}
                               </div>
                             </div>
@@ -1105,7 +1091,7 @@ export default function ProfilePage() {
 
                           <div className="space-y-1">
                             <Label className="text-sm">Email Address</Label>
-                            <div className="h-9 px-3 py-2 border rounded-md bg-gray-50 text-sm flex items-center">
+                            <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm flex items-center">
                               <Mail className="h-4 w-4 text-gray-400 mr-2" />
                               {personalData.email}
                             </div>
@@ -1114,14 +1100,14 @@ export default function ProfilePage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
                               <Label className="text-sm">Phone Number</Label>
-                              <div className="h-9 px-3 py-2 border rounded-md bg-gray-50 text-sm flex items-center">
+                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm flex items-center">
                                 <Phone className="h-4 w-4 text-gray-400 mr-2" />
                                 {personalData.phone}
                               </div>
                             </div>
                             <div className="space-y-1">
                               <Label className="text-sm">Location</Label>
-                              <div className="h-9 px-3 py-2 border rounded-md bg-gray-50 text-sm flex items-center">
+                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm flex items-center">
                                 <MapPin className="h-4 w-4 text-gray-400 mr-2" />
                                 {personalData.location}
                               </div>
@@ -1131,13 +1117,13 @@ export default function ProfilePage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
                               <Label className="text-sm">LinkedIn Profile</Label>
-                              <div className="h-9 px-3 py-2 border rounded-md bg-gray-50 text-sm">
+                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
                                 {personalData.linkedin}
                               </div>
                             </div>
                             <div className="space-y-1">
                               <Label className="text-sm">Personal Website</Label>
-                              <div className="h-9 px-3 py-2 border rounded-md bg-gray-50 text-sm">
+                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
                                 {personalData.website || "Not provided"}
                               </div>
                             </div>
@@ -1268,8 +1254,11 @@ export default function ProfilePage() {
                                 <div>
                                   <Button
                                     onClick={() => setShowUploadModal(true)}
-                                    className="bg-[#FF5722] hover:bg-[#E64A19] text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={resumes.length >= 5 || isLoadingResumes || isRefreshingResumes}
+                                    disabled={resumes.length >= 5}
+                                    className={`w-full border text-white ${resumes.length >= 5
+                                        ? 'bg-gray-400 border-gray-400 cursor-not-allowed'
+                                        : 'bg-black border-black hover:bg-gray-800'
+                                      }`}
                                   >
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add Resume
@@ -1356,7 +1345,7 @@ export default function ProfilePage() {
                                           </Tooltip>
                                         </TooltipProvider>
                                         {resume.isPrimary && (
-                                          <span className="absolute -top-1 left-full ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full border border-green-200">
+                                          <span className="absolute -top-1 left-full ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full border border-blue-200">
                                             Primary
                                           </span>
                                         )}
@@ -1464,7 +1453,7 @@ export default function ProfilePage() {
                           </Button>
                           <Button
                             onClick={handleSaveEdit}
-                            className="bg-[#FF5722] hover:bg-[#E64A19] text-white"
+                            className="bg-black hover:bg-gray-800 text-white"
                             disabled={!editForm.name.trim() || !editForm.jobTitle.trim()}
                           >
                             Save Changes
@@ -1602,7 +1591,7 @@ export default function ProfilePage() {
                               </p>
                               <Button
                                 onClick={() => router.push('/dashboard')}
-                                className="bg-[#FF5722] hover:bg-[#E64A19] text-white"
+                                className="bg-black border border-black text-white hover:bg-gray-800"
                               >
                                 Start Your First Analysis
                               </Button>
