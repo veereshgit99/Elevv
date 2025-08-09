@@ -310,3 +310,46 @@ export async function updateResumeLegacy(resumeId: string, name: string, jobTitl
 
     return response.json()
 }
+
+
+export async function resendVerificationEmail(email: string) {
+    const response = await fetch(`${FILES_API_URL}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to resend email.');
+    }
+    return response.json();
+}
+
+export async function forgotPassword(email: string) {
+    const response = await fetch(`${FILES_API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to initiate password reset.');
+    }
+    return response.json();
+}
+
+export async function confirmForgotPassword(email: string, confirmation_code: string, new_password: string) {
+    const response = await fetch(`${FILES_API_URL}/auth/confirm-forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, confirmation_code, new_password }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to reset password.');
+    }
+    return response.json();
+}

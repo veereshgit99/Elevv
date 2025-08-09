@@ -2,23 +2,68 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Brain, ArrowLeft, Mail } from "lucide-react"
+import { Brain } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 
 const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL
 
+// Reusable ChatGPT-like floating label input
+function FloatingInput({
+  id,
+  type = "text",
+  value,
+  onChange,
+  label,
+  autoComplete,
+  maxLength,
+}: {
+  id: string
+  type?: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  label: string
+  autoComplete?: string
+  maxLength?: number
+}) {
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        autoComplete={autoComplete}
+        maxLength={maxLength}
+        placeholder=" "
+        className="peer w-full h-12 rounded-2xl border border-gray-300 bg-white px-4 text-[15px] text-gray-900 shadow-sm transition-all outline-none
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+      />
+      {/* Label chip with bg-white so the border line does NOT cut through the text */}
+      <label
+        htmlFor={id}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 px-1 text-[15px] text-gray-500 transition-all
+                   bg-white
+                   peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-blue-600
+                   peer-[&:not(:placeholder-shown)]:top-0 peer-[&:not(:placeholder-shown)]:-translate-y-1/2 peer-[&:not(:placeholder-shown)]:text-xs peer-[&:not(:placeholder-shown)]:text-gray-500"
+      >
+        {label}
+      </label>
+    </div>
+  )
+}
+
 export default function VerifyPage() {
-  const [code, setCode] = useState(["", "", "", "", "", ""])
+  const [code, setCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [resendCooldown, setResendCooldown] = useState(0)
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const [isResending, setIsResending] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   // Get email from URL params or localStorage (you can adjust this based on your implementation)
   const [email, setEmail] = useState("")
@@ -26,8 +71,7 @@ export default function VerifyPage() {
   useEffect(() => {
     // You can get email from URL params or localStorage
     // For now, using a placeholder - adjust based on your backend integration
-    const urlParams = new URLSearchParams(window.location.search)
-    const emailParam = urlParams.get("email")
+    const emailParam = searchParams.get("email")
     if (emailParam) {
       setEmail(emailParam)
     } else {
@@ -39,7 +83,7 @@ export default function VerifyPage() {
         router.push("/signup")
       }
     }
-  }, [router])
+  }, [router, searchParams])
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -49,53 +93,10 @@ export default function VerifyPage() {
     }
   }, [resendCooldown])
 
-  const handleInputChange = (index: number, value: string) => {
-    if (value.length > 1) return // Only allow single digit
-
-    const newCode = [...code]
-    newCode[index] = value
-    setCode(newCode)
-    setError("")
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus()
-    }
-  }
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus()
-    }
-  }
-
-  const handlePaste = (e: React.ClipboardEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault()
-    const pastedData = e.clipboardData.getData("text").slice(0, 6)
-    const newCode = [...code]
 
-    for (let i = 0; i < pastedData.length && i < 6; i++) {
-      if (/^\d$/.test(pastedData[i])) {
-        newCode[i] = pastedData[i]
-      }
-    }
-
-    setCode(newCode)
-    setError("")
-
-    // Focus the next empty input or the last input
-    const nextEmptyIndex = newCode.findIndex((digit) => digit === "")
-    if (nextEmptyIndex !== -1) {
-      inputRefs.current[nextEmptyIndex]?.focus()
-    } else {
-      inputRefs.current[5]?.focus()
-    }
-  }
-
-  const handleVerify = async () => {
-    const verificationCode = code.join("")
-
-    if (verificationCode.length !== 6) {
+    if (code.length !== 6) {
       setError("Please enter the complete 6-digit code")
       return
     }
@@ -109,7 +110,7 @@ export default function VerifyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email,
-          confirmation_code: verificationCode,
+          confirmation_code: code,
         }),
       });
 
@@ -132,6 +133,8 @@ export default function VerifyPage() {
   const handleResendCode = async () => {
     if (resendCooldown > 0) return
 
+    setIsResending(true)
+
     try {
       // Replace this with your actual API call
       const response = await fetch("/api/resend-verification", {
@@ -146,141 +149,96 @@ export default function VerifyPage() {
         setResendCooldown(60) // 60 second cooldown
         setError("")
         // Clear current code
-        setCode(["", "", "", "", "", ""])
-        inputRefs.current[0]?.focus()
+        setCode("")
       } else {
         setError("Failed to resend code. Please try again.")
       }
     } catch (error) {
       setError("Something went wrong. Please try again.")
+    } finally {
+      setIsResending(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-50 to-blue-50 p-12 flex-col justify-center">
-        <div className="max-w-md">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="h-12 w-12 rounded bg-[#FF5722] flex items-center justify-center">
-              <Brain className="h-7 w-7 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-black">Elevv</span>
+    <div className="min-h-screen bg-white">
+      {/* Header with Logo */}
+      <div className="absolute top-6 left-6">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
+            <Brain className="h-5 w-5 text-white" />
           </div>
-
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Check Your Email</h1>
-
-          <p className="text-lg text-gray-600 mb-8">
-            We've sent a 6-digit verification code to your email address. Enter it below to complete your account setup.
-          </p>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-[#FF5722]"></div>
-              <span className="text-gray-700">Secure account verification</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-[#FF5722]"></div>
-              <span className="text-gray-700">Code expires in 10 minutes</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-[#FF5722]"></div>
-              <span className="text-gray-700">Check your spam folder if needed</span>
-            </div>
+          <div>
+            <span className="text-2xl font-semibold text-gray-900">Elevv</span>
+            <div className="text-xs text-gray-500 -mt-1">Your Career. Elevated</div>
           </div>
         </div>
       </div>
 
-      {/* Right Panel - Verification Form */}
-      <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
-        <div className="mx-auto w-full max-w-sm lg:w-96">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <div className="h-8 w-8 rounded bg-[#FF5722] flex items-center justify-center">
-              <Brain className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-black">Elevv</span>
-          </div>
-
-          {/* Back Button */}
-          <div className="mb-6">
-            <Link
-              href="/signup"
-              className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Sign Up
-            </Link>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h2>
-            {email && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-8">
-                <Mail className="w-4 h-4" />
-                <span>Code sent to {email}</span>
-              </div>
-            )}
-          </div>
-
+      {/* Main */}
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="w-full max-w-md">
           <div className="space-y-6">
-            {/* Verification Code Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-4">Enter 6-digit verification code</label>
-              <div className="flex gap-3 justify-center">
-                {code.map((digit, index) => (
-                  <Input
-                    key={index}
-                    ref={(el) => { inputRefs.current[index] = el; }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleInputChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    onPaste={index === 0 ? handlePaste : undefined}
-                    className="w-12 h-12 text-center text-lg font-semibold border-2 focus:border-[#FF5722] focus:ring-[#FF5722]"
-                    disabled={isLoading}
-                  />
-                ))}
-              </div>
+            <div className="text-center space-y-4">
+              <h1 className="text-3xl font-medium text-gray-900">Check your inbox</h1>
+              <p className="text-gray-600 text-base leading-relaxed">
+                Enter the verification code we just sent to{" "}
+                <span className="font-medium text-gray-900">{email || 'your email'}</span>.
+              </p>
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-md p-3">
-                {error}
-              </div>
-            )}
+            <form onSubmit={handleVerify} className="space-y-6">
+              {/* Verification Code Input */}
+              <FloatingInput
+                id="code"
+                type="text"
+                label="Code"
+                value={code}
+                onChange={(e) => {
+                  // Only allow numbers and limit length
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                  setCode(value)
+                  setError("")
+                }}
+                autoComplete="one-time-code"
+                maxLength={6}
+              />
 
-            {/* Verify Button */}
-            <Button
-              onClick={handleVerify}
-              disabled={isLoading || code.join("").length !== 6}
-              className="w-full bg-[#FF5722] hover:bg-[#E64A19] text-white h-11 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Verifying..." : "Verify Code"}
-            </Button>
+              {/* Error Message */}
+              {error && (
+                <div className="text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-md p-3">
+                  {error}
+                </div>
+              )}
 
-            {/* Resend Code */}
+              <Button
+                type="submit"
+                disabled={code.length < 6 || isLoading}
+                className="w-full h-12 rounded-2xl bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-medium"
+              >
+                {isLoading ? "Verifying..." : "Continue"}
+              </Button>
+            </form>
+
+            {/* Resend Email */}
             <div className="text-center">
-              <span className="text-sm text-gray-600">Didn't receive the code? </span>
               <button
                 onClick={handleResendCode}
-                disabled={resendCooldown > 0}
-                className="text-sm font-medium text-[#FF5722] hover:text-[#E64A19] disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isResending || resendCooldown > 0}
+                className="text-gray-600 hover:text-gray-800 font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
               >
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
+                {isResending
+                  ? "Sending..."
+                  : resendCooldown > 0
+                    ? `Resend email (${resendCooldown}s)`
+                    : "Resend email"
+                }
               </button>
-            </div>
-
-            {/* Help Text */}
-            <div className="text-center text-xs text-gray-500">
-              <p>Having trouble? Check your spam folder or contact support.</p>
             </div>
           </div>
         </div>
       </div>
+
     </div>
   )
 }
