@@ -37,6 +37,10 @@ def get_secret_hash(username: str) -> str:
     return base64.b64encode(dig).decode()
 
 # --- Pydantic Models for User Authentication ---
+class SocialSignupRequest(BaseModel):
+    user_id: str
+    email: str
+    name: str
 class ConfirmSignupRequest(BaseModel):
     email: str
     confirmation_code: str
@@ -190,3 +194,28 @@ def confirm_forgot_password(request: ConfirmForgotPasswordRequest):
     except Exception as e:
         print(f"Error confirming forgot password: {e}")
         raise HTTPException(status_code=500, detail="Failed to reset password.")
+    
+# --- ADD THIS NEW ENDPOINT to your auth.py file ---
+
+@router.post("/social-signup", tags=["Authentication"])
+async def social_signup(request: SocialSignupRequest):
+    """
+    Handles creating a user profile after a successful social login (Google/LinkedIn).
+    """
+    try:
+        # Check if a user with this ID already exists to prevent duplicates
+        # (This is an optional but recommended check)
+        
+        # Create the user profile in your DynamoDB
+        await create_user_profile(
+            user_id=request.user_id,
+            name=request.name,
+            email=request.email
+        )
+        return {"message": "User profile created successfully for social login."}
+    except Exception as e:
+        logger.error(f"Error during social signup profile creation: {e}")
+        # It's important to raise an error so the frontend knows something went wrong
+        raise HTTPException(status_code=500, detail="Failed to create user profile for social login.")
+
+# ... keep all your other existing routes ...

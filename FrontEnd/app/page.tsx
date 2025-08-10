@@ -102,7 +102,7 @@ export default function Home() {
                 <div className="relative aspect-video">
                   <video className="w-full h-full object-cover" autoPlay muted loop playsInline>
                     <source
-                      src=""
+                      src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
                       type="video/mp4"
                     />
                     {/* Fallback gradient background */}

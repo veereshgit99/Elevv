@@ -1301,13 +1301,6 @@ export default function ProfilePage() {
                           <p className="text-gray-600 mb-6">
                             Upload your first resume to get started with AI-powered job matching
                           </p>
-                          <Button
-                            onClick={() => setShowUploadModal(true)}
-                            className="bg-[#FF5722] hover:bg-[#E64A19] text-white"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Upload Resume
-                          </Button>
                         </CardContent>
                       </Card>
                     ) : (
