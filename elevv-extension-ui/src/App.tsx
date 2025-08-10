@@ -47,12 +47,14 @@ export default function ChromeExtensionPopup() {
     summary: string;
     strengths: string[];
     gaps: string[];
+    analysisId?: string; // Store analysis ID for enhancement tracking
     rawData?: any; // Store the full API response for enhancement generation
   }>({
     matchScore: 0,
     summary: "",
     strengths: [],
     gaps: [],
+    analysisId: undefined,
     rawData: null,
   });
 
@@ -362,6 +364,7 @@ export default function ChromeExtensionPopup() {
             "Could benefit from more leadership experience",
             "GraphQL experience not clearly demonstrated"
           ],
+          analysisId: 'dev-analysis-123',
           rawData: {
             // Mock raw data for enhancement API
             user_id: 'dev-user',
@@ -391,6 +394,7 @@ export default function ChromeExtensionPopup() {
         summary: analysisResult.job_match_analysis.match_analysis.strength_summary,
         strengths: analysisResult.relationship_map.relationship_map.strong_points_in_resume,
         gaps: analysisResult.relationship_map.relationship_map.identified_gaps_in_resume.map((g: any) => g.jd_requirement),
+        analysisId: analysisResult.analysis_id,
         rawData: analysisResult, // Store for enhancement generation
       });
 
@@ -409,7 +413,15 @@ export default function ChromeExtensionPopup() {
 
   // --- NEW: Handle viewing existing enhancements ---
   const handleViewEnhancements = () => {
-    const storedEnhancements = sessionStorage.getItem('enhancement_results');
+    if (!analysisData.analysisId) {
+      console.error('No analysis ID available for enhancement retrieval');
+      handleTailorResume();
+      return;
+    }
+
+    const enhancementKey = `enhancements_${analysisData.analysisId}`;
+    const storedEnhancements = sessionStorage.getItem(enhancementKey);
+
     if (storedEnhancements) {
       try {
         const parsedEnhancements = JSON.parse(storedEnhancements);
@@ -477,8 +489,9 @@ export default function ChromeExtensionPopup() {
           ]
         });
 
-        // Store mock enhancement results in sessionStorage
-        sessionStorage.setItem('enhancement_results', JSON.stringify({
+        // Store mock enhancement results in sessionStorage with analysis_id
+        const enhancementKey = `enhancements_${analysisData.analysisId}`;
+        sessionStorage.setItem(enhancementKey, JSON.stringify({
           projectedScore: 88,
           strategicSummary: "Your resume is already strong, showcasing impressive projects and quantified achievements. The key opportunity is to more explicitly align your existing experience with the specific language used in the Google job description, particularly around 'ML infrastructure', 'model evaluation/optimization', and 'large-scale systems'. By reframing your accomplishments using these keywords, you will transform your resume from 'strong candidate' to 'ideal candidate' and significantly increase your chances of passing the initial screening.",
           suggestions: [
@@ -500,8 +513,9 @@ export default function ChromeExtensionPopup() {
       const mappedEnhancementData = mapEnhancementData(enhancementResult);
       setEnhancementsData(mappedEnhancementData);
 
-      // Store enhancement results in sessionStorage
-      sessionStorage.setItem('enhancement_results', JSON.stringify(mappedEnhancementData));
+      // Store enhancement results in sessionStorage with analysis_id
+      const enhancementKey = `enhancements_${analysisData.analysisId}`;
+      sessionStorage.setItem(enhancementKey, JSON.stringify(mappedEnhancementData));
 
       console.log('Enhancement generation completed successfully');
       setCurrentView('enhancements');
@@ -657,6 +671,7 @@ export default function ChromeExtensionPopup() {
               summary={analysisData.summary}
               strengths={analysisData.strengths}
               gaps={analysisData.gaps}
+              analysisId={analysisData.analysisId}
             />
           ) : currentView === 'enhancements' && enhancementsData ? (
             <EnhancementsPage

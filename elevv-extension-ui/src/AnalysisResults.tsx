@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, CheckCircle, AlertTriangle, ChevronRight, Loader2 } from "lucide-react"
 
@@ -15,6 +15,8 @@ interface AnalysisResultsProps {
     // NEW: Props for enhancement viewing logic
     showViewEnhancements?: boolean
     onViewEnhancements?: () => void
+    // NEW: Analysis ID for unique enhancement tracking
+    analysisId?: string
 }
 
 export function AnalysisResults({
@@ -26,9 +28,54 @@ export function AnalysisResults({
     strengths,
     gaps,
     showViewEnhancements = false,
-    onViewEnhancements
+    onViewEnhancements,
+    analysisId
 }: AnalysisResultsProps) {
     const [expandedSection, setExpandedSection] = useState<'strengths' | 'gaps' | null>('gaps')
+
+    // NEW: State to track if enhancements exist for current analysis
+    const [hasValidEnhancements, setHasValidEnhancements] = useState(false)
+
+    // NEW: Check for existing enhancements using analysis_id
+    useEffect(() => {
+        const checkForExistingEnhancements = () => {
+            if (!analysisId) {
+                setHasValidEnhancements(false)
+                return
+            }
+
+            try {
+                const enhancementKey = `enhancements_${analysisId}`
+                const storedEnhancements = sessionStorage.getItem(enhancementKey)
+
+                if (storedEnhancements) {
+                    const enhancementData = JSON.parse(storedEnhancements)
+
+                    // Check if enhancement data is valid
+                    if (enhancementData.suggestions && enhancementData.suggestions.length > 0) {
+                        setHasValidEnhancements(true)
+                        console.log(`Found valid enhancement results for analysis_id: ${analysisId}`)
+                    } else {
+                        setHasValidEnhancements(false)
+                        console.log(`Invalid enhancement data for analysis_id: ${analysisId}`)
+                    }
+                } else {
+                    setHasValidEnhancements(false)
+                    console.log(`No enhancement results found for analysis_id: ${analysisId}`)
+                }
+            } catch (error) {
+                console.error('Error checking for existing enhancements:', error)
+                setHasValidEnhancements(false)
+            }
+        }
+
+        checkForExistingEnhancements()
+    }, [analysisId])
+
+    // NEW: Determine button state based on enhancement availability
+    const shouldShowViewEnhancements = showViewEnhancements || hasValidEnhancements
+    const buttonText = shouldShowViewEnhancements ? 'View Enhancements' : 'Tailor Your Resume'
+    const buttonAction = shouldShowViewEnhancements ? onViewEnhancements : onTailorResume
 
     const circleLength = 2 * Math.PI * 30;
 
@@ -71,7 +118,7 @@ export function AnalysisResults({
                     <motion.button
                         whileHover={{ scale: isGeneratingEnhancements ? 1 : 1.02 }}
                         whileTap={{ scale: isGeneratingEnhancements ? 1 : 0.98 }}
-                        onClick={showViewEnhancements ? onViewEnhancements : onTailorResume}
+                        onClick={buttonAction}
                         disabled={isGeneratingEnhancements}
                         className={`tailor-button ${isGeneratingEnhancements ? 'loading' : ''}`}
                     >
@@ -81,7 +128,7 @@ export function AnalysisResults({
                                 <span className="loading-text">Generating...</span>
                             </>
                         ) : (
-                            showViewEnhancements ? 'View Enhancements' : 'Tailor Your Resume'
+                            buttonText
                         )}
                     </motion.button>
                 </div>
