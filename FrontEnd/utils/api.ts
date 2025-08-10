@@ -367,3 +367,33 @@ export async function confirmSignup(email: string, confirmation_code: string) {
     }
     return response.json();
 }
+
+
+// Add this new function to the bottom of your utils/api.ts file
+
+export async function submitFeedback(feedbackText: string, userEmail?: string) {
+    const apiKey = process.env.NEXT_PUBLIC_TRELLO_API_KEY;
+    const apiToken = process.env.NEXT_PUBLIC_TRELLO_API_TOKEN;
+    const listId = process.env.NEXT_PUBLIC_TRELLO_LIST_ID;
+
+    if (!apiKey || !apiToken || !listId) {
+        throw new Error("Trello API credentials are not configured.");
+    }
+
+    // The card's title will be a snippet of the feedback
+    const cardName = `${userEmail || 'anonymous'}: ${feedbackText.substring(0, 50)}...`;
+    // The full feedback text will be in the card's description
+    const cardDesc = `**User:** ${userEmail || 'Not provided'}\n\n---\n\n${feedbackText}`;
+
+    const url = `https://api.trello.com/1/cards?idList=${listId}&key=${apiKey}&token=${apiToken}&name=${encodeURIComponent(cardName)}&desc=${encodeURIComponent(cardDesc)}`;
+
+    const response = await fetch(url, {
+        method: 'POST',
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to submit feedback to Trello.');
+    }
+
+    return response.json();
+}

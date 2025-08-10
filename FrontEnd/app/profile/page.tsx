@@ -42,7 +42,7 @@ import {
   Edit,
   Info,
   BarChart3,
-  Settings,
+  MessageSquare,
   LogOut,
   ChevronDown,
   X,
@@ -54,6 +54,7 @@ import { useAnalysisNavigation } from "@/components/analysis-navigation-context"
 // Add this import with your other imports
 import { signOut, useSession } from "next-auth/react"
 import { ResumeUpload } from "@/components/resume-upload"
+import FeedbackModal from "@/components/FeedbackModal"
 
 // Add this at the top of your profile page component, after imports
 interface UserProfile {
@@ -87,6 +88,7 @@ export default function ProfilePage() {
 
   // Add this with your other state declarations (around line 35-40)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   // Add user profile state
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
@@ -962,9 +964,12 @@ export default function ProfilePage() {
                           <span>Profile</span>
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center space-x-2 cursor-pointer">
-                        <Settings className="w-4 h-4" />
-                        <span>Settings</span>
+                      <DropdownMenuItem
+                        onClick={() => setShowFeedbackModal(true)}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Feedback</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleSignOut}>
@@ -1605,6 +1610,12 @@ export default function ProfilePage() {
 
           {/* Edit Panel */}
           {renderEditPanel()}
+
+          {/* Feedback Modal */}
+          <FeedbackModal
+            isOpen={showFeedbackModal}
+            onOpenChange={setShowFeedbackModal}
+          />
         </>
       )}
     </div>

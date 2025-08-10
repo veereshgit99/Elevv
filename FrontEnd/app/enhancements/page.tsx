@@ -17,7 +17,7 @@ import {
   Brain,
   BarChart3,
   User,
-  Settings,
+  MessageSquare,
   LogOut,
   ChevronDown,
   ArrowLeft,
@@ -28,6 +28,7 @@ import {
   CheckCircle2
 } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
+import FeedbackModal from "@/components/FeedbackModal"
 
 interface EnhancementSuggestion {
   type: 'add' | 'rephrase' | 'quantify' | 'highlight' | 'remove' | 'style_adjust'
@@ -63,6 +64,7 @@ export default function EnhancementsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [enhancementData, setEnhancementData] = useState<OptimizationResponse | null>(null)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   // Redirect unauthenticated users to login
   useEffect(() => {
@@ -324,13 +326,16 @@ export default function EnhancementsPage() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
+                        <User className="w-4 h-4" />
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                    <DropdownMenuItem
+                      onClick={() => setShowFeedbackModal(true)}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Feedback</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
@@ -489,6 +494,12 @@ export default function EnhancementsPage() {
                 Start New Analysis
               </Button>
             </div>
+
+            {/* Feedback Modal */}
+            <FeedbackModal
+              isOpen={showFeedbackModal}
+              onOpenChange={setShowFeedbackModal}
+            />
           </main>
         </>
       )}

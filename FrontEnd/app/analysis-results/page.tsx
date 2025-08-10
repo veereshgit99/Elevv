@@ -9,7 +9,7 @@ import {
   Brain,
   BarChart3,
   User,
-  Settings,
+  MessageSquare,
   LogOut,
   ChevronDown,
   ArrowLeft,
@@ -29,6 +29,7 @@ import { AnalysisResponse } from '@/utils/analysis-api'
 import { useSession, signOut } from 'next-auth/react'
 import { optimizeResume } from "@/utils/analysis-api"
 import { fetchUserProfile } from "@/utils/api"
+import FeedbackModal from "@/components/FeedbackModal"
 interface UserProfile {
   user_id: string
   email: string
@@ -43,6 +44,7 @@ export default function AnalysisResultsPage() {
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingData, setIsLoadingData] = useState(true)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasExistingEnhancements, setHasExistingEnhancements] = useState(false)
 
@@ -306,13 +308,16 @@ export default function AnalysisResultsPage() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
+                        <User className="w-4 h-4" />
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                    <DropdownMenuItem
+                      onClick={() => setShowFeedbackModal(true)}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Feedback</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
@@ -516,6 +521,12 @@ export default function AnalysisResultsPage() {
                   ))}
               </CardContent>
             </Card>
+
+            {/* Feedback Modal */}
+            <FeedbackModal
+              isOpen={showFeedbackModal}
+              onOpenChange={setShowFeedbackModal}
+            />
           </main>
         </>
       )}

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Upload, BarChart3, User, Settings, LogOut, Brain, ChevronDown, Clock, FileText, Zap, Target, Building } from "lucide-react"
+import { Upload, BarChart3, User, MessageSquare, LogOut, Brain, ChevronDown, Clock, FileText, Zap, Target, Building } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -24,6 +24,7 @@ import { ResumeUpload } from "@/components/resume-upload"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { analyzeJobApplication } from '@/utils/analysis-api'
 import { storeAnalysisResults } from '@/utils/analysis-storage'
+import FeedbackModal from "@/components/FeedbackModal"
 
 // Define types for better TypeScript support
 interface UserProfile {
@@ -174,6 +175,7 @@ export default function DashboardPage() {
 
   // Add this with your other state declarations
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   // Redirect unauthenticated users to login
   useEffect(() => {
@@ -375,13 +377,16 @@ export default function DashboardPage() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
+                        <User className="w-4 h-4" />
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                    <DropdownMenuItem
+                      onClick={() => setShowFeedbackModal(true)}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Feedback</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
@@ -556,6 +561,12 @@ export default function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Feedback Modal */}
+            <FeedbackModal
+              isOpen={showFeedbackModal}
+              onOpenChange={setShowFeedbackModal}
+            />
           </main>
         </>
       )}

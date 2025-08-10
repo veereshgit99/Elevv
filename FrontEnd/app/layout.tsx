@@ -14,7 +14,7 @@ import Providers from "@/components/Providers";
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Elevv Career AI - Stop Guessing. Get Hired.",
+  title: "Elevv - Your Career. Elevated",
   description:
     "Elevv's AI analyzes your resume against any job description to give you a detailed match score and actionable feedback. Land your dream job, faster.",
   generator: 'v0.dev'
