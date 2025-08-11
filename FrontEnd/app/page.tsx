@@ -58,7 +58,7 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section with Overlapping Video */}
-        <section className="container mx-auto px-4 py-8 md:py-16 lg:py-24 relative">
+        <section className="container mx-auto px-4 py-8 md:py-16 lg:py-24 relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 to-black">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center min-h-[70vh]">
             {/* Left Side - Text Content */}
             <div className="space-y-8 relative z-20 lg:ml-8 lg:-mt-16">
@@ -76,8 +76,8 @@ export default function Home() {
                 </h1>
 
                 <p className="text-sm md:text-base text-gray-200 max-w-xl leading-relaxed">
-                  Get an expert AI analysis of your resume against any job. We show you exactly how to tailor your
-                  application to land your dream role.
+                  Get an in-depth analysis of your resume against any job. We show you exactly how to tailor your
+                  resume to land your dream role.
                 </p>
               </div>
 
@@ -85,7 +85,7 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Link href="/signup">
                   <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white text-lg px-8 py-6">
-                    Get Elevv Free
+                    Get Elevv For Free
                   </Button>
                 </Link>
               </div>
@@ -119,25 +119,17 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-8 relative z-20">
                 <div className="space-y-2">
-                  <div className="text-gray-400 text-sm font-medium tracking-wide uppercase">Chrome Extension</div>
-                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                    Analyze jobs directly from any career site.
+                  <div className="text-gray-400 text-sm font-medium tracking-wide">AI Analysis</div>
+                  <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
+                    Detailed Analysis and Tailored Resumes for Every Application
                   </h2>
                 </div>
 
-                <p className="text-xl text-gray-300 leading-relaxed max-w-2xl">
-                  Install the Elevv Chrome extension to get instant resume analysis on LinkedIn, Indeed, Glassdoor, and
-                  20+ other job sites. See your match score, identify missing keywords, and get strategic
-                  recommendations without ever leaving the page. Transform your job search with AI-powered insights at
-                  every click.
+                <p className="text-lg text-gray-400 leading-relaxed max-w-2xl">
+                  Our AI fine-tunes your resume with precision. Spotting strengths, closing gaps, and turning every application into a stronger bet.
                 </p>
 
                 <div className="pt-4">
-                  <Link href="/chrome-extension">
-                    <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white text-lg px-8 py-6">
-                      Add to Chrome
-                    </Button>
-                  </Link>
                 </div>
               </div>
 
@@ -218,16 +210,14 @@ export default function Home() {
 
               <div className="space-y-8 order-1 lg:order-2">
                 <div className="space-y-2">
-                  <div className="text-gray-400 text-sm font-medium tracking-wide uppercase">AI Resume Analysis</div>
-                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                    Get expert-level insights for every application.
+                  <div className="text-gray-400 text-sm font-medium tracking-wide">One-click Analysis</div>
+                  <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
+                    Insights at the Speed of a Click
                   </h2>
                 </div>
 
-                <p className="text-xl text-gray-300 leading-relaxed max-w-2xl">
-                  Upload your resume and any job description to receive detailed analysis, match scoring, and strategic
-                  recommendations from our multi-agent AI system. Our AI thinks like a hiring manager with decades of
-                  experience, identifying exactly what you need to stand out and land interviews.
+                <p className="text-lg text-gray-400 leading-relaxed max-w-2xl">
+                  Our AI instantly parses the job description, compares it with your resume, and delivers clear, targeted suggestions right when you need them.
                 </p>
 
                 <div className="pt-4">
@@ -241,10 +231,10 @@ export default function Home() {
         <section className="container mx-auto px-4 py-16 md:py-24 lg:py-32 relative">
           <div className="mx-auto max-w-2xl text-center space-y-8">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-white">
-              Ready to engineer your career success?
+              Beat the Bots. Land the Role.
             </h2>
-            <p className="text-lg text-gray-300 font-medium">
-              Finally, an AI that thinks strategically about your future
+            <p className="text-lg text-gray-450 font-medium">
+              AI insights that hit harder than keywords ever could
             </p>
             <div className="space-y-4">
               <Link href="/signup">
@@ -258,7 +248,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-black border-t border-gray-800">
+      <footer >
         <div className="container mx-auto px-4 py-12 md:py-16">
           <div className="flex items-center gap-2 justify-start py-8">
             <Logo variant="dark" size="md" showText={true} className="font-bold text-xl" />
@@ -301,26 +291,6 @@ export default function Home() {
                 <li>
                   <Link href="#contact" className="text-gray-400 hover:text-white transition-colors">
                     Contact
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-medium text-sm mb-3 text-white">Resources</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="#blog" className="text-gray-400 hover:text-white transition-colors">
-                    Career Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#guides" className="text-gray-400 hover:text-white transition-colors">
-                    Resume Guides
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#success" className="text-gray-400 hover:text-white transition-colors">
-                    Success Stories
                   </Link>
                 </li>
               </ul>

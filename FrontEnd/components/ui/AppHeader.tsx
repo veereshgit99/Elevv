@@ -61,7 +61,7 @@ export default function AppHeader() {
             <div className="container mx-auto px-4">
                 <div className="flex justify-between items-center h-16">
                     <div className="flex items-center gap-8">
-                        <Logo variant="dark" />
+                        <Logo variant="dark" href="/dashboard" />
                         <nav className="hidden md:flex items-center gap-8">
                             {navLinks.map((link) => (
                                 <Link

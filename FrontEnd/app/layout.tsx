@@ -1,6 +1,5 @@
 // app/layout.tsx
 
-// --- NEW: Import Suspense from React ---
 import "./globals.css"
 import { Suspense } from "react";
 
@@ -18,13 +17,22 @@ export const metadata: Metadata = {
   title: "Elevv - Your Career. Elevated",
   description:
     "Elevv's AI analyzes your resume against any job description to give you a detailed match score and actionable feedback. Land your dream job, faster.",
-  generator: 'v0.dev'
+  generator: "v0.dev",
+  icons: {
+    icon: [
+      { url: "/logos/Group4.svg" }
+    ],
+    apple: "/logos/apple-touch-icon.png",
+  },
+  manifest: "/logos/site.webmanifest",
 }
 
-// --- NEW: A simple loading component for the fallback ---
 function Loading() {
-  // You can add any loading UI here, like a spinner
-  return <div>Loading page...</div>;
+  return (
+    <div className="min-h-screen bg-[#f9fafb] text-black flex items-center justify-center">
+      Loading…
+    </div>
+  );
 }
 
 export default function RootLayout({
@@ -39,7 +47,6 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
             <AnalysisNavigationProvider>
               <ConditionalHeader />
-              {/* --- MODIFIED: Wrap children in Suspense --- */}
               <Suspense fallback={<Loading />}>
                 {children}
               </Suspense>
