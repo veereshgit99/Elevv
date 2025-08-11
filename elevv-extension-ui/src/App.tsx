@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Brain, Loader2, FileText, ExternalLink } from "lucide-react"
+import { Loader2, FileText, ExternalLink } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { AnalysisResults } from "./AnalysisResults" // Your new results component
 import { EnhancementsPage } from "./EnhancementsPage" // Your new enhancements component
+import Logo from "./components/Logo";
 
 // --- ADD THESE IMPORTS ---
 import { fetchResumes, startJobAnalysis, optimizeResume } from "./utils/api";
@@ -565,7 +566,7 @@ export default function ChromeExtensionPopup() {
       <div className="app-container">
         <header className="app-header">
           <div className="logo">
-            <Brain className="logo-icon" />
+            <Logo className="logo-icon" />
             <span>Elevv</span>
           </div>
           <h1 className="header-subtitle">Authenticating...</h1>
@@ -586,7 +587,7 @@ export default function ChromeExtensionPopup() {
       <div className="app-container">
         <header className="app-header">
           <div className="logo">
-            <Brain className="logo-icon" />
+            <Logo className="logo-icon" />
             <span>Elevv</span>
           </div>
           <h1 className="header-subtitle">Sign In Required</h1>
@@ -599,15 +600,14 @@ export default function ChromeExtensionPopup() {
           >
             <div className="auth-content">
               <div className="auth-icon">
-                <Brain className="auth-brain-icon" />
               </div>
               <h2>Welcome to Elevv</h2>
-              <p>Please sign in to your Elevv account to start analyzing job descriptions and optimizing your resume.</p>
+              <p>Start analyzing your resume against job descriptions and get tailored feedback.</p>
 
               <div className="auth-features">
                 <div className="feature-item">
                   <div className="feature-bullet"></div>
-                  <span>AI-powered resume analysis</span>
+                  <span>One-click analysis</span>
                 </div>
                 <div className="feature-item">
                   <div className="feature-bullet"></div>
@@ -646,7 +646,7 @@ export default function ChromeExtensionPopup() {
     <div className="app-container">
       <header className="app-header">
         <div className="logo">
-          <Brain className="logo-icon" />
+          <Logo className="logo-icon" />
           <span>Elevv</span>
         </div>
         <h1 className="header-subtitle">
