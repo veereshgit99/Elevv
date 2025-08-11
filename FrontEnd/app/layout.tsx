@@ -1,12 +1,12 @@
 // app/layout.tsx
 
 // --- NEW: Import Suspense from React ---
+import "./globals.css"
 import { Suspense } from "react";
 
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AnalysisNavigationProvider } from "@/components/analysis-navigation-context"
 import Providers from "@/components/Providers";
@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className}`}>
         <Providers>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>

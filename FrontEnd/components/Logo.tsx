@@ -1,12 +1,10 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 interface LogoProps {
     variant?: 'light' | 'dark'
     size?: 'sm' | 'md' | 'lg'
     showText?: boolean
-    href?: string
     className?: string
 }
 
@@ -14,7 +12,6 @@ const Logo = ({
     variant = 'dark',
     size = 'md',
     showText = true,
-    href = '/',
     className
 }: LogoProps) => {
     // Size configurations
@@ -48,7 +45,7 @@ const Logo = ({
 
     const config = sizeConfig[size]
 
-    const LogoContent = () => (
+    return (
         <div className={cn(
             'flex items-center',
             config.container,
@@ -69,18 +66,6 @@ const Logo = ({
             )}
         </div>
     )
-
-    // If href is provided, wrap in Link
-    if (href) {
-        return (
-            <Link href={href} className="flex items-center">
-                <LogoContent />
-            </Link>
-        )
-    }
-
-    // Otherwise return just the logo
-    return <LogoContent />
 }
 
 export default Logo

@@ -56,11 +56,47 @@
 
   html,
   body {
-    /* This is the crucial fix. It applies the background color defined 
-      by your theme's --background variable to the entire page. 
-      This is more robust than a static color and works seamlessly 
-      with your dark mode and theme provider.
-    */
     @apply bg-background text-foreground;
+    background-color: #fff;
+    /* Tailwind's bg-gray-50 */
   }
+}
+
+html {
+  background-color: rgb(249 250 251) !important;
+  /* Your light theme color */
+  transition: none !important;
+}
+
+html.dark {
+  background-color: rgb(3 7 18) !important;
+  /* Your dark theme color */
+}
+
+/* Disable Chrome's paint optimization during navigation */
+html,
+body {
+  will-change: auto;
+  transform: translateZ(0);
+  /* Forces hardware acceleration */
+}
+
+@layer base {
+
+  html,
+  body {
+    @apply bg-white;
+  }
+}
+
+/* globals.css */
+
+/* Fallback background for Chrome's flash */
+html,
+body {
+  background-color: #ffffff !important;
+  /* pure white */
+  color-scheme: light !important;
+  /* Let Chrome know default is light theme */
+  min-height: 100%;
 }
