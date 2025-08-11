@@ -4,9 +4,10 @@ import { useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Brain, Chrome, BarChart3 } from "lucide-react"
+import { Chrome, BarChart3 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import Logo from "@/components/Logo"
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -29,12 +30,7 @@ export default function Home() {
       {/* Header Navigation */}
       <header className="sticky top-0 z-50 w-full bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/60 border-b border-gray-800">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl text-white">
-            <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center">
-              <Brain className="h-5 w-5 text-black" />
-            </div>
-            ELEVV
-          </Link>
+          <Logo variant="dark" size="md" showText={true} className="font-bold text-xl" />
           <nav className="hidden md:flex items-center gap-8">
             <Link href="#features" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
               Features
@@ -265,10 +261,7 @@ export default function Home() {
       <footer className="bg-black border-t border-gray-800">
         <div className="container mx-auto px-4 py-12 md:py-16">
           <div className="flex items-center gap-2 justify-start py-8">
-            <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center">
-              <Brain className="h-5 w-5 text-black" />
-            </div>
-            <span className="font-bold text-xl text-white">ELEVV</span>
+            <Logo variant="dark" size="md" showText={true} className="font-bold text-xl" />
           </div>
           <div className="border-t border-gray-800 mb-8"></div>
           <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">

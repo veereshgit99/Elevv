@@ -30,7 +30,6 @@ import {
   Plus,
   Eye,
   MoreHorizontal,
-  Brain,
   MapPin,
   Phone,
   Mail,
@@ -823,45 +822,7 @@ export default function ProfilePage() {
   if (status === "loading" || isLoadingProfile || isLoadingUserData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="bg-black sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              {/* Left side - Logo and Navigation */}
-              <div className="flex items-center gap-8">
-                {/* Logo */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                    <span className="text-black font-bold text-sm">E</span>
-                  </div>
-                  <span className="text-2xl font-semibold text-white">Elevv</span>
-                </div>
-
-                {/* Primary Navigation */}
-                <nav className="hidden md:flex items-center gap-8">
-                  <Link
-                    href="/dashboard"
-                    className="text-sm font-medium text-gray-300 hover:text-white"
-                  >
-                    Analysis
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className="text-sm font-medium text-white border-b-2 border-white pb-1"
-                  >
-                    Profile
-                  </Link>
-                </nav>
-              </div>
-
-              {/* Right side - User Menu skeleton */}
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="container mx-auto px-4 py-8">
           <div className="flex gap-8">
             {/* Skeleton for sidebar */}
             <div className="w-72 flex-shrink-0">
@@ -913,77 +874,7 @@ export default function ProfilePage() {
         <div /> // Safe placeholder while redirecting
       ) : (
         <>
-          {/* Persistent Header */}
-          <header className="bg-black">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center h-16">
-                {/* Left side - Logo and Navigation */}
-                <div className="flex items-center gap-8">
-                  {/* Logo */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                      <span className="text-black font-bold text-sm">E</span>
-                    </div>
-                    <span className="text-2xl font-semibold text-white">Elevv</span>
-                  </div>
-
-                  {/* Primary Navigation */}
-                  <nav className="hidden md:flex items-center gap-8">
-                    <Link
-                      href={lastAnalysisPage}
-                      className="text-sm font-medium text-gray-300 hover:text-white"
-                    >
-                      Analysis
-                    </Link>
-                    <Link
-                      href="/profile"
-                      className="text-sm font-medium text-white border-b-2 border-white pb-1"
-                    >
-                      Profile
-                    </Link>
-                  </nav>
-                </div>
-
-                {/* Right side - User Menu */}
-                <div className="flex items-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
-                        <User className="h-5 w-5 text-black" />
-                      </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <div className="px-3 py-2">
-                        <p className="text-sm font-medium text-gray-900">{getUserFullName()}</p>
-                        <p className="text-xs text-gray-500">{getUserEmail()}</p>
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
-                          <User className="w-4 h-4" />
-                          <span>Profile</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setShowFeedbackModal(true)}
-                        className="flex items-center space-x-2 cursor-pointer"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span>Feedback</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleSignOut}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="container mx-auto px-4 py-8">
             <div className="flex gap-8">
 
               {/* Left Sidebar - Now Sticky */}

@@ -13,8 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import Logo from "@/components/Logo";
 import {
-  Brain,
   BarChart3,
   User,
   MessageSquare,
@@ -194,38 +194,6 @@ export default function EnhancementsPage() {
   if (isLoading || isLoadingData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="bg-black">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              {/* Left side - Logo and Navigation */}
-              <div className="flex items-center gap-8">
-                {/* Logo */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                    <span className="text-black font-bold text-sm">E</span>
-                  </div>
-                  <span className="text-2xl font-semibold text-white">Elevv</span>
-                </div>
-
-                {/* Navigation */}
-                <nav className="hidden md:flex items-center gap-8">
-                  <Link href="/dashboard" className="text-sm font-medium text-white border-b-2 border-white pb-1">
-                    Analysis
-                  </Link>
-                  <Link href="/profile" className="text-sm font-medium text-gray-300 hover:text-white">
-                    Profile
-                  </Link>
-                </nav>
-              </div>
-
-              {/* ONLY the user avatar should be skeleton during loading */}
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse"></div>
-              </div>
-            </div>
-          </div>
-        </header>
-
         {/* Main Content Skeleton */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Back Navigation Skeleton */}
@@ -286,70 +254,8 @@ export default function EnhancementsPage() {
         <div /> // Safe placeholder while redirecting
       ) : (
         <>
-          {/* Header */}
-          <header className="bg-black">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center h-16">
-                {/* Left side - Logo and Navigation */}
-                <div className="flex items-center gap-8">
-                  {/* Logo */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                      <span className="text-black font-bold text-sm">E</span>
-                    </div>
-                    <span className="text-2xl font-semibold text-white">Elevv</span>
-                  </div>
-
-                  {/* Navigation */}
-                  <nav className="hidden md:flex items-center gap-8">
-                    <Link href="/dashboard" className="text-sm font-medium text-white border-b-2 border-white pb-1">
-                      Analysis
-                    </Link>
-                    <Link href="/profile" className="text-sm font-medium text-gray-300 hover:text-white">
-                      Profile
-                    </Link>
-                  </nav>
-                </div>
-
-                {/* User Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
-                      <User className="h-5 w-5 text-black" />
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <div className="px-3 py-2">
-                      <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'User'}</p>
-                      <p className="text-xs text-gray-500">{userProfile?.email}</p>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile" className="flex items-center space-x-2 cursor-pointer">
-                        <User className="w-4 h-4" />
-                        <span>Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setShowFeedbackModal(true)}
-                      className="flex items-center space-x-2 cursor-pointer"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>Feedback</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </header>
-
           {/* Main Content */}
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <main className="max-w-7xl mx-auto px-4 py-8">
             {/* Back Navigation */}
             <div className="mb-6">
               <Button
@@ -489,7 +395,7 @@ export default function EnhancementsPage() {
             <div className="flex justify-center space-x-4 mt-8">
               <Button
                 onClick={() => router.push("/dashboard")}
-                className="bg-[#FF5722] hover:bg-[#E64A19] text-white px-6 py-3 text-base"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 text-base"
               >
                 Start New Analysis
               </Button>

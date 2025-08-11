@@ -3,8 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Brain } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { Button } from "@/components/ui/button"
+import Logo from "@/components/Logo"
 import { forgotPassword } from "@/utils/api"
 
 // Reusable ChatGPT-like floating label input
@@ -74,18 +75,12 @@ export default function ForgotPasswordPage() {
 
     return (
         <div className="min-h-screen bg-white">
-            {/* Header with Logo */}
-            <div className="absolute top-6 left-6">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-                        <Brain className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                        <span className="text-2xl font-semibold text-gray-900">Elevv</span>
-                        <div className="text-xs text-gray-500 -mt-1">Your Career. Elevated</div>
-                    </div>
+            {/* Header Navigation */}
+            <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200">
+                <div className="container mx-auto flex h-16 items-center justify-between px-4">
+                    <Logo variant="light" size="md" showText={true} className="font-bold text-xl" />
                 </div>
-            </div>
+            </header>
 
             {/* Main */}
             <div className="flex items-center justify-center min-h-screen px-4">

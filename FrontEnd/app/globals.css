@@ -53,7 +53,14 @@
   * {
     @apply border-border;
   }
+
+  html,
   body {
+    /* This is the crucial fix. It applies the background color defined 
+      by your theme's --background variable to the entire page. 
+      This is more robust than a static color and works seamlessly 
+      with your dark mode and theme provider.
+    */
     @apply bg-background text-foreground;
   }
 }

@@ -10,6 +10,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AnalysisNavigationProvider } from "@/components/analysis-navigation-context"
 import Providers from "@/components/Providers";
+import ConditionalHeader from "../components/ConditionalHeader";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -33,10 +34,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className}`}>
         <Providers>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
             <AnalysisNavigationProvider>
+              <ConditionalHeader />
               {/* --- MODIFIED: Wrap children in Suspense --- */}
               <Suspense fallback={<Loading />}>
                 {children}
