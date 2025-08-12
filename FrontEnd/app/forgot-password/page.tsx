@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
     }
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="bg-white min-h-screen overflow-hidden">
             {/* Header Navigation */}
             <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200">
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
             </header>
 
             {/* Main */}
-            <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="flex items-start justify-center min-h-[80vh] px-4 pt-16">
                 <div className="w-full max-w-md">
                     <div className="space-y-6">
                         {/* Back Link */}
