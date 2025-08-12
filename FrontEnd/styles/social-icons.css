@@ -1,0 +1,22 @@
+.social-icon {
+    color: #9CA3AF;
+    /* A neutral gray color */
+    filter: grayscale(100%);
+    transition: all 0.2s ease-in-out;
+    margin-left: 0rem;
+}
+
+.social-icon:hover {
+    filter: grayscale(0%);
+}
+
+/* Specific hover colors for each icon */
+.social-icon.linkedin:hover {
+    color: #0A66C2;
+    /* LinkedIn Blue */
+}
+
+.social-icon.twitter:hover {
+    color: #FFFFFF;
+    /* Twitter White */
+}

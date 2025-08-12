@@ -8,6 +8,7 @@ import { Chrome, BarChart3 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import Logo from "@/components/Logo"
+import Footer from "@/components/Footer"; // Import the new component
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -32,11 +33,11 @@ export default function Home() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Logo variant="dark" size="md" showText={true} className="font-bold text-xl" />
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="#features" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
+            <Link href="/features" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
               Features
             </Link>
-            <Link href="#how-it-works" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-              How It Works
+            <Link href="#add-to-chrome" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
+              Add to Chrome
             </Link>
             <Link href="/login">
               <Button
@@ -231,10 +232,10 @@ export default function Home() {
         <section className="container mx-auto px-4 py-16 md:py-24 lg:py-32 relative">
           <div className="mx-auto max-w-2xl text-center space-y-8">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-white">
-              Beat the Bots. Land the Role.
+              Beat the Odds. Skip the Line.
             </h2>
             <p className="text-lg text-gray-450 font-medium">
-              AI insights that hit harder than keywords ever could
+              Your shortcut from applying to interviewing
             </p>
             <div className="space-y-4">
               <Link href="/signup">
@@ -248,79 +249,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer >
-        <div className="container mx-auto px-4 py-12 md:py-16">
-          <div className="flex items-center gap-2 justify-start py-8">
-            <Logo variant="dark" size="md" showText={true} className="font-bold text-xl" />
-          </div>
-          <div className="border-t border-gray-800 mb-8"></div>
-          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
-            <div>
-              <h3 className="font-medium text-sm mb-3 text-white">Product</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="#analysis" className="text-gray-400 hover:text-white transition-colors">
-                    AI Analysis
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#pricing" className="text-gray-400 hover:text-white transition-colors">
-                    Pricing
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#api" className="text-gray-400 hover:text-white transition-colors">
-                    API Access
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-medium text-sm mb-3 text-white">Company</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="#about" className="text-gray-400 hover:text-white transition-colors">
-                    About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#careers" className="text-gray-400 hover:text-white transition-colors">
-                    Careers
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#contact" className="text-gray-400 hover:text-white transition-colors">
-                    Contact
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-medium text-sm mb-3 text-white">Support</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="#help" className="text-gray-400 hover:text-white transition-colors">
-                    Help Center
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#community" className="text-gray-400 hover:text-white transition-colors">
-                    Community
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#status" className="text-gray-400 hover:text-white transition-colors">
-                    System Status
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-12 pt-6 border-t border-gray-800 text-center text-sm text-gray-400">
-            &copy; {new Date().getFullYear()} Elevv. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

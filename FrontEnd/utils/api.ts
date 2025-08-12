@@ -381,7 +381,7 @@ export async function submitFeedback(feedbackText: string, userEmail?: string) {
     }
 
     // The card's title will be a snippet of the feedback
-    const cardName = `${userEmail || 'anonymous'}: ${feedbackText.substring(0, 50)}...`;
+    const cardName = `${feedbackText.substring(0, 50)}...`;
     // The full feedback text will be in the card's description
     const cardDesc = `**User:** ${userEmail || 'Not provided'}\n\n---\n\n${feedbackText}`;
 
