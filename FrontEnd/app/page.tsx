@@ -81,9 +81,11 @@ export default function Home() {
         <section className="container mx-auto px-4 pb-16">
           <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 max-w-5xl mx-auto">
             <div className="relative aspect-video bg-gray-100 flex items-center justify-center">
-              <video className="w-full h-full object-cover" autoPlay muted loop playsInline>
-                <source src="/videos/test_video.mp4" type="video/mp4" />
-              </video>
+              {/* This is where your animated video will go */}
+              {/* <video className="w-full h-full object-cover" autoPlay muted loop playsInline>
+                <source src="/videos/your-demo-video.mp4" type="video/mp4" />
+              </video> */}
+              <p className="text-gray-500">Your Animated Demo Video Here</p>
             </div>
           </div>
         </section>
