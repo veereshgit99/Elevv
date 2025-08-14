@@ -298,7 +298,7 @@ export default function EnhancementsPage() {
                         cx="64"
                         cy="64"
                         r="56"
-                        stroke="#2563eb"
+                        stroke="#3B82F6"
                         strokeWidth="12"
                         fill="none"
                         strokeDasharray={`${(enhancementData.match_after_enhancement / 100) * 352} 352`}
@@ -395,7 +395,7 @@ export default function EnhancementsPage() {
             <div className="flex justify-center space-x-4 mt-8">
               <Button
                 onClick={() => router.push("/dashboard")}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 text-base"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 text-base"
               >
                 Start New Analysis
               </Button>

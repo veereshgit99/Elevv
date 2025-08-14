@@ -11,10 +11,10 @@ export function FormSkeleton() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
         >
-            {/* Parsing Job Details message */}
+            {/* Reading Job Details message */}
             <div className="flex items-center gap-2 mb-4 text-sm text-gray-600">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Parsing Job Details...</span>
+                <span>Reading Job Details...</span>
             </div>
 
             {/* Job Title Skeleton */}

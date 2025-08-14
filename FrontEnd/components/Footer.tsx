@@ -25,10 +25,10 @@ const socialLinks = [
 
 export default function Footer() {
     return (
-        <footer className="bg-black text-gray-400 border-t border-gray-800">
+        <footer className="bg-white text-gray-400 border-t border-white-800">
             <div className="container mx-auto px-4 py-8">
                 <div className="flex flex-col items-center md:items-start gap-4">
-                    <Logo variant="dark" size="md" showText={true} className="font-bold text-xl" />
+                    <Logo variant="light" size="md" showText={true} className="font-bold text-xl" />
                     <div className="flex items-center gap-4">
                         {socialLinks.map((link) => (
                             <a
@@ -50,19 +50,19 @@ export default function Footer() {
                         &copy; {new Date().getFullYear()} Elevv. All rights reserved.
                     </p>
                     <nav className="flex items-center gap-6 mt-2 md:mt-0">
-                        <Link href="/features" className="text-sm hover:text-white transition-colors">
+                        <Link href="/features" className="text-sm hover:text-black transition-colors">
                             Features
                         </Link>
-                        <Link href="/about" className="text-sm hover:text-white transition-colors">
+                        <Link href="/about" className="text-sm hover:text-black transition-colors">
                             About
                         </Link>
-                        <Link href="/contact" className="text-sm hover:text-white transition-colors">
+                        <Link href="/contact" className="text-sm hover:text-black transition-colors">
                             Contact
                         </Link>
-                        <Link href="/terms" className="text-sm hover:text-white transition-colors">
+                        <Link href="/terms" className="text-sm hover:text-black transition-colors">
                             Terms
                         </Link>
-                        <Link href="/privacy" className="text-sm hover:text-white transition-colors">
+                        <Link href="/privacy" className="text-sm hover:text-black transition-colors">
                             Privacy
                         </Link>
                     </nav>

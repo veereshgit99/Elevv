@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Canvas Resume Card</title>
+</head>
+
+<body>
+    <canvas id="myCanvas" width="400" height="250" style="border:1px solid #ccc;"></canvas>
+
+    <script>
+        const canvas = document.getElementById("myCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Draw rounded rectangle
+        function drawRoundedRect(x, y, width, height, radius, fillColor) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+        }
+
+        // Card background
+        drawRoundedRect(20, 20, 360, 200, 12, "#ffffff");
+
+        // Job Title
+        ctx.font = "bold 20px Arial";
+        ctx.fillStyle = "#000";
+        ctx.fillText("Software Engineer", 40, 60);
+
+        // Company
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#555";
+        ctx.fillText("at Microsoft", 40, 85);
+
+        // Match circle
+        ctx.beginPath();
+        ctx.arc(80, 140, 25, 0, Math.PI * 2);
+        ctx.strokeStyle = "#007BFF";
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.closePath();
+
+        // Match %
+        ctx.font = "bold 18px Arial";
+        ctx.fillStyle = "#000";
+        ctx.fillText("82%", 65, 145);
+
+        // Match Label
+        ctx.font = "bold 16px Arial";
+        ctx.fillText("Strong Match", 130, 125);
+
+        // Description
+        ctx.font = "14px Arial";
+        ctx.fillStyle = "#555";
+        ctx.fillText("Your resume effectively", 130, 145);
+        ctx.fillText("showcases the key skills", 130, 165);
+        ctx.fillText("and experience for this role", 130, 185);
+    </script>
+</body>
+
+</html>

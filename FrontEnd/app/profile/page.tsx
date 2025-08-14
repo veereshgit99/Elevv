@@ -894,7 +894,7 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <button
                         onClick={() => setActiveTab("profile")}
-                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "profile" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "profile" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
                       >
                         <User className="w-5 h-5" />
                         <span className="font-medium">Profile</span>
@@ -902,14 +902,14 @@ export default function ProfilePage() {
 
                       <button
                         onClick={() => setActiveTab("resume")}
-                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "resume" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "resume" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
                       >
                         <FileText className="w-5 h-5" />
                         <span className="font-medium">Resume</span>
                       </button>
                       <button
                         onClick={() => setActiveTab("analysis-history")}
-                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "analysis-history" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                        className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors ${activeTab === "analysis-history" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}
                       >
                         <BarChart3 className="w-5 h-5" />
                         <span className="font-medium">Analysis History</span>

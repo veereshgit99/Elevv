@@ -85,7 +85,7 @@ export default function FeaturesPage() {
                     <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Elevate Your Career?</h2>
                     <p className="text-gray-600 mb-8">Your shortcut from applying to interviewing</p>
                     <Link href="/signup">
-                        <Button size="lg" className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base">
+                        <Button size="lg" className="bg-blue-500 hover:bg-blue-600 h-12 px-8 text-base">
                             Create Your Free Account
                         </Button>
                     </Link>

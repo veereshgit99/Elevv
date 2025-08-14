@@ -163,7 +163,7 @@ export default function ChromeExtensionPopup() {
     }
   }, []);
 
-  // --- DATA FETCHING & PARSING (only when authenticated) ---
+  // --- DATA FETCHING & reading (only when authenticated) ---
   useEffect(() => {
     if (!isAuthenticated || isCheckingAuth || !user) return;
 
@@ -689,7 +689,7 @@ export default function ChromeExtensionPopup() {
               {isLoading ? (
                 <div className="loader-container">
                   <Loader2 className="loader-spinner" />
-                  <p>Parsing Job Details...</p>
+                  <p>Reading Job Details...</p>
                 </div>
               ) : (
                 <>

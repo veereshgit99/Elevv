@@ -12,8 +12,7 @@
     "host_permissions": [
         "https://elevv.net/*",
         "https://*.linkedin.com/*",
-        "https://*.indeed.com/*",
-        "https://*.glassdoor.com/*"
+        "https://*.indeed.com/*"
     ],
     "action": {
         "default_title": "Elevv"

@@ -416,7 +416,7 @@ export default function DashboardPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-500 hover:text-white"
                         onClick={() => setShowUploadModal(true)}
                       >
                         Upload Resume
@@ -430,14 +430,14 @@ export default function DashboardPage() {
                   onClick={handleAnalyze}
                   disabled={!jobTitle || !companyName || !jobDescription.trim() || !selectedResume || isAnalyzing}
                   className={`w-full h-12 rounded-2xl text-white font-medium transition-all ${isAnalyzing
-                    ? 'bg-blue-600 cursor-not-allowed'
+                    ? 'bg-blue-500 cursor-not-allowed'
                     : !jobTitle || !companyName || !jobDescription.trim() || !selectedResume
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-blue-500 hover:bg-blue-600'
                     }`}
                 >
                   {isAnalyzing ? (
-                    <>
+                    <>bg-blue-600
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                       Analyzing...
                     </>

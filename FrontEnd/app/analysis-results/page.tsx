@@ -211,7 +211,7 @@ export default function AnalysisResultsPage() {
                   <div className="h-4 w-5/6 bg-gray-200 rounded animate-pulse"></div>
                   <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
                 </div>
-                <div className="h-10 w-40 bg-blue-600 opacity-30 rounded animate-pulse"></div>
+                <div className="h-10 w-40 bg-blue-500 opacity-30 rounded animate-pulse"></div>
               </div>
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function AnalysisResultsPage() {
                           cx="64"
                           cy="64"
                           r="56"
-                          stroke="#2563eb"
+                          stroke="#3B82F6"
                           strokeWidth="12"
                           fill="none"
                           strokeDasharray={`${(matchPercentage / 100) * 352} 352`}
@@ -313,7 +313,7 @@ export default function AnalysisResultsPage() {
                     <Button
                       onClick={hasExistingEnhancements ? handleViewEnhancements : handleTailorResume}
                       disabled={isAnalyzing}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
                     >
                       {isAnalyzing ? (
                         <>

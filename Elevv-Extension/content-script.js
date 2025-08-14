@@ -151,7 +151,6 @@ class JobParser {
     };
   }
 
-  // Indeed job parsing
   parseIndeed() {
     const jobTitle = this._trySelectors([
       // Current Indeed selectors

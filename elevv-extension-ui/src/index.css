@@ -15,8 +15,8 @@
   --text-dark: #1F2937;
   --text-light: #F9FAFB;
   --text-muted: #6B7280;
-  --accent: #2563EB;
-  --accent-hover: #1D4ED8;
+  --accent: #3B82F6;
+  --accent-hover: #2563EB;
   --strength-color: #16A34A;
   --gap-color: #F97316;
 }
@@ -184,13 +184,13 @@ select {
 }
 
 .analyze-button.analyzing {
-  background-color: #2563EB;
+  background-color: #3B82F6;
   color: white;
   cursor: wait;
 }
 
 .analyze-button.analyzing:hover {
-  background-color: #2563EB;
+  background-color: #3B82F6;
 }
 
 .loader-spinner-button {
@@ -1012,7 +1012,7 @@ select {
 
 .priority-badge.priority-medium {
   background-color: #DBEAFE;
-  color: #2563EB;
+  color: #3B82F6;
   border: 1px solid #93C5FD;
 }
 
@@ -1044,7 +1044,7 @@ select {
 
 .action-type-badge.quantify {
   background-color: #EFF6FF;
-  color: #1D4ED8;
+  color: #2563EB;
   border: 1px solid #BFDBFE;
 }
 
@@ -1064,13 +1064,13 @@ select {
 
 /* Loading state for Tailor Resume button */
 .tailor-button.loading {
-  background-color: #2563EB;
+  background-color: #3B82F6;
   /* Blue color when loading */
   cursor: wait;
 }
 
 .tailor-button.loading:hover {
-  background-color: #2563EB;
+  background-color: #3B82F6;
   /* Keep same color on hover when loading */
   box-shadow: none;
 }
