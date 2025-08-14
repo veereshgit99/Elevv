@@ -26,14 +26,14 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-gray-900">
       {/* Header Navigation */}
-      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur">
+      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur pb-16 md:pb-24">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Logo variant="light" size="md" showText={true} className="font-bold text-xl" />
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
               Features
             </Link>
-            <Link href="/#add-to-chrome" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+            <Link href="https://chromewebstore.google.com/category/extensions" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
               Add to Chrome
             </Link>
             <div className="flex items-center gap-2 ml-4">
@@ -53,7 +53,7 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero Section (Notion-Inspired) */}
         <section className="container mx-auto px-4 pt-24 pb-16 text-center">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto mb-8">
             <h1 className="font-bold leading-tight text-white">
               <div className="flex flex-col items-center">
                 <div className="text-lg md:text-xl lg:text-4xl font-bold leading-tight text-gray-900">
@@ -73,19 +73,7 @@ export default function Home() {
                   Get Elevv For Free
                 </Button>
               </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Video Section */}
-        <section className="container mx-auto px-4 pb-16">
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 max-w-5xl mx-auto">
-            <div className="relative aspect-video bg-gray-100 flex items-center justify-center">
-              {/* This is where your animated video will go */}
-              {/* <video className="w-full h-full object-cover" autoPlay muted loop playsInline>
-                <source src="/videos/your-demo-video.mp4" type="video/mp4" />
-              </video> */}
-              <p className="text-gray-500">Your Animated Demo Video Here</p>
+              <div className="mb-8" />
             </div>
           </div>
         </section>
@@ -106,10 +94,14 @@ export default function Home() {
                 </p>
               </div>
               <div className="relative">
+                {/* This is the new, corrected code */}
                 <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
-                  <div className="aspect-[4/3] bg-white p-8 flex items-center justify-center">
-                    {/* Placeholder for your extension screenshot */}
-                    <p className="text-gray-400">Extension Screenshot Here</p>
+                  <div className="aspect-[4/3] bg-white">
+                    <img
+                      src="/images/Analysis.png"
+                      alt="Screenshot of Elevv's AI Analysis"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
               </div>
@@ -122,10 +114,14 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="relative order-2 lg:order-1">
+                {/* This is the new, corrected code */}
                 <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
-                  <div className="aspect-[4/3] bg-white p-8 flex items-center justify-center">
-                    {/* Placeholder for your analysis screenshot */}
-                    <p className="text-gray-400">Analysis Screenshot Here</p>
+                  <div className="aspect-[4/3] bg-white">
+                    <img
+                      src="/images/OneClickAnalysis.png"
+                      alt="Screenshot of Elevv's extension"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
               </div>
@@ -135,7 +131,7 @@ export default function Home() {
                   Insights at the speed of a click.
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Our AI instantly reads the job description, compares it with your resume, and delivers clear, targeted suggestions right when you need them.
+                  Our extension instantly reads the job description, compares it with your resume, and delivers clear, targeted suggestions right when you need them.
                 </p>
                 <div className="mt-4">
                   <a

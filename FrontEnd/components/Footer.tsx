@@ -28,7 +28,7 @@ export default function Footer() {
         <footer className="bg-white text-gray-400 border-t border-white-800">
             <div className="container mx-auto px-4 py-8">
                 <div className="flex flex-col items-center md:items-start gap-4">
-                    <Logo variant="light" size="md" showText={true} className="font-bold text-xl" />
+                    <Logo variant="light" size="md" showText={true} className="font-bold text-xl -ml-2" />
                     <div className="flex items-center gap-4">
                         {socialLinks.map((link) => (
                             <a

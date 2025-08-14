@@ -433,11 +433,11 @@ export default function DashboardPage() {
                     ? 'bg-blue-500 cursor-not-allowed'
                     : !jobTitle || !companyName || !jobDescription.trim() || !selectedResume
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-500 hover:bg-blue-600'
+                      : 'bg-blue-500 hover:bg-blue-650'
                     }`}
                 >
                   {isAnalyzing ? (
-                    <>bg-blue-600
+                    <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                       Analyzing...
                     </>
