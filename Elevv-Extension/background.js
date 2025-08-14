@@ -1,22 +1,5 @@
-// This script manages the extension's side panel behavior.
-
-// 1. Open the side panel when the user clicks the toolbar icon.
-chrome.action.onClicked.addListener((tab) => {
-    chrome.sidePanel.open({ tabId: tab.id });
-});
-
-// 2. A listener to keep the side panel alive and check auth.
-//    This replaces the previous 'popup' connection logic.
-chrome.runtime.onConnect.addListener(port => {
-    if (port.name === 'sidepanel') {
-        // This can be used for long-lived connections if needed.
-        // For now, it's a good place to trigger an auth refresh.
-        checkAuthStatus();
-    }
-});
-
-
-let user = null; // Caches the user's session data
+// Caches the user's session data
+let user = null;
 const SESSION_URL = 'https://elevv.net/api/auth/session';
 
 // This function fetches the session and updates the cache
@@ -26,14 +9,8 @@ async function checkAuthStatus() {
         const sessionData = await response.json();
 
         if (sessionData && Object.keys(sessionData).length > 0) {
-            // Include the accessToken with the user data
-            user = {
-                ...sessionData.user,
-                accessToken: sessionData.accessToken,
-                expires: sessionData.expires
-            };
+            user = { ...sessionData.user, accessToken: sessionData.accessToken, expires: sessionData.expires };
             console.log('Auth status updated. User is:', user.email);
-            console.log('AccessToken included:', !!user.accessToken);
         } else {
             user = null;
             console.log('Auth status updated. User is not authenticated.');
@@ -45,45 +22,66 @@ async function checkAuthStatus() {
 }
 
 // --- MESSAGE LISTENER ---
-// Listens for requests from the popup UI
+// Listens for requests from the side panel UI
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'GET_AUTH_STATUS') {
-        // Immediately respond with the cached user data for a fast UI load
         sendResponse(user);
     } else if (request.type === 'REFRESH_AUTH_STATUS') {
-        // Force a fresh check, then respond with the new data
         checkAuthStatus().then(() => {
             sendResponse(user);
         });
     }
-    // `return true` is required to indicate you will send a response asynchronously
+    // `return true` is required for asynchronous responses
     return true;
 });
 
+// --- SIDEPANEL & ICON CLICK LOGIC ---
+// Open the side panel when the user clicks the toolbar icon.
+chrome.action.onClicked.addListener((tab) => {
+    chrome.sidePanel.open({ tabId: tab.id });
+});
 
-// --- PROACTIVE REFRESH LOGIC ---
+// --- PROACTIVE REFRESH & SETUP LOGIC ---
 
-// 1. Refresh when a user navigates on your website
+// Listen for when the side panel is connected (opened)
+chrome.runtime.onConnect.addListener(port => {
+    // FIX: Consolidated the two onConnect listeners from your original file.
+    // The manifest uses a 'side_panel', so we only need to listen for that.
+    if (port.name === 'sidepanel') {
+        console.log('Side panel opened, refreshing auth status...');
+        checkAuthStatus();
+    }
+});
+
+// Refresh auth when user activity is detected on your website
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // Check if the updated tab's URL is on your domain and the page has finished loading
     if (tab.url && tab.url.startsWith('https://elevv.net') && changeInfo.status === 'complete') {
         console.log('Website activity detected, refreshing auth status...');
         checkAuthStatus();
     }
 });
 
-// 2. Refresh when the popup is opened
-chrome.runtime.onConnect.addListener(port => {
-    if (port.name === 'popup') {
-        console.log('Popup opened, refreshing auth status...');
-        checkAuthStatus();
-        port.onDisconnect.addListener(() => {
-            // Optional: clean-up logic when popup closes
-        });
-    }
+// Perform initial setup and checks
+chrome.runtime.onInstalled.addListener(() => {
+    // 1. Initial auth check on install
+    checkAuthStatus();
+
+    // 2. NEW: Set rules to enable the icon only on specific sites
+    chrome.declarativeContent.onPageChanged.removeRules(undefined, () => {
+        const rules = [{
+            conditions: [
+                new chrome.declarativeContent.PageStateMatcher({
+                    pageUrl: { hostContains: 'linkedin.com', pathPrefix: '/jobs/view' },
+                }),
+                new chrome.declarativeContent.PageStateMatcher({
+                    pageUrl: { hostContains: 'indeed.com' },
+                })
+            ],
+            actions: [new chrome.declarativeContent.ShowAction()]
+        }];
+        chrome.declarativeContent.onPageChanged.addRules(rules);
+    });
 });
 
-
-// 3. Initial check on install/startup
-chrome.runtime.onInstalled.addListener(checkAuthStatus);
+// Refresh auth when the browser starts
 chrome.runtime.onStartup.addListener(checkAuthStatus);

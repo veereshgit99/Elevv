@@ -79,6 +79,8 @@ export default function ProfilePage() {
   const [editingSection, setEditingSection] = useState<EditSection>(null)
   const router = useRouter()
   const { lastAnalysisPage } = useAnalysisNavigation()
+  const [editPanelData, setEditPanelData] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const personalRef = useRef<HTMLDivElement>(null)
   const educationRef = useRef<HTMLDivElement>(null)
@@ -460,35 +462,52 @@ export default function ProfilePage() {
   }
 
   const handleEditSection = (section: EditSection) => {
-    setEditingSection(section)
-  }
+    if (section === "personal") {
+      // Copy current personalData into the temporary editPanelData state
+      setEditPanelData(personalData);
+    }
+    // Add similar logic for 'education' or 'work-experience' if needed
+
+    setEditingSection(section);
+  };
 
   const handleSaveSection = async () => {
     if (editingSection === "personal") {
+      setIsSaving(true); // Start the loading state
+      setEditingSection(null); // Close the edit panel immediately
+
       try {
         if (!session?.accessToken) {
-          console.error('No access token available')
-          return
+          console.error('No access token available');
+          setIsSaving(false);
+          return;
         }
+        const token = session.accessToken as string;
 
-        const token = session.accessToken as string
-        const updatedProfile = await updateUserProfile(token, personalData)
+        // Use the data from the temporary state for the API call
+        const updatedProfile = await updateUserProfile(token, editPanelData);
 
-        // Now TypeScript knows the type of 'prev'
+        // On success, update the main profile state with the final data
         setUserProfile(prev => ({
           ...prev,
           ...updatedProfile,
-          name: `${personalData.firstName} ${personalData.lastName}`.trim()
-        }))
+          name: `${editPanelData.firstName} ${editPanelData.lastName}`.trim()
+        }));
+        // Also update the personalData state to match
+        setPersonalData(editPanelData);
 
-        setEditingSection(null)
       } catch (error) {
-        console.error("Failed to update profile:", error)
+        console.error("Failed to update profile:", error);
+        // Optionally, show an error message to the user
+      } finally {
+        setIsSaving(false); // Stop the loading state
+        setEditPanelData(null); // Clear the temporary edit data
       }
+    } else {
+      // If not 'personal', just close the panel
+      setEditingSection(null);
     }
-
-    setEditingSection(null)
-  }
+  };
 
   const handleCancelSection = () => {
     setEditingSection(null)
@@ -498,13 +517,15 @@ export default function ProfilePage() {
     if (!editingSection) return null
 
     return (
-      <div className="fixed inset-0 z-50 overflow-hidden">
+      <div className="fixed inset-0 z-50 overflow-y-auto">
         {/* Backdrop */}
         <div className="absolute inset-0 bg-black bg-opacity-50" onClick={handleCancelSection} />
 
         {/* Slide-out panel */}
-        <div className="absolute right-0 top-0 h-full w-1/2 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
-          <div className="flex flex-col h-full">
+        {/* We use min-h-full to allow it to grow, and float-right to position it correctly within the scrollable container */}
+        <div className="relative float-right min-h-full w-1/2 bg-white shadow-xl">
+          {/* This inner div no longer needs h-full */}
+          <div className="flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-semibold capitalize">Edit {editingSection?.replace("-", " ")}</h2>
@@ -522,28 +543,40 @@ export default function ProfilePage() {
                       <Label htmlFor="editFirstName">First Name</Label>
                       <Input
                         id="editFirstName"
-                        value={personalData.firstName}
-                        onChange={(e) => setPersonalData({ ...personalData, firstName: e.target.value })}
+                        value={editPanelData?.firstName || ''} // Read from editPanelData
+                        onChange={(e) => setEditPanelData({ ...editPanelData, firstName: e.target.value })} // Write to editPanelData
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editLastName">Last Name</Label>
                       <Input
                         id="editLastName"
-                        value={personalData.lastName}
-                        onChange={(e) => setPersonalData({ ...personalData, lastName: e.target.value })}
+                        value={editPanelData?.lastName || ''} // Read from editPanelData
+                        onChange={(e) => setEditPanelData({ ...editPanelData, lastName: e.target.value })} // Write to editPanelData
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="editEmail">Email Address</Label>
-                    <Input
-                      id="editEmail"
-                      type="email"
-                      value={personalData.email}
-                      onChange={(e) => setPersonalData({ ...personalData, email: e.target.value })}
-                    />
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Input
+                              id="editEmail"
+                              type="email"
+                              value={editPanelData?.email || ''} // Read from editPanelData
+                              readOnly
+                              className="bg-gray-100 cursor-not-allowed"
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Can't edit email address
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -551,16 +584,16 @@ export default function ProfilePage() {
                       <Label htmlFor="editPhone">Phone Number</Label>
                       <Input
                         id="editPhone"
-                        value={personalData.phone}
-                        onChange={(e) => setPersonalData({ ...personalData, phone: e.target.value })}
+                        value={editPanelData?.phone || ''} // Read from editPanelData
+                        onChange={(e) => setEditPanelData({ ...editPanelData, phone: e.target.value })} // Write to editPanelData
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editLocation">Location</Label>
                       <Input
                         id="editLocation"
-                        value={personalData.location}
-                        onChange={(e) => setPersonalData({ ...personalData, location: e.target.value })}
+                        value={editPanelData?.location || ''} // Read from editPanelData
+                        onChange={(e) => setEditPanelData({ ...editPanelData, location: e.target.value })} // Write to editPanelData
                       />
                     </div>
                   </div>
@@ -570,16 +603,16 @@ export default function ProfilePage() {
                       <Label htmlFor="editLinkedin">LinkedIn Profile</Label>
                       <Input
                         id="editLinkedin"
-                        value={personalData.linkedin}
-                        onChange={(e) => setPersonalData({ ...personalData, linkedin: e.target.value })}
+                        value={editPanelData?.linkedin || ''} // Read from editPanelData
+                        onChange={(e) => setEditPanelData({ ...editPanelData, linkedin: e.target.value })} // Write to editPanelData
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="editWebsite">Personal Website</Label>
                       <Input
                         id="editWebsite"
-                        value={personalData.website}
-                        onChange={(e) => setPersonalData({ ...personalData, website: e.target.value })}
+                        value={editPanelData?.website || ''} // Read from editPanelData
+                        onChange={(e) => setEditPanelData({ ...editPanelData, website: e.target.value })} // Write to editPanelData
                         placeholder="https://your-website.com"
                       />
                     </div>
@@ -962,70 +995,89 @@ export default function ProfilePage() {
 
                     {/* Personal Section - Compact Layout */}
                     <div ref={personalRef} className="scroll-mt-32">
-                      <Card>
-                        <CardHeader className="pb-4 flex flex-row items-center justify-between">
-                          <CardTitle className="text-xl font-bold">Personal</CardTitle>
-                          <Button variant="outline" size="sm" onClick={() => handleEditSection("personal")} className="p-2">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <Label className="text-sm">First Name</Label>
-                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
-                                {personalData.firstName}
+                      {isSaving ? (
+                        <Card>
+                          <CardContent className="p-6">
+                            <div className="animate-pulse space-y-4">
+                              <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="h-10 bg-gray-200 rounded"></div>
+                                <div className="h-10 bg-gray-200 rounded"></div>
+                              </div>
+                              <div className="h-10 bg-gray-200 rounded"></div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="h-10 bg-gray-200 rounded"></div>
+                                <div className="h-10 bg-gray-200 rounded"></div>
                               </div>
                             </div>
-                            <div className="space-y-1">
-                              <Label className="text-sm">Last Name</Label>
-                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
-                                {personalData.lastName}
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card>
+                          <CardHeader className="pb-4 flex flex-row items-center justify-between">
+                            <CardTitle className="text-xl font-bold">Personal</CardTitle>
+                            <Button variant="outline" size="sm" onClick={() => handleEditSection("personal")} className="p-2">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <Label className="text-sm">First Name</Label>
+                                <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
+                                  {personalData.firstName}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-sm">Last Name</Label>
+                                <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
+                                  {personalData.lastName}
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="space-y-1">
-                            <Label className="text-sm">Email Address</Label>
-                            <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm flex items-center">
-                              <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                              {personalData.email}
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <Label className="text-sm">Phone Number</Label>
+                              <Label className="text-sm">Email Address</Label>
                               <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm flex items-center">
-                                <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                                {personalData.phone}
+                                <Mail className="h-4 w-4 text-gray-400 mr-2" />
+                                {personalData.email}
                               </div>
                             </div>
-                            <div className="space-y-1">
-                              <Label className="text-sm">Location</Label>
-                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm flex items-center">
-                                <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                                {personalData.location}
-                              </div>
-                            </div>
-                          </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <Label className="text-sm">LinkedIn Profile</Label>
-                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
-                                {personalData.linkedin}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <Label className="text-sm">Phone Number</Label>
+                                <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm flex items-center">
+                                  <Phone className="h-4 w-4 text-gray-400 mr-2" />
+                                  {personalData.phone}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-sm">Location</Label>
+                                <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm flex items-center">
+                                  <MapPin className="h-4 w-4 text-gray-400 mr-2" />
+                                  {personalData.location}
+                                </div>
                               </div>
                             </div>
-                            <div className="space-y-1">
-                              <Label className="text-sm">Personal Website</Label>
-                              <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
-                                {personalData.website || "Not provided"}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <Label className="text-sm">LinkedIn Profile</Label>
+                                <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
+                                  {personalData.linkedin}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-sm">Personal Website</Label>
+                                <div className="h-9 px-3 py-2 border rounded-2xl bg-gray-50 text-sm">
+                                  {personalData.website || "Not provided"}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </CardContent>
+                        </Card>
+                      )}
                     </div>
 
                     {/* Commented out Education Section - can uncomment later */}

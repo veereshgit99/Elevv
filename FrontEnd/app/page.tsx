@@ -26,17 +26,17 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-gray-900">
       {/* Header Navigation */}
-      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur pb-16 md:pb-24">
+      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Logo variant="light" size="md" showText={true} className="font-bold text-xl" />
+          <Logo variant="light" size="lg" showText={true} className="font-bold text-xl" />
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
               Features
             </Link>
-            <Link href="https://chromewebstore.google.com/category/extensions" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-              Add to Chrome
+            <Link href="https://chromewebstore.google.com/category/extensions">
+              <Button variant="ghost" size="sm">Add to Chrome</Button>
             </Link>
-            <div className="flex items-center gap-2 ml-4">
+            <div className="flex items-center gap-2">
               <Link href="/login">
                 <Button variant="ghost" size="sm">Log In</Button>
               </Link>

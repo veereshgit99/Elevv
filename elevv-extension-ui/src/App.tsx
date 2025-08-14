@@ -30,7 +30,7 @@ export default function ChromeExtensionPopup() {
   const [userResumes, setUserResumes] = useState<Resume[]>([]);
 
   // --- EXISTING STATE MANAGEMENT ---
-  const [isLoading, setIsLoading] = useState(true)
+  const [loadingStep, setLoadingStep] = useState<'readingJob' | 'loadingProfile' | 'done'>('readingJob');
   const [jobTitle, setJobTitle] = useState("")
   const [companyName, setCompanyName] = useState("")
   const [jobDescription, setJobDescription] = useState("")
@@ -163,77 +163,42 @@ export default function ChromeExtensionPopup() {
     }
   }, []);
 
-  // --- DATA FETCHING & reading (only when authenticated) ---
+  // Replace your entire data-fetching useEffect with this
   useEffect(() => {
     if (!isAuthenticated || isCheckingAuth || !user) return;
 
-    // --- ADD THIS BLOCK to fetch resumes ---
     const loadUserResumes = async () => {
       try {
-        console.log('Loading resumes for user:', user);
-        console.log('User access token exists:', !!user.accessToken);
-
-        // Try different token field names that might be returned by your session endpoint
         const token = user.accessToken || (user as any).access_token || (user as any).token || (user as any).jwt;
-
-        if (!token) {
-          console.error('No access token found for user. Available fields:', Object.keys(user));
-          return;
-        }
-
-        // Development mode check - provide mock data instead of API call
+        if (!token) { console.error('No access token found for user.'); return; }
         if (token === 'dev-mock-token-12345') {
-          console.log('Development mode: Using mock resume data');
-          const mockResumes: Resume[] = [
-            {
-              resume_id: 'dev-resume-1',
-              file_name: 'John_Doe_Resume.pdf',
-              is_primary: true
-            },
-            {
-              resume_id: 'dev-resume-2',
-              file_name: 'John_Doe_Technical_Resume.pdf',
-              is_primary: false
-            }
-          ];
+          const mockResumes: Resume[] = [{ resume_id: 'dev-resume-1', file_name: 'John_Doe_Resume.pdf', is_primary: true }, { resume_id: 'dev-resume-2', file_name: 'John_Doe_Technical_Resume.pdf', is_primary: false }];
           setUserResumes(mockResumes);
-          setSelectedResume('dev-resume-1'); // Auto-select the primary resume
-          console.log('Mock resumes loaded and primary selected');
+          setSelectedResume(mockResumes.find(r => r.is_primary)?.resume_id || '');
           return;
         }
-
-        console.log('Using token:', token.substring(0, 20) + '...');
         const resumesData = await fetchResumes(token);
-        console.log('Successfully loaded resumes:', resumesData);
         setUserResumes(resumesData);
-
-        // Pre-select the primary resume if one exists
         const primaryResume = resumesData.find(r => r.is_primary);
         if (primaryResume) {
           setSelectedResume(primaryResume.resume_id);
-          console.log('Auto-selected primary resume:', primaryResume.resume_id);
         }
       } catch (error) {
         console.error("Failed to fetch resumes:", error);
-        // Check if it's an authentication error
-        if (error instanceof Error && error.message.includes('401')) {
-          console.log('Authentication error - token might be invalid');
-          // You might want to trigger a re-authentication here
-        }
       }
     };
-    loadUserResumes();
-    // --- END OF ADDED BLOCK ---
 
-    // This function messages the content script to parse the page
-    setTimeout(() => {
+    // --- Start the sequential loading process ---
+    setLoadingStep('readingJob'); // Set initial step
+
+    const fetchJobAndResumes = () => {
       if (chrome.tabs && chrome.tabs.query) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           if (tabs[0]?.id) {
             chrome.tabs.sendMessage(tabs[0].id, { action: "parseJob" }, (response) => {
               if (chrome.runtime.lastError) {
-                console.log("Could not establish connection. This is normal on non-job pages.");
-                setIsLoading(false);
+                console.log("Could not establish connection.");
+                setLoadingStep('done');
                 return;
               }
               if (response) {
@@ -241,21 +206,29 @@ export default function ChromeExtensionPopup() {
                 setCompanyName(response.companyName || "");
                 setJobDescription(response.jobDescription || "");
               }
-              setIsLoading(false);
+              setLoadingStep('loadingProfile');
+              loadUserResumes().finally(() => {
+                setLoadingStep('done');
+              });
             });
           } else {
-            setIsLoading(false);
+            setLoadingStep('done');
           }
         });
       } else {
-        // Fallback for local development when not in an extension environment
         setJobTitle("Senior Software Engineer");
         setCompanyName("Google");
         setJobDescription("This is a sample job description for local testing.");
-        setIsLoading(false);
+        setLoadingStep('loadingProfile');
+        loadUserResumes().finally(() => {
+          setLoadingStep('done');
+        });
       }
-    }, 500);
-  }, [isAuthenticated, isCheckingAuth])
+    };
+
+    fetchJobAndResumes();
+
+  }, [isAuthenticated, isCheckingAuth, user?.id]);
 
   // --- NEW: Check for existing enhancement results ---
   useEffect(() => {
@@ -274,6 +247,12 @@ export default function ChromeExtensionPopup() {
       _sender: chrome.runtime.MessageSender,
       _sendResponse: (response?: any) => void
     ) => {
+
+      // 1. If an analysis is running, ignore all updates.
+      if (isAnalyzing) {
+        return;
+      }
+
       if (message?.type === "JOB_DATA_UPDATED") {
         console.log("Received updated job data:", message.payload);
         const { jobTitle, companyName, jobDescription } = message.payload || {};
@@ -293,7 +272,7 @@ export default function ChromeExtensionPopup() {
         chrome.runtime.onMessage.removeListener(messageListener);
       }
     };
-  }, []); // Run once when component mounts
+  }, [isAnalyzing]); // Run once when component mounts
 
   // --- HELPER FUNCTION: Map backend response to extension UI format ---
   const mapEnhancementData = (optimizationResponse: OptimizationResponse) => {
@@ -686,40 +665,43 @@ export default function ChromeExtensionPopup() {
               exit={{ opacity: 0 }}
               className="form-container"
             >
-              {isLoading ? (
-                <div className="loader-container">
-                  <Loader2 className="loader-spinner" />
-                  <p>Reading Job Details...</p>
+              {/* The form is always visible, but disabled during loading */}
+              <div className="form-group">
+                <label htmlFor="job-title">Job Title</label>
+                <input id="job-title" type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} disabled={loadingStep !== 'done'} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="company-name">Company Name</label>
+                <input id="company-name" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} disabled={loadingStep !== 'done'} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="job-description">Job Description</label>
+                <textarea id="job-description" value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} rows={6} disabled={loadingStep !== 'done'} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="resume-select">Analyze using this resume</label>
+                <div className="select-wrapper">
+                  <FileText className="select-icon" />
+                  <select id="resume-select" value={selectedResume} onChange={(e) => setSelectedResume(e.target.value)} disabled={loadingStep !== 'done'}>
+                    <option value="" disabled>Select a resume</option>
+                    {userResumes.map((resume) => (
+                      <option key={resume.resume_id} value={resume.resume_id}>
+                        {resume.file_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label htmlFor="job-title">Job Title</label>
-                    <input id="job-title" type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="company-name">Company Name</label>
-                    <input id="company-name" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="job-description">Job Description</label>
-                    <textarea id="job-description" value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} rows={6} />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="resume-select">Analyze using this resume</label>
-                    <div className="select-wrapper">
-                      <FileText className="select-icon" />
-                      <select id="resume-select" value={selectedResume} onChange={(e) => setSelectedResume(e.target.value)}>
-                        <option value="" disabled>Select a resume</option>
-                        {userResumes.map((resume) => (
-                          <option key={resume.resume_id} value={resume.resume_id}>
-                            {resume.file_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </>
+              </div>
+
+              {/* NEW: Dynamic Loading Indicator */}
+              {/* UPDATED: Dynamic Loading Indicator with Single Message */}
+              {loadingStep !== 'done' && (
+                <div className="loader-container" style={{ paddingTop: '1rem' }}>
+                  <Loader2 className="loader-spinner" />
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    Getting your workspace ready...
+                  </p>
+                </div>
               )}
             </motion.div>
           )}
@@ -730,7 +712,7 @@ export default function ChromeExtensionPopup() {
         <footer className="app-footer">
           <motion.button
             onClick={handleAnalyze}
-            disabled={isLoading || isAnalyzing || !selectedResume}
+            disabled={loadingStep !== 'done' || isAnalyzing || !selectedResume}
             whileTap={{ scale: 0.98 }}
             className={`analyze-button ${isAnalyzing ? 'analyzing' : ''}`}
           >

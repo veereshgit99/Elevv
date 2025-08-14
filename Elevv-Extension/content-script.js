@@ -151,6 +151,7 @@ class JobParser {
     };
   }
 
+  // Indeed job parsing
   parseIndeed() {
     const jobTitle = this._trySelectors([
       // Current Indeed selectors
@@ -214,100 +215,6 @@ class JobParser {
     };
   }
 
-
-  // Generic fallback parser
-  parseGeneric() {
-    const jobTitle = this._trySelectors([
-      // Specific job title patterns
-      '[data-testid*="job-title"]',
-      '[data-test*="job-title"]',
-      '[class*="job-title"] h1',
-      '[class*="jobTitle"] h1',
-      '[id*="job-title"]',
-
-      // Heading patterns
-      'h1[class*="title"]',
-      'h2[class*="title"]',
-      'h1[class*="job"]',
-      'h2[class*="job"]',
-
-      // Generic patterns
-      'main h1',
-      'article h1',
-      'section h1',
-      '[role="main"] h1',
-
-      // Broader fallbacks
-      'h1',
-      'h2',
-      '[class*="title"]'
-    ]);
-
-    const companyName = this._trySelectors([
-      // Specific company patterns
-      '[data-testid*="company"]',
-      '[data-test*="company"]',
-      '[data-testid*="employer"]',
-      '[class*="company-name"]',
-      '[class*="companyName"]',
-      '[id*="company"]',
-
-      // Link patterns
-      'a[href*="/company/"]',
-      'a[href*="/employer/"]',
-      'a[href*="/organization/"]',
-
-      // Generic patterns
-      '[class*="company"]',
-      '[class*="employer"]',
-      '[class*="org"]',
-      '[class*="organization"]',
-
-      // Broader fallbacks
-      '.company',
-      '.employer'
-    ]);
-
-    let jobDescription = this._trySelectors([
-      // Specific description patterns
-      '[data-testid*="description"]',
-      '[data-test*="description"]',
-      '[class*="job-description"]',
-      '[class*="jobDescription"]',
-      '[id*="job-description"]',
-      '[id*="description"]',
-
-      // Content patterns
-      '[class*="description-content"]',
-      '[class*="job-content"]',
-      '[class*="content"] [class*="description"]',
-
-      // Generic patterns
-      '[class*="description"]',
-      '[class*="desc"]',
-      '[class*="content"]',
-
-      // Broader fallbacks
-      '.description',
-      '.content',
-      'main [class*="text"]',
-      'article [class*="text"]'
-    ]);
-
-    // Clean up the description
-    if (jobDescription) {
-      jobDescription = jobDescription
-        .replace(/\s+/g, ' ')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-    }
-
-    return {
-      jobTitle: jobTitle || "",
-      companyName: companyName || "",
-      jobDescription: jobDescription || "",
-    };
-  }
 }
 
 // Listen for messages from popup
