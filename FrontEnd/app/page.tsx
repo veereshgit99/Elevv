@@ -98,7 +98,7 @@ export default function Home() {
                 <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
                   <div className="aspect-[4/3] bg-white">
                     <img
-                      src="/images/Analysis.png"
+                      src="/Images/Analysis.png"
                       alt="Screenshot of Elevv's AI Analysis"
                       className="w-full h-full object-cover"
                     />
@@ -118,7 +118,7 @@ export default function Home() {
                 <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
                   <div className="aspect-[4/3] bg-white">
                     <img
-                      src="/images/OneClickAnalysis.png"
+                      src="/Images/OneClickAnalysis.png"
                       alt="Screenshot of Elevv's extension"
                       className="w-full h-full object-cover"
                     />
