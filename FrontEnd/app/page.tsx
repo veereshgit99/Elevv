@@ -80,7 +80,7 @@ export default function Home() {
 
         {/* --- RESTYLED FEATURE SECTIONS --- */}
 
-        {/* Chrome Extension Feature Section */}
+        {/* AI Analysis Feature Section */}
         <section id="add-to-chrome" className="py-16 md:py-24 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -109,7 +109,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* AI Analysis Feature Section */}
+        {/* Chrome Extension Feature Section */}
         <section className="py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -143,6 +143,35 @@ export default function Home() {
                       Add to Chrome
                     </Button>
                   </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Bridging Gaps Section */}
+        <section id="add-to-chrome" className="py-16 md:py-24 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div className="space-y-6">
+                <div className="text-black-600 text-sm font-medium tracking-wide">Bridging the Gaps</div>
+                <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
+                  Filling the gaps that matter.
+                </h2>
+                <p className="text-lg text-gray-600 leading-relaxed">
+                  Missing a skill? Get tailored project ideas to close the gap and showcase your initiative.
+                </p>
+              </div>
+              <div className="relative">
+                {/* This is the new, corrected code */}
+                <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
+                  <div className="aspect-[4/3] bg-white">
+                    <img
+                      src="/Images/BridgingGaps.png"
+                      alt="Screenshot of Elevv's Bridging the Gaps"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
