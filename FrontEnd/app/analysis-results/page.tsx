@@ -173,7 +173,7 @@ export default function AnalysisResultsPage() {
     if (score >= 80) return 'Strong Match'
     if (score >= 60) return 'Good Match'
     if (score >= 40) return 'Fair Match'
-    return 'Needs Improvement'
+    return 'Low Match'
   }
 
   if (isLoading || isLoadingData) {

@@ -40,10 +40,10 @@ class RelationshipMapperAgent(BaseAgent):
         super().__init__(AgentType.RELATIONSHIP_MAPPER)
         
         if genai:
-            self.llm_model = genai.GenerativeModel("gemini-2.5-flash")
+            self.llm_model = genai.GenerativeModel("gemini-2.5-pro")
         else:
             self.llm_model = None
-        self.logger.info("LLM-based RelationshipMapperAgent initialized with model: Gemini 2.5 Flash")
+        self.logger.info("LLM-based RelationshipMapperAgent initialized with model: Gemini 2.5 Pro")
 
     async def process(self, context: DocumentContext) -> AgentResult:
         """
@@ -173,14 +173,14 @@ class RelationshipMapperAgent(BaseAgent):
 
             
             user_prompt = (
-                f"Analyze the following resume and job description entities to map relationships, matches, and gaps.\n\n"
+                f"Analyze the following structured entities to map relationships between a resume and a job description.\n\n"
                 f"--- Candidate's Resume Entities ---\n{json.dumps(resume_entities, indent=2)}\n\n"
-                f"--- Candidate's Resume Content (Partial for context) ---\n{context.content[:5000]}\n\n" # Pass relevant parts
                 f"--- Job Description Entities ---\n{json.dumps(jd_entities, indent=2)}\n\n"
-                f"--- Job Description Content ---\n{jd_content[:5000]}\n\n" # Pass relevant parts
+                f"Instructions: Your analysis MUST be based solely on the structured entities provided. "
+                f"Do not invent or infer information not present in these entities.\n\n"
                 f"Output the relationships as a JSON object strictly following this schema:\n"
                 f"{json.dumps(relationship_schema, indent=2)}"
-            )
+)
             
             # Make the LLM API call
             response = await self.llm_model.generate_content_async(
@@ -224,7 +224,7 @@ class RelationshipMapperAgent(BaseAgent):
                 data={
                     "relationship_map": llm_output,
                     "resume_id": context.file_id,
-                    "llm_model_used": "gemini-2.5-flash"
+                    "llm_model_used": "gemini-2.5-pro"
                 },
                 confidence=overall_confidence,
                 processing_time=0.0 # Will be updated by _execute_with_timing

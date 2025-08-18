@@ -34,10 +34,10 @@ class JobMatchingAgent(BaseAgent):
     def __init__(self):
         super().__init__(AgentType.JOB_MATCHER)
         if genai:
-            self.llm_model = genai.GenerativeModel('gemini-2.5-flash')
+            self.llm_model = genai.GenerativeModel('gemini-2.5-pro')
         else:
             self.llm_model = None
-        self.logger.info(f"JobMatchingAgent initialized with model: Gemini 2.5 Flash")
+        self.logger.info(f"JobMatchingAgent initialized with model: Gemini 2.5 Pro")
 
     async def process(self, context: DocumentContext) -> AgentResult:
         """Calculates a job match score and summary."""
@@ -87,16 +87,16 @@ class JobMatchingAgent(BaseAgent):
 )
 
             user_prompt = (
-                f"Analyze the following job description and the relationship map (which details matches and gaps "
-                f"between the resume and JD) to calculate an overall match percentage and provide feedback.\n\n"
-                f"--- Job Description ---\n{jd_content[:5000]}\n\n"
+                f"Analyze the following relationship map (which details matches and gaps "
+                f"between a resume and a job description) to calculate an overall match percentage and provide feedback.\n\n"
+                # --- Job Description content is removed ---
                 f"--- Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
                 f"Output the match analysis as a JSON object strictly following this schema:\n"
                 f"{json.dumps(match_score_schema, indent=2)}"
-            )
+)
             
             # --- CORRECTED: Make the LLM API call to Gemini with a list of prompts ---
-            response = self.llm_model.generate_content(
+            response = await self.llm_model.generate_content_async(
                 [system_prompt, user_prompt], # Pass prompts as a list
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.0,
@@ -105,7 +105,28 @@ class JobMatchingAgent(BaseAgent):
                 safety_settings=GEMINI_SAFETY_SETTINGS
             )
             
-            llm_output = json.loads(response.text)
+            try:
+                # First, try to parse the response directly
+                llm_output = json.loads(response.text)
+            except json.JSONDecodeError:
+                self.logger.warning("Initial JSON parsing failed for Job Matcher. Attempting to self-correct.")
+                # If it fails, ask the LLM to fix the broken JSON
+                fix_prompt = (
+                    "The following text is not a valid JSON object because it contains extra data or formatting errors. "
+                    "Please analyze the text, correct any errors, and return ONLY the perfectly formatted JSON object. "
+                    "Do not include any other text or explanation outside of the JSON itself.\n\n"
+                    f"--- BROKEN TEXT ---\n{response.text}\n--- END BROKEN TEXT ---"
+                )
+                
+                correction_response = await self.llm_model.generate_content_async(
+                    fix_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.0,
+                        response_mime_type="application/json"
+                    ),
+                    safety_settings=GEMINI_SAFETY_SETTINGS
+                )
+                llm_output = json.loads(correction_response.text)
             
             if not isinstance(llm_output, dict) or not all(key in llm_output for key in match_score_schema['required']):
                 raise ValueError("LLM returned invalid or incomplete JSON for match score.")
@@ -118,7 +139,7 @@ class JobMatchingAgent(BaseAgent):
                 data={
                     "match_analysis": llm_output,
                     "overall_match_percentage": match_percentage,
-                    "llm_model_used": "gemini-2.5-flash"
+                    "llm_model_used": "gemini-2.5-pro"
                 },
                 confidence=match_percentage / 100.0,
                 processing_time=0.0
@@ -136,7 +157,7 @@ class JobMatchingAgent(BaseAgent):
         return {
             "name": "LLM-Powered Job Matcher",
             "description": "Calculates an overall match percentage and provides key insights between a candidate's resume and a job description.",
-            "model": "gemini-2.5-flash",
+            "model": "gemini-2.5-pro",
             "input_requirements": [
                 "Relationship Mapper Agent result",
                 "Job Description content"

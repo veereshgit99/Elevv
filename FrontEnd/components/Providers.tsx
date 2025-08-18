@@ -1,4 +1,4 @@
-"use client"; // This directive marks this as a Client Component
+"use client";
 
 import { SessionProvider } from "next-auth/react";
 import type { FC, ReactNode } from "react";
@@ -8,8 +8,12 @@ interface ProvidersProps {
 }
 
 const Providers: FC<ProvidersProps> = ({ children }) => {
-    // We wrap the children with the SessionProvider here
-    return <SessionProvider>{children}</SessionProvider>;
+    // Add the refetchOnWindowFocus={false} prop here
+    return (
+        <SessionProvider refetchOnWindowFocus={false}>
+            {children}
+        </SessionProvider>
+    );
 };
 
 export default Providers;

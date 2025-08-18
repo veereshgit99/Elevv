@@ -1,23 +1,29 @@
-// Caches the user's session data
-let user = null;
 const SESSION_URL = 'https://elevv.net/api/auth/session';
 
-// This function fetches the session and updates the cache
+// This function fetches the session and SAVES it to chrome.storage
 async function checkAuthStatus() {
     try {
         const response = await fetch(SESSION_URL);
         const sessionData = await response.json();
 
         if (sessionData && Object.keys(sessionData).length > 0) {
-            user = { ...sessionData.user, accessToken: sessionData.accessToken, expires: sessionData.expires };
-            console.log('Auth status updated. User is:', user.email);
+            const user = {
+                ...sessionData.user,
+                accessToken: sessionData.accessToken,
+                expires: sessionData.expires
+            };
+            // Save the user session to persistent storage
+            await chrome.storage.local.set({ user: user });
+            console.log('Auth status updated and saved to storage. User is:', user.email);
         } else {
-            user = null;
-            console.log('Auth status updated. User is not authenticated.');
+            // Remove the user from storage on logout
+            await chrome.storage.local.remove('user');
+            console.log('Auth status updated. User logged out, session removed from storage.');
         }
     } catch (error) {
         console.error('Error checking auth status:', error);
-        user = null;
+        // Ensure user is cleared from storage on error
+        await chrome.storage.local.remove('user');
     }
 }
 
@@ -25,14 +31,22 @@ async function checkAuthStatus() {
 // Listens for requests from the side panel UI
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'GET_AUTH_STATUS') {
-        sendResponse(user);
-    } else if (request.type === 'REFRESH_AUTH_STATUS') {
-        checkAuthStatus().then(() => {
-            sendResponse(user);
+        // Read the user directly from storage
+        chrome.storage.local.get('user', (result) => {
+            sendResponse(result.user || null);
         });
+        return true; // Indicate you will send a response asynchronously
     }
-    // `return true` is required for asynchronous responses
-    return true;
+
+    if (request.type === 'REFRESH_AUTH_STATUS') {
+        // Force a fresh check, which saves the new data to storage, then respond
+        checkAuthStatus().then(() => {
+            chrome.storage.local.get('user', (result) => {
+                sendResponse(result.user || null);
+            });
+        });
+        return true; // Indicate you will send a response asynchronously
+    }
 });
 
 // --- SIDEPANEL & ICON CLICK LOGIC ---
@@ -45,8 +59,6 @@ chrome.action.onClicked.addListener((tab) => {
 
 // Listen for when the side panel is connected (opened)
 chrome.runtime.onConnect.addListener(port => {
-    // FIX: Consolidated the two onConnect listeners from your original file.
-    // The manifest uses a 'side_panel', so we only need to listen for that.
     if (port.name === 'sidepanel') {
         console.log('Side panel opened, refreshing auth status...');
         checkAuthStatus();
@@ -63,10 +75,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // Perform initial setup and checks
 chrome.runtime.onInstalled.addListener(() => {
-    // 1. Initial auth check on install
-    checkAuthStatus();
+    checkAuthStatus(); // Initial auth check on install
 
-    // 2. NEW: Set rules to enable the icon only on specific sites
+    // Set rules to enable the icon only on specific sites
     chrome.declarativeContent.onPageChanged.removeRules(undefined, () => {
         const rules = [{
             conditions: [

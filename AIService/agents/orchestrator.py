@@ -148,7 +148,7 @@ class DocumentAnalysisOrchestrator:
         print(f"\n📄 PHASE 1: RESUME PROCESSING")
         print(f"{'─'*40}")
 
-        # --- PHASE 1 & 2: Process Resume and JD in Parallel ---
+        # --- PHASE 2: Process Resume and JD in Parallel ---
         # Get resume details first
         resume_details = await self._get_resume_details(user_id, resume_id, auth_token)
         resume_s3_bucket = resume_details.get("s3_bucket")
@@ -222,19 +222,12 @@ class DocumentAnalysisOrchestrator:
         # --- PHASE 3: Cross-Document Analysis ---
         print(f"\n🔗 PHASE 3: CROSS-DOCUMENT ANALYSIS")
         print(f"{'─'*40}")
-        # --- OPTIMIZATION 1: Create a lean context for the Relationship Mapper ---
-        # Instead of sending the full original documents again, we only send the extracted entities.
-        # This drastically reduces the token count.
         relationship_map_result = await self._run_agent(AgentType.RELATIONSHIP_MAPPER, resume_context)
         final_results["relationship_map"] = relationship_map_result.data
         
         print("Relationship mapping completed. Time: ", response_time)
         
         
-        # --- Job Matching ---
-        # --- OPTIMIZATION 2: Create a lean context for the Job Matcher ---
-        # The matcher doesn't need the full resume or JD text. It only needs the
-        # high-level map of connections that the previous agent created.
         job_match_result = await self._run_agent(AgentType.JOB_MATCHER, resume_context)
         final_results["job_match_analysis"] = job_match_result.data
         final_results["overall_match_percentage"] = job_match_result.data.get("overall_match_percentage")
