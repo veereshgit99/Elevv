@@ -390,7 +390,7 @@ export default function AnalysisResultsPage() {
                   ) : (
                     <div className="flex items-center space-x-3 text-gray-600 py-4">
                       <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span>No critical gaps identified. Your profile aligns well with the job requirements!</span>
+                      <span>No critical gaps identified.</span>
                     </div>
                   )}
                 </CardContent>

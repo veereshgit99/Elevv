@@ -185,7 +185,7 @@ export function AnalysisResults({
                     >
                         <div className="accordion-title">
                             <AlertTriangle className="icon-gap" />
-                            <span>Critical Gaps to Address</span>
+                            <span>Areas to Address</span>
                         </div>
                         <div className="accordion-meta">
                             <span>{gaps.length} identified</span>
