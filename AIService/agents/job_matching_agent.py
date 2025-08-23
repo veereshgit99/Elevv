@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Union
 import google.generativeai as genai
 from anthropic import AsyncAnthropic
 from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
+from services.utils import _safe_json
 
 logger = logging.getLogger(__name__)
 
@@ -26,24 +27,6 @@ GEMINI_SAFETY_SETTINGS = [
     {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
 ]
-
-import re
-import json
-
-def _strip_code_fences(s: str) -> str:
-    if not s:
-        return ""
-    s = s.strip()
-    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.I | re.M)
-    i, j = s.find("{"), s.rfind("}")
-    return s[i:j+1].strip() if (i != -1 and j != -1 and j > i) else s
-
-def _safe_json(s: str):
-    """Best-effort JSON parse; accepts fenced or prefixed/suffixed outputs."""
-    s2 = _strip_code_fences(s)
-    return json.loads(s2 or "{}")
-
-
 class JobMatchingAgent(BaseAgent):
     """
     Optimized JobMatching agent using different models for different tasks in parallel.
@@ -149,7 +132,7 @@ class JobMatchingAgent(BaseAgent):
                 import re
                 json_match = re.search(r'$$.*?$$|\{.*?\}', response_text, re.DOTALL)
                 if json_match:
-                    return json.loads(json_match.group(0))
+                    return _safe_json(json_match.group(0))
                 else:
                     return {}
         except Exception as e:

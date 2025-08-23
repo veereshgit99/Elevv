@@ -2,11 +2,11 @@
 
 from typing import Dict, Any, List
 from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
+from services.utils import _safe_json
 import os
 import json
 import logging
 import asyncio
-import re
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -57,23 +57,6 @@ def _blank_entities() -> Dict[str, Any]:
     """Return an empty, well-formed entity dict."""
     return {k: ([] if ENTITY_SCHEMA["properties"][k]["type"] == "array" else {})
             for k in DEFAULT_KEYS}
-
-def _strip_code_fences(text: str) -> str:
-    """Remove ```json ...``` fences and keep only the first JSON object block."""
-    if not text:
-        return ""
-    s = text.strip()
-    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.IGNORECASE | re.MULTILINE)
-    start = s.find("{"); end = s.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        return s[start:end+1].strip()
-    return s
-
-def _safe_json(text: str) -> Dict[str, Any]:
-    s = _strip_code_fences(text)
-    if not s:
-        raise ValueError("Empty response text.")
-    return json.loads(s)
 
 def _dedup_list(values: List[str]) -> List[str]:
     seen, out = set(), []

@@ -13,3 +13,4 @@ asyncio
 dataclasses
 python-docx
 botocore
+anthropic

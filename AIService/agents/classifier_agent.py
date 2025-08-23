@@ -7,6 +7,7 @@ import math
 import asyncio
 import logging
 from typing import Dict, Any
+from services.utils import _safe_json
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -36,27 +37,6 @@ GEMINI_SAFETY_SETTINGS = [
 ]
 
 SUPPORTED = ["Resume", "Job Description", "Other"]
-
-def _strip_code_fences(text: str) -> str:
-    """Remove ```json ... ``` or ``` ... ``` fences and trim to the first {...} block."""
-    if not text:
-        return text
-    s = text.strip()
-    # remove fenced blocks if present
-    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.IGNORECASE | re.MULTILINE)
-    # keep only the first { ... } block, if any surrounding prose exists
-    start = s.find("{")
-    end = s.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        s = s[start:end + 1]
-    return s.strip()
-
-def _safe_json_loads(text: str) -> Dict[str, Any]:
-    """Best-effort JSON extraction + parse."""
-    s = _strip_code_fences(text)
-    if not s:
-        raise ValueError("Empty response text.")
-    return json.loads(s)
 
 def _normalize_label(label: str) -> str:
     """Map model free-form labels back to our canonical set."""
@@ -184,7 +164,7 @@ class DocumentClassifierAgent(BaseAgent):
             # 4) robust JSON parsing
             raw_text = getattr(response, "text", None) or ""
             try:
-                llm_output = _safe_json_loads(raw_text)
+                llm_output = _safe_json(raw_text)
             except Exception as parse_err:
                 # fallback: heuristic classification instead of failing
                 self.logger.warning(f"LLM JSON parse failed, using heuristic fallback: {parse_err}")

@@ -5,29 +5,13 @@ from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
 import os
 import json
 import logging
-
 import google.generativeai as genai
+from services.utils import _safe_json
 
 logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 load_dotenv()
-
-import re
-import json
-
-def _strip_code_fences(s: str) -> str:
-    if not s:
-        return ""
-    s = s.strip()
-    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.I | re.M)
-    i, j = s.find("{"), s.rfind("}")
-    return s[i:j+1].strip() if (i != -1 and j != -1 and j > i) else s
-
-def _safe_json(s: str):
-    """Best-effort JSON parse; accepts fenced or prefixed/suffixed outputs."""
-    s2 = _strip_code_fences(s)
-    return json.loads(s2 or "{}")
 
 try:
     api_key = os.getenv("GOOGLE_API_KEY")
@@ -198,7 +182,7 @@ class ResumeOptimizerAgent(BaseAgent):
                     generation_config={"response_mime_type": "application/json", "temperature": 0.0},
                     safety_settings=GEMINI_SAFETY_SETTINGS
                 )
-                llm_output = json.loads(correction_response.text) # Try parsing the fixed version
+                llm_output = _safe_json(correction_response.text) # Try parsing the fixed version
                 
             
             if not isinstance(llm_output, dict) or "suggestions" not in llm_output or not isinstance(llm_output["suggestions"], list):

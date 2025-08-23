@@ -8,6 +8,7 @@ import google.generativeai as genai
 from anthropic import AsyncAnthropic
 from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
 from typing import Any
+from services.utils import _safe_json
 
 logger = logging.getLogger(__name__)
 
@@ -29,19 +30,6 @@ GEMINI_SAFETY_SETTINGS = [
     {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
 ]
-
-
-# ---- JSON helpers
-def _strip_code_fences(s: str) -> str:
-    if not s: return ""
-    s = s.strip()
-    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.I | re.M)
-    i, j = s.find("{"), s.rfind("}")
-    return s[i:j+1].strip() if (i != -1 and j != -1 and j > i) else s
-
-def _safe_json(s: str):
-    s2 = _strip_code_fences(s)
-    return json.loads(s2 or "[]")
 
 # ---- LLM with time budget (fast path)
 async def _llm_with_budget(model: Any, system_prompt: str, user_prompt: str,
@@ -197,7 +185,13 @@ class RelationshipMapperAgent(BaseAgent):
                 }
             )
             print(f"[DEBUG] Gemini model {model_name} finished")
-            return _safe_json(response.text)
+            try:
+                return _safe_json(response.text)
+            except json.JSONDecodeError as e:
+                print(f"[DEBUG] Gemini model {model_name} JSON decode error: {e}")
+                print(f"[DEBUG] Gemini model {model_name} raw response:\n{response.text}")
+                self.logger.error(f"Gemini model {model_name} failed: {e}")
+                return None
         except Exception as e:
             print(f"[DEBUG] Gemini model {model_name} failed: {e}")
             self.logger.error(f"Gemini model {model_name} failed: {e}")
@@ -223,7 +217,13 @@ class RelationshipMapperAgent(BaseAgent):
                 }]
             )
             print(f"[DEBUG] Claude model {model_type} finished")
-            return _safe_json(response.content[0].text)
+            try:
+                return _safe_json(response.content[0].text)
+            except json.JSONDecodeError as e:
+                print(f"[DEBUG] Claude model {model_type} JSON decode error: {e}")
+                print(f"[DEBUG] Claude model {model_type} raw response:\n{response.content[0].text}")
+                self.logger.error(f"Claude model {model_type} failed: {e}")
+                return None
         except Exception as e:
             print(f"[DEBUG] Claude model {model_type} failed: {e}")
             self.logger.error(f"Claude model {model_type} failed: {e}")

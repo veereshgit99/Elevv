@@ -9,6 +9,7 @@ from typing import Dict, Any, List
 
 import google.generativeai as genai
 from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
+from services.utils import _safe_json
 
 logger = logging.getLogger(__name__)
 
@@ -27,27 +28,6 @@ GEMINI_SAFETY_SETTINGS = [
 ]
 
 MODEL_NAME = "gemini-2.5-flash-lite"
-
-
-def _strip_code_fences(text: str) -> str:
-    """Remove ```json fences and isolate the first JSON object if extra prose is present."""
-    if not text:
-        return ""
-    s = text.strip()
-    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.IGNORECASE | re.MULTILINE)
-    start = s.find("{")
-    end = s.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        s = s[start : end + 1]
-    return s.strip()
-
-
-def _safe_json_loads(text: str) -> Dict[str, Any]:
-    s = _strip_code_fences(text)
-    if not s:
-        raise ValueError("Empty LLM response.")
-    return json.loads(s)
-
 
 def _chunk(text: str, max_chars: int = 9000) -> List[str]:
     """Split long documents on line boundaries to avoid server-side 500s."""
@@ -128,7 +108,7 @@ class DocumentLayoutAgent(BaseAgent):
             return {"full_content": content}
 
         try:
-            sections = _safe_json_loads(raw_text)
+            sections = _safe_json(raw_text)
         except Exception:
             # Non-JSON or fenced output – fall back to full content for this chunk
             return {"full_content": content}

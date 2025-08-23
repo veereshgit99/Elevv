@@ -33,16 +33,13 @@ export default function Home() {
             <Link href="/features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
               Features
             </Link>
-            <Link href="https://chromewebstore.google.com/detail/elevv/hdlkdocilmllfboionmjpekkjjfpdfjm">
-              <Button variant="ghost" size="sm">Add to Chrome</Button>
-            </Link>
             <div className="flex items-center gap-2">
               <Link href="/login">
                 <Button variant="ghost" size="sm">Log In</Button>
               </Link>
               <Link href="/signup">
                 <Button size="sm" className="bg-gray-900 hover:bg-gray-800">
-                  Sign Up Free <ArrowRight className="w-4 h-4 ml-2" />
+                  Sign up free <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
             </div>
@@ -67,14 +64,29 @@ export default function Home() {
             <p className="mt-6 text-lg font-bold text-gray-600 leading-relaxed">
               The AI that gets your resume
             </p>
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/signup">
                 <Button size="lg" className="bg-blue-500 hover:bg-blue-600 h-12 px-8 text-base">
-                  Get Elevv For Free
+                  Get Elevv free
                 </Button>
               </Link>
+              <a
+                href="https://chromewebstore.google.com/detail/elevv/hdlkdocilmllfboionmjpekkjjfpdfjm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto"
+              >
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 px-8 text-base bg-white hover:bg-gray-300 text-black border border-black shadow-sm transition-colors duration-150 font-semibold"
+                >
+                  Add to Chrome
+                </Button>
+              </a>
               <div className="mb-8" />
             </div>
+
           </div>
         </section>
 
@@ -190,7 +202,7 @@ export default function Home() {
             <div className="mt-8">
               <Link href="/signup">
                 <Button size="lg" className="bg-blue-500 hover:bg-blue-600 h-12 px-8 text-base">
-                  Start Your Free Analysis
+                  Start your free analysis
                 </Button>
               </Link>
             </div>
