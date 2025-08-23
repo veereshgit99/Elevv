@@ -26,18 +26,35 @@ const cognitoClient = new CognitoIdentityProviderClient({
 
 // --- tiny helpers (no cache) -------------------------------------------------
 
-async function getCognitoSubByEmail(email: string): Promise<string | null> {
-    try {
-        const res = await cognitoClient.send(
-            new AdminGetUserCommand({
-                UserPoolId: process.env.COGNITO_USER_POOL_ID!,
-                Username: email,
-            })
-        );
-        return res.UserAttributes?.find((a) => a.Name === "sub")?.Value ?? null;
-    } catch {
-        return null;
+async function getCognitoSubWithRetry(
+    email: string,
+    retries = 3,
+    delay = 500 // 500ms delay
+): Promise<string | null> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const res = await cognitoClient.send(
+                new AdminGetUserCommand({
+                    UserPoolId: process.env.COGNITO_USER_POOL_ID!,
+                    Username: email,
+                })
+            );
+            const sub = res.UserAttributes?.find((a) => a.Name === "sub")?.Value;
+            if (sub) {
+                return sub; // Success!
+            }
+        } catch (error) {
+            // Ignore 'UserNotFoundException' and retry
+            if ((error as Error).name !== "UserNotFoundException") {
+                throw error; // Re-throw other errors
+            }
+        }
+        // Wait before the next attempt
+        if (i < retries - 1) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
     }
+    return null; // Failed after all retries
 }
 
 // replace the existing randomStrongPassword in app/api/auth/[...nextauth]/route.ts
@@ -186,7 +203,7 @@ const handler = NextAuth({
                         "";
 
                     // 1) already in pool?
-                    let sub = await getCognitoSubByEmail(user.email);
+                    let sub = await getCognitoSubWithRetry(user.email);
 
                     // 2) if not, create + set permanent password to CONFIRM
                     if (!sub) {
@@ -213,9 +230,11 @@ const handler = NextAuth({
                             })
                         );
 
-                        sub = await getCognitoSubByEmail(user.email);
+                        sub = await getCognitoSubWithRetry(user.email);
                         if (!sub) throw new Error("Failed to obtain Cognito sub after creation");
                     }
+
+                    (user as any).id = sub; // <-- ADD THIS LINE
 
                     // 3) create Dynamo profile with that exact sub (idempotent on backend):contentReference[oaicite:1]{index=1}
                     await fetch(`${FILES_API_URL}/auth/social-signup`, {
@@ -240,13 +259,10 @@ const handler = NextAuth({
         },
 
         async jwt({ token, user }) {
-            // First pass (right after signIn) we have user; resolve sub once
-            if (user?.email) {
-                const sub = await getCognitoSubByEmail(user.email);
-                if (sub) {
-                    token.sub = sub;
-                    token.userId = sub;
-                }
+            // If user object exists (on first sign in), use the id we passed from the signIn callback
+            if (user) {
+                token.sub = user.id;
+                token.userId = user.id;
                 token.email = user.email;
                 token.name = user.name;
             }

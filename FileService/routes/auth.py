@@ -16,7 +16,7 @@ import base64
 
 # Import your config and DB operations
 import config
-from database.user_operations import create_user_profile
+from database.user_operations import create_user_profile, get_user_profile
 
 
 
@@ -204,7 +204,9 @@ async def social_signup(request: SocialSignupRequest):
     """
     try:
         # Check if a user with this ID already exists to prevent duplicates
-        # (This is an optional but recommended check)
+        existing = await get_user_profile(request.user_id)
+        if existing:
+            return {"message": "User profile already exists.", "user_id": request.user_id}
         
         # Create the user profile in your DynamoDB
         await create_user_profile(

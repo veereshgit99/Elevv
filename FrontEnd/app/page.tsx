@@ -92,12 +92,52 @@ export default function Home() {
 
         {/* --- RESTYLED FEATURE SECTIONS --- */}
 
+        {/* Chrome Extension Feature Section */}
+        <section className="py-16 md:py-24 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div className="relative order-2 lg:order-1">
+                {/* This is the new, corrected code */}
+                <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
+                  <div className="aspect-[4/3] bg-white">
+                    <img
+                      src="/Images/OneClickAnalysis.png"
+                      alt="Screenshot of Elevv's extension"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-6 order-1 lg:order-2">
+                <div className="text-black-600 text-sm font-medium tracking-wide">Chrome Extension — Works on LinkedIn & Indeed</div>
+                <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
+                  Insights at the speed of a click.
+                </h2>
+                <p className="text-lg text-gray-600 leading-relaxed">
+                  Our extension instantly reads the job description, compares it with your resume, and delivers clear, targeted suggestions right when you need them.
+                </p>
+                <div className="mt-4">
+                  <a
+                    href="https://chromewebstore.google.com/detail/elevv/hdlkdocilmllfboionmjpekkjjfpdfjm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white">
+                      Add to Chrome
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* AI Analysis Feature Section */}
-        <section id="add-to-chrome" className="py-16 md:py-24 bg-gray-50">
+        <section id="add-to-chrome" className="py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-6">
-                <div className="text-black-600 text-sm font-medium tracking-wide">AI Analysis</div>
+                <div className="text-black-600 text-sm font-medium tracking-wide">AI Resume</div>
                 <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
                   In-depth analysis and tailored feedback.
                 </h2>
@@ -121,51 +161,11 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Chrome Extension Feature Section */}
-        <section className="py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div className="relative order-2 lg:order-1">
-                {/* This is the new, corrected code */}
-                <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
-                  <div className="aspect-[4/3] bg-white">
-                    <img
-                      src="/Images/OneClickAnalysis.png"
-                      alt="Screenshot of Elevv's extension"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-6 order-1 lg:order-2">
-                <div className="text-black-600 text-sm font-medium tracking-wide">One-click Analysis</div>
-                <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
-                  Insights at the speed of a click.
-                </h2>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  Our extension instantly reads the job description, compares it with your resume, and delivers clear, targeted suggestions right when you need them.
-                </p>
-                <div className="mt-4">
-                  <a
-                    href="https://chromewebstore.google.com/detail/elevv/hdlkdocilmllfboionmjpekkjjfpdfjm"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white">
-                      Add to Chrome
-                    </Button>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Bridging Gaps Section */}
-        <section id="add-to-chrome" className="py-16 md:py-24 bg-gray-50">
+        <section className="py-16 md:py-24 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div className="space-y-6">
+              <div className="space-y-6 order-1 lg:order-2">
                 <div className="text-black-600 text-sm font-medium tracking-wide">Bridging the Gaps</div>
                 <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
                   Filling the gaps that matter.

@@ -67,7 +67,7 @@ export default function AppHeader() {
     const getUserEmail = () => userProfile?.email || session?.user?.email || ""
 
     const handleSignOut = () => {
-        signOut({ callbackUrl: "/" })
+        signOut({ callbackUrl: "/login" })
     }
 
     const handleDeleteAccount = async () => {

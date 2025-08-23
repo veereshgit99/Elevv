@@ -465,15 +465,30 @@ export default function DashboardPage() {
                   <ResumeUpload
                     onUploadSuccess={async () => {
                       setShowUploadModal(false)
-                      // Refresh the resumes list with token
+                      // --- THIS IS THE FIX ---
+                      setIsLoadingData(true); // 1. Trigger the skeleton loader
+
                       if (session?.accessToken) {
                         try {
-                          const resumesData = await fetchResumes(session.accessToken as string)
-                          setUserResumes(resumesData)
+                          // 2. Fetch the new list of resumes
+                          const resumesData = await fetchResumes(session.accessToken as string);
+                          setUserResumes(resumesData);
+
+                          // 3. Find the primary resume (which will be the new one if it's the first)
+                          //    and set it as the selected value in the dropdown.
+                          const primaryResume = resumesData.find((r: Resume) => r.is_primary);
+                          if (primaryResume) {
+                            setSelectedResume(primaryResume.resume_id);
+                          }
+
                         } catch (error) {
-                          console.error("Failed to refresh resumes:", error)
+                          console.error("Failed to refresh resumes:", error);
+                          setError("Failed to refresh resume list.");
+                        } finally {
+                          setIsLoadingData(false); // Stop the skeleton loader
                         }
                       }
+                      // --- END OF FIX ---
                     }}
                     onUploadError={(error) => {
                       console.error("Upload error:", error)
