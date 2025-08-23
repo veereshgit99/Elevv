@@ -14,7 +14,7 @@ import ConditionalHeader from "../components/ConditionalHeader";
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Elevv - Your Career. Elevated",
+  title: "Elevv | The AI that gets your resume",
   description:
     "Elevv's AI analyzes your resume against any job description to give you a detailed match score and actionable feedback. Land your dream job, faster.",
   generator: "v0.dev",
