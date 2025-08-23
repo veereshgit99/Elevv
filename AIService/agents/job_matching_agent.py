@@ -1,23 +1,25 @@
-# AIService/agents/job_matching_agent.py
+# AIService/agents/job_matching_agent_optimized.py
 
 import os
 import json
 import logging
-from typing import Dict, Any
-
+import asyncio
+from typing import Dict, Any, List, Union
 import google.generativeai as genai
+from anthropic import AsyncAnthropic
 from agents.base import BaseAgent, AgentType, AgentResult, DocumentContext
 
 logger = logging.getLogger(__name__)
 
-# Configure the Gemini client at the module level
+# Configure API clients
 try:
     genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-except KeyError:
-    logger.warning("GOOGLE_API_KEY not found in environment. The agent will not work.")
+    anthropic_client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+except KeyError as e:
+    logger.warning(f"API key not found: {e}")
     genai = None
+    anthropic_client = None
 
-# Define Gemini-specific settings
 GEMINI_SAFETY_SETTINGS = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -25,144 +27,249 @@ GEMINI_SAFETY_SETTINGS = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
 ]
 
+import re
+import json
+
+def _strip_code_fences(s: str) -> str:
+    if not s:
+        return ""
+    s = s.strip()
+    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.I | re.M)
+    i, j = s.find("{"), s.rfind("}")
+    return s[i:j+1].strip() if (i != -1 and j != -1 and j > i) else s
+
+def _safe_json(s: str):
+    """Best-effort JSON parse; accepts fenced or prefixed/suffixed outputs."""
+    s2 = _strip_code_fences(s)
+    return json.loads(s2 or "{}")
+
+
 class JobMatchingAgent(BaseAgent):
     """
-    Agent responsible for calculating a match score and summary between a resume
-    and a job description, using the Gemini API.
+    Optimized JobMatching agent using different models for different tasks in parallel.
     """
 
     def __init__(self):
         super().__init__(AgentType.JOB_MATCHER)
-        if genai:
-            self.llm_model = genai.GenerativeModel('gemini-2.5-pro')
-        else:
-            self.llm_model = None
-        self.logger.info(f"JobMatchingAgent initialized with model: Gemini 2.5 Pro")
-
-    async def process(self, context: DocumentContext) -> AgentResult:
-        """Calculates a job match score and summary."""
-        if not self.llm_model:
-            raise RuntimeError("Gemini API key not configured. Cannot call the LLM.")
-
-        try:
-            relationship_map_result = context.previous_results.get(AgentType.RELATIONSHIP_MAPPER)
-            if not relationship_map_result or not relationship_map_result.success:
-                raise ValueError("Failed to get relationship map results for job matching.")
-            
-            relationship_map = relationship_map_result.data.get("relationship_map", {})
-            jd_content = context.metadata.get('job_description', {}).get('content', 'Job Description content not available.')
-            
-            if not relationship_map:
-                raise ValueError("JobMatchingAgent requires a relationship_map in its context metadata.")
-
-            match_score_schema = {
-                "type": "object",
-                "properties": {
-                    "match_percentage": {"type": "number", "minimum": 0, "maximum": 100},
-                    "strength_summary": {"type": "string"},
-                    "areas_for_improvement": {"type": "array", "items": {"type": "string"}},
-                    # ... other properties
-                },
-                "required": ["match_percentage", "strength_summary", "areas_for_improvement"]
-            }
-
-            # --- CORRECTED: System and User prompts are now separate ---
-            system_prompt = (
-                "You are an expert Job Matching AI, acting as a seasoned executive recruiter. Your task is to evaluate a candidate’s fit for a role by calculating a realistic match percentage and providing structured, evidence-based insights, strictly adhering to the schema and principles below.:\n\n"
-    
-                "--- CORE REASONING PRINCIPLES ---\n"
-                "1.  **Hierarchy of Experience**: Prioritize full-time professional experience above internships, freelance roles, personal projects, and coursework.\n\n"
-                "2.  **Impact over Keywords**: Quantified, results-based achievements count most—simple keyword matches are less important.\n\n"
-                "3.  **Semantic Equivalence**: Recognize similar skills or responsibilities, even if phrased differently.\n\n"
-                "4.  **Match Percentage Calculation**: Your score must:\n"
-                     "i. Be data-driven, based solely on the provided relationship map and job description.\n"
-                     "ii. Increase with more highly confident matches of key skills/experiences.\n"
-                     "iii. Decrease with significant gaps in core competencies.\n"
-                     "iv. Weigh fundamental “experience_gap” (missing core responsibilities) more than secondary “skill_gap.”"
-                "5.  Realism & Trust: Do not inflate scores or overstate strengths. Conservatively score when data is partial or weak.\n\n"
-                "6. Authorization, Sponsorship, and Security Requirements: These should NOT affect your match percentage calculation if missing from the resume. Simply highlight as informational for the candidate to clarify if relevant.\n"
-                "-  Only output a valid JSON. In 'areas_for_improvement', you may include a reminder to clarify work authorization or clearance status (if the JD requires it), but do NOT lower 'match_percentage' unless the resume directly contradicts employer requirement.\n\n"
-                "--- OUTPUT INSTRUCTIONS ---\n"
-                "Only output a single valid JSON object matching the schema 'match_score_schema; - no extra text, comments, or explanations"
-)
-
-            user_prompt = (
-                f"Analyze the following relationship map (which details matches and gaps "
-                f"between a resume and a job description) to calculate an overall match percentage and provide feedback.\n\n"
-                # --- Job Description content is removed ---
-                f"--- Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
-                f"Output the match analysis as a JSON object strictly following this schema:\n"
-                f"{json.dumps(match_score_schema, indent=2)}"
-)
-            
-            # --- CORRECTED: Make the LLM API call to Gemini with a list of prompts ---
-            response = await self.llm_model.generate_content_async(
-                [system_prompt, user_prompt], # Pass prompts as a list
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.0,
-                    response_mime_type="application/json"
+        
+        if genai and anthropic_client:
+            self.models = {
+                # Fast models for scoring and strengths
+                "gemini_flash_lite": genai.GenerativeModel(
+                    "gemini-2.5-flash-lite",
+                    safety_settings=GEMINI_SAFETY_SETTINGS
                 ),
+                # Higher quality for improvement analysis
+                "gemini_pro": genai.GenerativeModel(
+                    "gemini-2.5-pro", 
+                    safety_settings=GEMINI_SAFETY_SETTINGS
+                ),
+                "anthropic_client": anthropic_client
+            }
+            
+            # Task assignments
+            self.task_models = {
+                "calculate_match_score": "claude_sonnet",      # Fast scoring
+                "generate_strength_summary": "gemini_flash_lite",  # Fast strengths summary
+            }
+        else:
+            self.models = None
+            self.task_models = None
+            
+        self.logger.info("Optimized JobMatchingAgent initialized")
+
+    def _normalize_response_data(self, data: Any) -> Union[List, Dict, float, str]:
+        """Ensure data is in expected format"""
+        if data is None:
+            return []
+        return data
+
+    async def _call_gemini_model(self, model_name: str, prompt: str) -> Any:
+        """Call Gemini models with error handling"""
+        print(f"[DEBUG] Gemini model {model_name} started")
+        try:
+            model = self.models[model_name]
+            response = await model.generate_content_async(
+                prompt,
+                generation_config={
+                    "response_mime_type": "application/json",
+                    "temperature": 0.0,
+                    "max_output_tokens": 1000
+                },
                 safety_settings=GEMINI_SAFETY_SETTINGS
             )
-            
+            print(f"[DEBUG] Gemini model {model_name} finished")
+            # Handle safety blocks
+            if hasattr(response, 'candidates') and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, 'finish_reason') and candidate.finish_reason != 1:
+                    self.logger.warning(f"Gemini response blocked. Finish reason: {candidate.finish_reason}")
+                    return {}
+            if hasattr(response, 'text') and response.text:
+                return _safe_json(response.text)
+            else:
+                self.logger.warning(f"No text in Gemini response for {model_name}")
+                return {}
+        except Exception as e:
+            print(f"[DEBUG] Gemini model {model_name} failed: {e}")
+            self.logger.error(f"Gemini model {model_name} failed: {e}")
+            return {}
+
+    async def _call_claude_model(self, model_type: str, prompt: str) -> Any:
+        """Call Claude models with error handling"""
+        print(f"[DEBUG] Claude model {model_type} started")
+        try:
+            client = self.models["anthropic_client"]
+            # Use Claude Sonnet
+            model_name = "claude-4-sonnet-20250514"
+            response = await client.messages.create(
+                model=model_name,
+                max_tokens=1000,
+                temperature=0.0,
+                messages=[{
+                    "role": "user",
+                    "content": prompt + "\n\nRespond ONLY with valid JSON. No markdown, no explanations."
+                }]
+            )
+            print(f"[DEBUG] Claude model {model_type} finished")
+            response_text = response.content[0].text.strip()
+            # Clean response
+            if response_text.startswith('```'):
+                response_text = response_text[7:]
+            if response_text.startswith('```'):
+                response_text = response_text[3:]
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
+            if not response_text:
+                return {}
             try:
-                # First, try to parse the response directly
-                llm_output = json.loads(response.text)
+                return _safe_json(response_text)
             except json.JSONDecodeError:
-                self.logger.warning("Initial JSON parsing failed for Job Matcher. Attempting to self-correct.")
-                # If it fails, ask the LLM to fix the broken JSON
-                fix_prompt = (
-                    "The following text is not a valid JSON object because it contains extra data or formatting errors. "
-                    "Please analyze the text, correct any errors, and return ONLY the perfectly formatted JSON object. "
-                    "Do not include any other text or explanation outside of the JSON itself.\n\n"
-                    f"--- BROKEN TEXT ---\n{response.text}\n--- END BROKEN TEXT ---"
-                )
-                
-                correction_response = await self.llm_model.generate_content_async(
-                    fix_prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.0,
-                        response_mime_type="application/json"
-                    ),
-                    safety_settings=GEMINI_SAFETY_SETTINGS
-                )
-                llm_output = json.loads(correction_response.text)
+                import re
+                json_match = re.search(r'$$.*?$$|\{.*?\}', response_text, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group(0))
+                else:
+                    return {}
+        except Exception as e:
+            print(f"[DEBUG] Claude model {model_type} failed: {e}")
+            self.logger.error(f"Claude model {model_type} failed: {e}")
+            return {}
+
+    async def _dispatch_to_model(self, task_name: str, prompt: str) -> Any:
+        """Route task to appropriate model"""
+        model_assignment = self.task_models.get(task_name)
+        
+        if model_assignment in ["gemini_flash_lite", "gemini_pro"]:
+            return await self._call_gemini_model(model_assignment, prompt)
+        elif model_assignment == "claude_sonnet":
+            return await self._call_claude_model("claude_sonnet", prompt)
+        else:
+            self.logger.error(f"Unknown model assignment for task: {task_name}")
+            return {}
+
+    async def _calculate_match_score(self, relationship_map: Dict) -> float:
+        """Calculate match percentage using fast model"""
+        
+        prompt = (
+            "You are a quantitative analyst. Your ONLY task is to calculate a match percentage (0-100) based on the provided relationship map. "
+            "Follow these principles strictly:\n"
+            "- Prioritize 'matched_experience_to_responsibilities' most heavily.\n"
+            "- Increase the score for strong skill matches with evidence.\n"
+            "- Decrease the score significantly for 'identified_gaps_in_resume'.\n\n"
+            "- Deduct strongly for 'experience_gaps' than 'skill_gaps'.\n"
+            f"--- Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
+            "Return ONLY a JSON object with a single key: 'match_percentage'."
+        )
+
+        result = await self._dispatch_to_model("calculate_match_score", prompt)
+        return result.get("match_percentage", 0.0) if isinstance(result, dict) else 0.0
+
+    async def _generate_strength_summary(self, relationship_map: Dict) -> List[str]:
+        
+        prompt = (
+            "You are a professional resume writer. Your ONLY task is to write a concise, encouraging 2-3 sentence summary of the candidate's strengths based on the 'strong_points_in_resume' and 'matched_experience_to_responsibilities' from the relationship map.\n\n"
+            f"--- Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
+            "Return ONLY a JSON object with a single key: 'strength_summary'."
+        )
+
+        result = await self._dispatch_to_model("generate_strength_summary", prompt)
+        return result.get("strength_summary", "") if isinstance(result, dict) else ""
+
+
+    # In job_matching_agent.py
+
+    async def process(self, context: DocumentContext) -> AgentResult:
+        if not self.models:
+            raise RuntimeError("API keys not configured for job matching.")
+
+        try:
+            relationship_map = context.previous_results[AgentType.RELATIONSHIP_MAPPER].data.get("relationship_map", {})
+            if not relationship_map:
+                raise ValueError("Missing relationship map for job matching.")
+
+            self.logger.info("Starting parallel job matching analysis...")
             
-            if not isinstance(llm_output, dict) or not all(key in llm_output for key in match_score_schema['required']):
-                raise ValueError("LLM returned invalid or incomplete JSON for match score.")
+            # Execute the two required tasks in parallel
+            tasks = [
+                self._calculate_match_score(relationship_map),
+                self._generate_strength_summary(relationship_map)
+            ]
+
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # --- CORRECTED RESULT HANDLING ---
+            match_percentage = 0
+            strength_summary = ""
+
+            # Process the result for the first task (match_percentage)
+            if not isinstance(results[0], Exception):
+                match_percentage = int(round(float(results[0])))
+            else:
+                self.logger.error(f"Match score task failed: {results[0]}")
+
+            # Process the result for the second task (strength_summary)
+            if not isinstance(results[1], Exception):
+                strength_summary = results[1] if isinstance(results[1], str) else ""
+            else:
+                self.logger.error(f"Strength summary task failed: {results[1]}")
             
-            match_percentage = max(0, min(100, int(llm_output.get("match_percentage", 0))))
+            # This is the final JSON object your frontend expects
+            final_analysis_output = {
+                "strength_summary": strength_summary
+            }
+            # --- END OF CORRECTION ---
+
+            self.logger.info("Parallel job matching analysis completed successfully")
             
             return AgentResult(
                 agent_type=self.agent_type,
                 success=True,
                 data={
-                    "match_analysis": llm_output,
-                    "overall_match_percentage": match_percentage,
-                    "llm_model_used": "gemini-2.5-pro"
+                    "match_analysis": final_analysis_output,
+                    "overall_match_percentage": match_percentage
                 },
-                confidence=match_percentage / 100.0,
-                processing_time=0.0
+                confidence=1.0,
+                processing_time=0  # Placeholder for actual processing time
             )
-            
-        except json.JSONDecodeError as e:
-            self.logger.error(f"LLM returned invalid JSON for Job Matching: {e}", exc_info=True)
-            raise ValueError(f"Failed to parse LLM response: Invalid JSON. {e}")
+
         except Exception as e:
-            self.logger.error(f"Job matching failed: {str(e)}", exc_info=True)
-            raise
+            self.logger.error(f"Job matching analysis failed: {e}", exc_info=True)
+            # You can decide on a more specific fallback error structure if needed
+            return AgentResult(
+                agent_type=self.agent_type,
+                success=False,
+                data={"match_analysis": {}, "overall_match_percentage": 0},
+                error=str(e),
+                confidence=1.0,
+                processing_time=0  # Placeholder for actual processing time
+            )
 
     def get_capabilities(self) -> Dict[str, Any]:
-        """Return agent capabilities"""
         return {
-            "name": "LLM-Powered Job Matcher",
-            "description": "Calculates an overall match percentage and provides key insights between a candidate's resume and a job description.",
-            "model": "gemini-2.5-pro",
-            "input_requirements": [
-                "Relationship Mapper Agent result",
-                "Job Description content"
-            ],
-            "output_format": "Structured JSON with match percentage, strengths, and areas for improvement",
-            "model": self.llm_model,
-            "confidence_level": 0.95 # Reflects expected LLM performance for scoring
+            "name": "Optimized Parallel Job Matching Agent",
+            "description": "Uses different models for scoring, strengths, and improvement analysis in parallel",
+            "models": self.task_models if self.task_models else {},
+            "expected_latency": "4-6 seconds"
         }

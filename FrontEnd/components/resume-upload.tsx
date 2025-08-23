@@ -48,28 +48,46 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
     }
 
     const uploadToS3 = async (url: string, formFields: Record<string, string>, file: File) => {
-        const formData = new FormData()
+        const formData = new FormData();
 
-        // Add all the form fields from the presigned URL
-        Object.entries(formFields).forEach(([key, value]) => {
-            formData.append(key, value)
-        })
+        // Include all presigned fields
+        Object.entries(formFields).forEach(([k, v]) => formData.append(k, v));
 
-        // Add the file last (important for S3)
-        formData.append('file', file)
-
-        // Upload directly to S3
-        const response = await fetch(url, {
-            method: 'POST',
-            body: formData,
-        })
-
-        if (!response.ok) {
-            const text = await response.text()
-            console.error('S3 Response:', text)
-            throw new Error(`Failed to upload file to S3: ${response.status}`)
+        // If the policy pinned Content-Type, ensure the form includes it too.
+        if (formFields["Content-Type"]) {
+            formData.set("Content-Type", formFields["Content-Type"]);
         }
-    }
+
+        // File must be last
+        formData.append("file", file);
+
+        // Retry on S3 5xx up to 3 attempts
+        let attempt = 0;
+        let lastErr: any;
+
+        while (attempt < 3) {
+            try {
+                const res = await fetch(url, { method: "POST", body: formData });
+                if (res.ok) return; // 201 (or 204) is fine
+
+                // Read body for debugging and throw
+                const bodyText = await res.text();
+                console.error("S3 Response:", bodyText);
+                if (res.status >= 500) {
+                    throw new Error(`S3 5xx (${res.status})`);
+                }
+                throw new Error(`Failed to upload file to S3: ${res.status}`);
+            } catch (e) {
+                lastErr = e;
+                attempt += 1;
+                if (attempt >= 3) break;
+                await new Promise(r => setTimeout(r, 200 * Math.pow(2, attempt))); // 200ms, 400ms
+            }
+        }
+
+        throw lastErr ?? new Error("Failed to upload file to S3");
+    };
+
 
     const handleUpload = async () => {
         // Validate both file and job title
@@ -137,13 +155,16 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
             }, 2000)
 
         } catch (error) {
-            console.error('Upload error:', error)
-            setUploadStatus('error')
-            setErrorMessage(error instanceof Error ? error.message : 'Failed to upload resume')
-            onUploadError?.(error instanceof Error ? error.message : 'Failed to upload resume')
-        } finally {
-            setUploading(false)
+            console.error('Upload error:', error);
+            setUploadStatus('error');
+            if (error instanceof Error && /S3 5xx/.test(error.message)) {
+                setErrorMessage("S3 was busy for a moment. Please try again.");
+            } else {
+                setErrorMessage(error instanceof Error ? error.message : 'Failed to upload resume');
+            }
+            onUploadError?.(error instanceof Error ? error.message : 'Failed to upload resume');
         }
+
     }
 
     const removeFile = () => {

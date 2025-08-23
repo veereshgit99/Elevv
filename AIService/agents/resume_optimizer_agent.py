@@ -13,6 +13,22 @@ logger = logging.getLogger(__name__)
 from dotenv import load_dotenv
 load_dotenv()
 
+import re
+import json
+
+def _strip_code_fences(s: str) -> str:
+    if not s:
+        return ""
+    s = s.strip()
+    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s, flags=re.I | re.M)
+    i, j = s.find("{"), s.rfind("}")
+    return s[i:j+1].strip() if (i != -1 and j != -1 and j > i) else s
+
+def _safe_json(s: str):
+    """Best-effort JSON parse; accepts fenced or prefixed/suffixed outputs."""
+    s2 = _strip_code_fences(s)
+    return json.loads(s2 or "{}")
+
 try:
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
@@ -71,8 +87,8 @@ class ResumeOptimizerAgent(BaseAgent):
 
             job_match_result = context.previous_results.get(AgentType.JOB_MATCHER)
             match_analysis = job_match_result.data.get("match_analysis", {}) if job_match_result and job_match_result.success else {}
-            
-            company_info = context.metadata.get('company_info', {}) # From WebScraperAgent, if implemented
+            overall_match_percentage = job_match_result.data.get("overall_match_percentage", 0) if job_match_result and job_match_result.success else 0
+
             
             # Define the schema for the desired enhancement suggestions output
             enhancement_schema = {
@@ -136,10 +152,10 @@ class ResumeOptimizerAgent(BaseAgent):
                 "   ii. *Only if you identify a critical, high-priority skill or experience gap**, propose a detailed project idea that the user could build in the future to fill that gap.\n"
                 "       Clearly label this with type 'suggest_new_project'. If the gaps are minor, do not suggest a new project.\n\n"
                 "4. Address Gaps: Also check 'identified_gaps_in_resume' from 'relationship_map' - Identify and suggest enhancements for any missing critical skills or experiences that are explicitly required in the job description but not present in the resume.\n"
-                    "CRITICAL: Make sure at the end, the enhanced resume has a strong, and relevant set of experiences that directly address the job description requirements, and that the candidate appears highly qualified for the role.\n\n"
+                    "CRITICAL: Make sure at the end, the enhanced resume has addressed all the gaps in the relationship_map, has a strong and relevant set of experiences that directly address the job description requirements, and that the candidate appears highly qualified for the role.\n\n"
                 "5. Do NOT propose resume changes or additions claiming work authorization, sponsorship, or clearance. If the job description requests it, you may suggest the user consider including a brief line about their eligibility, but make clear that omitting this is common and not usually expected in the resume.\n"
 
-                "After generating your enhancement suggestions, estimate what the match score would be if all the critical and high-priority suggestions are implemented. Output this as the field 'match_after_enhancement', a number between 0 and 100, in your final JSON object. Base 'match_after_enhancement' on the strengths, gaps, and prior match score in the job match analysis. Assume all actionable (critical, high) suggestions are implemented with high quality.\n"
+                "After generating your enhancement suggestions, estimate what the match score would be if all the suggestions are implemented with high quality. Output this as the field 'match_after_enhancement', a number between 0 and 100, in your final JSON object. Base 'match_after_enhancement' on the strengths, gaps, and prior match score in the job match analysis.\n"
                 "Output must be a JSON object strictly following the schema. Prioritize critical and high-impact suggestions."
             )
             
@@ -151,7 +167,7 @@ class ResumeOptimizerAgent(BaseAgent):
                 f"--- Job Description's Extracted Entities ---\n{json.dumps(jd_entities, indent=2)}\n\n"
                 f"--- Resume-JD Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
                 f"--- Job Match Analysis ---\n{json.dumps(match_analysis, indent=2)}\n\n"
-                f"--- Company Context (from Website) ---\n{json.dumps(company_info, indent=2)}\n\n"
+                f"--- initial match percentage (from job match analysis) ---\n{overall_match_percentage}\n\n"
                 f"Provide your enhancement suggestions as a JSON object strictly following this schema:\n"
                 f"{json.dumps(enhancement_schema, indent=2)}"
             )
@@ -166,7 +182,7 @@ class ResumeOptimizerAgent(BaseAgent):
             # --- NEW: Robust JSON Parsing Logic ---
             try:
                 # First, try to parse the response directly
-                llm_output = json.loads(response.text)
+                llm_output = _safe_json(response.text)
             except json.JSONDecodeError:
                 self.logger.warning("Initial JSON parsing failed. Attempting to self-correct.")
                 # If it fails, ask the LLM to fix the broken JSON

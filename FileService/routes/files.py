@@ -66,7 +66,7 @@ async def get_resume_upload_url(
         existing_resumes = await get_resumes_for_user(user_id)
         is_first_resume = len(existing_resumes) == 0
         
-        s3_upload_details = generate_presigned_url(s3_key)
+        s3_upload_details = generate_presigned_url(s3_key, request.content_type)
         if not s3_upload_details:
             raise HTTPException(status_code=500, detail="Failed to generate S3 presigned URL.")
 

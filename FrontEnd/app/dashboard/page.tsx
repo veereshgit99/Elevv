@@ -448,6 +448,10 @@ export default function DashboardPage() {
                     </>
                   )}
                 </Button>
+
+                <p className="mt-2 text-xs text-gray-500 text-center flex items-center justify">
+                  ⏱️ Analysis takes ~25s. We’re continuously working to improve speed & accuracy.
+                </p>
               </CardContent>
             </Card>
 

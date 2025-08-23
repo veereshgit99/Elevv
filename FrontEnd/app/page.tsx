@@ -33,7 +33,7 @@ export default function Home() {
             <Link href="/features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
               Features
             </Link>
-            <Link href="https://chromewebstore.google.com/category/extensions">
+            <Link href="https://chromewebstore.google.com/detail/elevv/hdlkdocilmllfboionmjpekkjjfpdfjm">
               <Button variant="ghost" size="sm">Add to Chrome</Button>
             </Link>
             <div className="flex items-center gap-2">
@@ -135,7 +135,7 @@ export default function Home() {
                 </p>
                 <div className="mt-4">
                   <a
-                    href="https://chrome.google.com/webstore/category/extensions"
+                    href="https://chromewebstore.google.com/detail/elevv/hdlkdocilmllfboionmjpekkjjfpdfjm"
                     target="_blank"
                     rel="noopener noreferrer"
                   >

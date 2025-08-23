@@ -15,10 +15,7 @@ class AgentType(Enum):
     RELATIONSHIP_MAPPER = "relationship_mapper"
     JOB_MATCHER = "job_matcher" # New: For calculating match score
     RESUME_OPTIMIZER = "resume_optimizer" # New: For generating enhancement suggestions
-    WEB_SCRAPER = "web_scraper" # New: For fetching company info from JD URL
-    COMPREHENSIVE_ANALYSIS = "comprehensive_analysis" # New: For end-to-end analysis combining all phases
-    # Removed: TOPIC_ANALYZER, SENTIMENT_ANALYZER, ACTION_ITEM_EXTRACTOR, STRUCTURE_ANALYZER
-    # These can be added back if the project expands to broader document types.
+    LAYOUT_ANALYZER = "layout_analyzer" # New: For analyzing document layout and structure
 
 @dataclass
 class AgentResult:

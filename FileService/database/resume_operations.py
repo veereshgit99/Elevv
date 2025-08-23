@@ -7,7 +7,7 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 from typing import Dict, Any, Optional
 
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr
 
 logger = logging.getLogger(__name__)
 
@@ -143,9 +143,11 @@ async def get_resumes_for_user(user_id: str) -> list[Dict[str, Any]]:
     try:
         # A GSI is needed to efficiently query by user_id
         # We assume the GSI is named 'user_id-index'
+        # Also check the resume status as 'uploaded' before returning
         response = table.query(
             IndexName='user_id-index',
-            KeyConditionExpression=Key('user_id').eq(user_id)
+            KeyConditionExpression=Key('user_id').eq(user_id),
+            FilterExpression=Attr('status').eq('uploaded')
         )
         items = response.get('Items', [])
         logger.info(f"Found {len(items)} resumes for user {user_id}")

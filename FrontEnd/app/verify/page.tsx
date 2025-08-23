@@ -106,7 +106,7 @@ export default function VerifyPage() {
     try {
       await confirmSignup(email, code)
       // On successful verification, redirect to the login page
-      router.push("/login")
+      router.push("/login?confirmed=1")
     } catch (err: any) {
       setError(err.message)
     } finally {

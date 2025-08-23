@@ -20,7 +20,7 @@ from agents.entity_extractor_agent import EntityExtractorAgent
 from agents.job_matching_agent import JobMatchingAgent
 from agents.relationship_mapper_agent import RelationshipMapperAgent
 from agents.resume_optimizer_agent import ResumeOptimizerAgent
-from agents.web_scraper_agent import WebScraperAgent
+from agents.document_layout_agent import DocumentLayoutAgent
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +51,8 @@ class DocumentAnalysisOrchestrator:
     def _initialize_agents(self):
         """Initializes all available agents."""
         self.agents[AgentType.CLASSIFIER] = DocumentClassifierAgent()
+        self.agents[AgentType.LAYOUT_ANALYZER] = DocumentLayoutAgent() # Add this line
         self.agents[AgentType.ENTITY_EXTRACTOR] = EntityExtractorAgent()
-        self.agents[AgentType.WEB_SCRAPER] = WebScraperAgent()
         self.agents[AgentType.RELATIONSHIP_MAPPER] = RelationshipMapperAgent()
         self.agents[AgentType.JOB_MATCHER] = JobMatchingAgent()
         self.agents[AgentType.RESUME_OPTIMIZER] = ResumeOptimizerAgent()
@@ -317,11 +317,12 @@ class DocumentAnalysisOrchestrator:
             raise RuntimeError(f"Agent {agent_type.value} failed: {result.error}")
             
         return result
-
-    async def process_document_for_analysis(self, user_id: str, file_id: str, content: str, file_type: str, initial_metadata: Dict[str, Any] = None) -> DocumentContext:
-        """
-        Processes a single document through initial analysis agents.
-        """
+    
+    # Comment this method for now
+    """async def process_document_for_analysis(self, user_id: str, file_id: str, content: str, file_type: str, initial_metadata: Dict[str, Any] = None) -> DocumentContext:
+    
+        # Processes a single document through initial analysis agents.
+        
         if initial_metadata is None:
             initial_metadata = {}
             
@@ -337,4 +338,65 @@ class DocumentAnalysisOrchestrator:
         await self._run_agent(AgentType.CLASSIFIER, context)
         await self._run_agent(AgentType.ENTITY_EXTRACTOR, context)
 
+        return context"""
+        
+        # In orchestrator.py, replace the entire method with this one
+
+    async def process_document_for_analysis(self, user_id: str, file_id: str, content: str, file_type: str, initial_metadata: Dict[str, Any] = None) -> DocumentContext:
+        """
+        Processes a single document:
+        1. Classifies the document.
+        2. Analyzes the layout to find sections.
+        3. Runs entity extraction on each section in parallel.
+        4. Merges the results.
+        """
+        if initial_metadata is None:
+            initial_metadata = {}
+            
+        context = DocumentContext(
+            user_id=user_id, file_id=file_id, content=content, file_type=file_type,
+            metadata=initial_metadata, previous_results={}
+        )
+
+        # Step 1: Classify the full document (fast)
+        await self._run_agent(AgentType.CLASSIFIER, context)
+
+        # --- NEW: Step 2: Use the LayoutAgent to intelligently split the document ---
+        layout_result = await self._run_agent(AgentType.LAYOUT_ANALYZER, context)
+        sections = layout_result.data.get("sections", {"full_content": content})
+        self.logger.info(f"Document split into {len(sections)} sections for parallel processing.")
+
+        # --- Step 3: Run entity extraction on each section in parallel ---
+        tasks = []
+        for section_name, section_content in sections.items():
+            section_context = DocumentContext(
+                user_id=user_id, file_id=f"{file_id}-{section_name}", content=section_content,
+                file_type=file_type, metadata=initial_metadata, previous_results={}
+            )
+            tasks.append(self._run_agent(AgentType.ENTITY_EXTRACTOR, section_context))
+
+        section_results = await asyncio.gather(*tasks)
+
+        # --- Step 4: Merge the results from all parallel tasks ---
+        merged_entities = {}
+        for result in section_results:
+            if result.success:
+                entities = result.data.get("entities", {})
+                for key, value_list in entities.items():
+                    if key not in merged_entities:
+                        merged_entities[key] = []
+                    if isinstance(value_list, list):
+                        merged_entities[key].extend(value_list)
+        
+        # Deduplicate the merged lists
+        for key in merged_entities:
+            merged_entities[key] = sorted(list(set(item for item in merged_entities[key] if item)))
+
+        # Add the final merged result to the main context
+        merged_result_data = {"entities": merged_entities}
+        context.previous_results[AgentType.ENTITY_EXTRACTOR] = AgentResult(
+            agent_type=AgentType.ENTITY_EXTRACTOR, success=True, data=merged_result_data, confidence=1.0,
+                    processing_time=0.0
+        )
+        
         return context

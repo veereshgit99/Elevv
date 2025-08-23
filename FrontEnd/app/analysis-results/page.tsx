@@ -332,6 +332,11 @@ export default function AnalysisResultsPage() {
                         </>
                       )}
                     </Button>
+
+                    <p className="mt-4 text-xs text-gray-500 text-center flex items-center justify">
+                      ⏱️ Enhancements take ~45s. We’re continuously working to improve speed & accuracy.
+                    </p>
+
                   </div>
                 </div>
               </CardContent>
@@ -344,7 +349,7 @@ export default function AnalysisResultsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span>Your Top Strengths</span>
+                    <span>Your top strengths</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -364,7 +369,7 @@ export default function AnalysisResultsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <AlertTriangle className="w-5 h-5 text-amber-600" />
-                    <span>Critical Gaps to Address</span>
+                    <span>Areas to address</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

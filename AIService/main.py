@@ -90,7 +90,7 @@ logging.basicConfig(level=logging.INFO)
 # --- CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://elevv.net", "chrome-extension://cfbjpbpglpenbmlndohaldffnjfncjfm"],  # Your frontend URL
+    allow_origins=["http://localhost:3000", "https://elevv.net", "chrome-extension://cfbjpbpglpenbmlndohaldffnjfncjfm", "chrome-extension://hdlkdocilmllfboionmjpekkjjfpdfjm"],  # Your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

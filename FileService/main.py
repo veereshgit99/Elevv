@@ -26,7 +26,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", 
                    "https://elevv.net", 
-                   "chrome-extension://cfbjpbpglpenbmlndohaldffnjfncjfm"],  # Adjust as needed
+                   "chrome-extension://cfbjpbpglpenbmlndohaldffnjfncjfm",
+                   "chrome-extension://hdlkdocilmllfboionmjpekkjjfpdfjm"],  # Adjust as needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

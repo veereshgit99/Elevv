@@ -6,11 +6,25 @@ from typing import Dict, Any, List, Optional
 import boto3
 from botocore.exceptions import ClientError
 import config
+import os
 
 logger = logging.getLogger(__name__)
 dynamodb = boto3.resource('dynamodb', region_name=config.AWS_REGION)
 table = dynamodb.Table('Analysis')
 
+DYNAMODB_ANALYSIS_TABLE_NAME = os.getenv("DYNAMODB_ANALYSIS_TABLE_NAME", "Analysis")
+
+def _get_analysis_table():
+    """Helper function to get the DynamoDB Analysis table instance."""
+    try:
+        dynamodb = boto3.resource('dynamodb', region_name=os.getenv("AWS_REGION", "us-east-2"))
+        table = dynamodb.Table(DYNAMODB_ANALYSIS_TABLE_NAME)
+        table.load()
+        return table
+    except ClientError as e:
+        logger.error(f"Could not connect to DynamoDB: {e}", exc_info=True)
+        raise
+    
 async def save_analysis_summary(
     user_id: str,
     analysis_id: str,

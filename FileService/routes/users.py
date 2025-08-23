@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from security import get_current_user_id
 from database.user_operations import get_user_profile
 import logging
-from database.user_operations import _get_user_table
+from database.user_operations import _get_user_table, delete_user_account
 
 router = APIRouter()
 
@@ -68,3 +68,17 @@ async def update_user_profile(
     except Exception as e:
         logging.error(f"Error updating user profile: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
+# --- ADD THIS NEW ENDPOINT AT THE BOTTOM ---
+@router.delete("/users/me", tags=["Users"])
+async def delete_my_account(user_id: str = Depends(get_current_user_id)):
+    """
+    Handles the complete deletion of the currently authenticated user's account and data.
+    """
+    try:
+        await delete_user_account(user_id)
+        return {"message": "Account and all associated data deleted successfully."}
+    except Exception as e:
+        logging.error(f"Error during account deletion for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete account.")

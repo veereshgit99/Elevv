@@ -1,4 +1,4 @@
-// app/api/auth/[...nextauth]/route.ts - Production version
+// app/api/auth/[...nextauth]/route.ts - Minimal fix version (no extra caching)
 
 import NextAuth from "next-auth";
 import { JWT } from "next-auth/jwt";
@@ -6,10 +6,16 @@ import jwt from "jsonwebtoken";
 import GoogleProvider from "next-auth/providers/google";
 import LinkedInProvider from "next-auth/providers/linkedin";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { CognitoIdentityProviderClient, AdminGetUserCommand, AdminCreateUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import {
+    CognitoIdentityProviderClient,
+    AdminGetUserCommand,
+    AdminCreateUserCommand,
+    AdminSetUserPasswordCommand, // ✅ added
+} from "@aws-sdk/client-cognito-identity-provider";
 
 const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL;
-// Add environment variable validation
+
+// keep your original secret guard
 if (!process.env.NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET.length < 32) {
     throw new Error("NEXTAUTH_SECRET must be at least 32 characters long");
 }
@@ -18,35 +24,50 @@ const cognitoClient = new CognitoIdentityProviderClient({
     region: process.env.COGNITO_REGION,
 });
 
-// Cache for Cognito user lookups to reduce API calls
-const userIdCache = new Map<string, { id: string; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// --- tiny helpers (no cache) -------------------------------------------------
 
-async function getCognitoUserId(email: string): Promise<string | null> {
-    // Check cache first
-    const cached = userIdCache.get(email);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.id;
-    }
-
+async function getCognitoSubByEmail(email: string): Promise<string | null> {
     try {
-        const userResponse = await cognitoClient.send(new AdminGetUserCommand({
-            UserPoolId: process.env.COGNITO_USER_POOL_ID!,
-            Username: email,
-        }));
-
-        const userId = userResponse.UserAttributes?.find(attr => attr.Name === 'sub')?.Value || null;
-
-        if (userId) {
-            userIdCache.set(email, { id: userId, timestamp: Date.now() });
-        }
-
-        return userId;
-    } catch (error) {
-        console.error("Failed to get Cognito user ID", error);
+        const res = await cognitoClient.send(
+            new AdminGetUserCommand({
+                UserPoolId: process.env.COGNITO_USER_POOL_ID!,
+                Username: email,
+            })
+        );
+        return res.UserAttributes?.find((a) => a.Name === "sub")?.Value ?? null;
+    } catch {
         return null;
     }
 }
+
+// replace the existing randomStrongPassword in app/api/auth/[...nextauth]/route.ts
+function randomStrongPassword(length = 32) {
+    const lowers = "abcdefghijklmnopqrstuvwxyz";
+    const uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const digits = "0123456789";
+    const symbols = "!@#$%^&*()-_=+[]{}:,.;?"; // safe, common ASCII set
+
+    if (length < 12) length = 12; // be sane; Cognito default min is 8
+
+    // ensure at least one of each required class
+    const pick = (set: string) => set[Math.floor(Math.random() * set.length)];
+    const required = [pick(lowers), pick(uppers), pick(digits), pick(symbols)];
+
+    // fill the rest from the full pool
+    const all = lowers + uppers + digits + symbols;
+    const restCount = length - required.length;
+    for (let i = 0; i < restCount; i++) required.push(pick(all));
+
+    // Fisher–Yates shuffle
+    for (let i = required.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [required[i], required[j]] = [required[j], required[i]];
+    }
+    return required.join("");
+}
+
+
+// -----------------------------------------------------------------------------
 
 const handler = NextAuth({
     providers: [
@@ -57,9 +78,9 @@ const handler = NextAuth({
                 params: {
                     prompt: "consent",
                     access_type: "offline",
-                    response_type: "code"
-                }
-            }
+                    response_type: "code",
+                },
+            },
         }),
 
         LinkedInProvider({
@@ -67,10 +88,8 @@ const handler = NextAuth({
             clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
             issuer: "https://www.linkedin.com/oauth",
             jwks_endpoint: "https://www.linkedin.com/oauth/openid/jwks",
-            userinfo: {
-                url: "https://api.linkedin.com/v2/userinfo",
-            },
-            async profile(profile, tokens) {
+            userinfo: { url: "https://api.linkedin.com/v2/userinfo" },
+            async profile(profile) {
                 return {
                     id: profile.sub,
                     name: `${profile.given_name} ${profile.family_name}`,
@@ -81,57 +100,47 @@ const handler = NextAuth({
         }),
 
         CredentialsProvider({
-            name: 'Credentials',
+            name: "Credentials",
             credentials: {
                 email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" }
+                password: { label: "Password", type: "password" },
             },
-            async authorize(credentials, req) {
+            async authorize(credentials) {
                 if (!credentials) return null;
 
-                try {
-                    // Use environment variable for backend URL
-                    const backendUrl = FILES_API_URL;
-                    const response = await fetch(`${backendUrl}/auth/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: credentials.email,
-                            password: credentials.password,
-                        }),
-                    });
+                const response = await fetch(`${FILES_API_URL}/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: credentials.email,
+                        password: credentials.password,
+                    }),
+                });
 
-                    const data = await response.json();
+                const data = await response.json();
 
-                    if (!response.ok) {
-                        // Handle specific error for unconfirmed user
-                        if (response.status === 401 && data.detail === "USER_NOT_CONFIRMED") {
-                            throw new Error("ACCOUNT_NOT_VERIFIED");
-                        }
-                        throw new Error(data.detail || 'Authentication failed');
+                if (!response.ok) {
+                    if (response.status === 401 && data.detail === "USER_NOT_CONFIRMED") {
+                        throw new Error("ACCOUNT_NOT_VERIFIED");
                     }
-
-                    if (data.IdToken) {
-                        return {
-                            id: credentials.email,
-                            name: 'User',
-                            email: credentials.email
-                        };
-                    }
-
-                    return null;
-
-                } catch (error: any) {
-                    console.error("Credentials Auth Error:", error.message);
-                    throw new Error(error.message);
+                    throw new Error(data.detail || "Authentication failed");
                 }
-            }
-        })
+
+                if (data.IdToken) {
+                    return {
+                        id: credentials.email,
+                        name: "User",
+                        email: credentials.email,
+                    };
+                }
+                return null;
+            },
+        }),
     ],
 
     session: {
         strategy: "jwt",
-        maxAge: 7 * 24 * 60 * 60, // 7 days
+        maxAge: 7 * 24 * 60 * 60,
     },
 
     secret: process.env.NEXTAUTH_SECRET,
@@ -140,26 +149,23 @@ const handler = NextAuth({
         secret: process.env.NEXTAUTH_SECRET,
 
         async encode({ secret, token, maxAge }) {
-            const jwtPayload = {
+            const payload = {
                 sub: token?.sub || token?.userId,
                 name: token?.name,
                 email: token?.email,
                 iat: Math.floor(Date.now() / 1000),
                 exp: Math.floor(Date.now() / 1000) + (maxAge || 7 * 24 * 60 * 60),
             };
-
-            return jwt.sign(jwtPayload, secret, { algorithm: 'HS256' });
+            return jwt.sign(payload, secret, { algorithm: "HS256" });
         },
 
         async decode({ secret, token }) {
             try {
-                const decoded = jwt.verify(token!, secret, {
-                    algorithms: ['HS256'],
-                    maxAge: '7d' // Additional validation
+                return jwt.verify(token!, secret, {
+                    algorithms: ["HS256"],
+                    maxAge: "7d",
                 }) as JWT;
-                return decoded;
-            } catch (error) {
-                console.error("JWT decode error:", error);
+            } catch {
                 return null;
             }
         },
@@ -167,78 +173,79 @@ const handler = NextAuth({
 
     callbacks: {
         async signIn({ user, account, profile }) {
-            // Rate limiting check could go here
-            console.log(`Sign in attempt for: ${user.email}`);
-
-            if (!user.email) {
-                return false;
-            }
+            if (!user.email) return false;
 
             try {
-                try {
-                    await cognitoClient.send(new AdminGetUserCommand({
-                        UserPoolId: process.env.COGNITO_USER_POOL_ID!,
-                        Username: user.email,
-                    }));
-                    return true;
+                // Social providers: ensure user exists and is CONFIRMED (no FORCE_CHANGE_PASSWORD)
+                if (account?.provider === "google" || account?.provider === "linkedin") {
+                    const givenName =
+                        (profile as any)?.given_name || user.name?.split(" ")[0] || "User";
+                    const familyName =
+                        (profile as any)?.family_name ||
+                        user.name?.split(" ").slice(1).join(" ") ||
+                        "";
 
-                } catch (error: any) {
-                    if (error.name !== 'UserNotFoundException') {
-                        throw error;
-                    }
-                }
+                    // 1) already in pool?
+                    let sub = await getCognitoSubByEmail(user.email);
 
-                // Create new user
-                let givenName = 'User';
-                let familyName = '';
-
-                if (account?.provider === 'google' || account?.provider === 'linkedin') {
-                    givenName = (profile as any)?.given_name || user.name?.split(' ')[0] || 'User';
-                    familyName = (profile as any)?.family_name || user.name?.split(' ').slice(1).join(' ') || '';
-                }
-
-                const createUserResponse = await cognitoClient.send(new AdminCreateUserCommand({
-                    UserPoolId: process.env.COGNITO_USER_POOL_ID!,
-                    Username: user.email,
-                    UserAttributes: [
-                        { Name: 'email', Value: user.email },
-                        { Name: 'email_verified', Value: 'true' },
-                        { Name: 'given_name', Value: givenName },
-                        { Name: 'family_name', Value: familyName },
-                    ],
-                    MessageAction: 'SUPPRESS'
-                }));
-
-                if (createUserResponse.User) {
-                    const cognitoUserId = createUserResponse.User.Attributes?.find(attr => attr.Name === 'sub')?.Value;
-                    if (cognitoUserId) {
-                        const backendUrl = FILES_API_URL;
-                        await fetch(`${backendUrl}/auth/social-signup`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                user_id: cognitoUserId,
-                                email: user.email,
-                                name: `${givenName} ${familyName}`,
+                    // 2) if not, create + set permanent password to CONFIRM
+                    if (!sub) {
+                        await cognitoClient.send(
+                            new AdminCreateUserCommand({
+                                UserPoolId: process.env.COGNITO_USER_POOL_ID!,
+                                Username: user.email,
+                                UserAttributes: [
+                                    { Name: "email", Value: user.email },
+                                    { Name: "email_verified", Value: "true" },
+                                    { Name: "given_name", Value: givenName },
+                                    { Name: "family_name", Value: familyName },
+                                ],
+                                MessageAction: "SUPPRESS",
                             })
-                        });
+                        );
+
+                        await cognitoClient.send(
+                            new AdminSetUserPasswordCommand({
+                                UserPoolId: process.env.COGNITO_USER_POOL_ID!,
+                                Username: user.email,
+                                Password: randomStrongPassword(),
+                                Permanent: true,
+                            })
+                        );
+
+                        sub = await getCognitoSubByEmail(user.email);
+                        if (!sub) throw new Error("Failed to obtain Cognito sub after creation");
                     }
+
+                    // 3) create Dynamo profile with that exact sub (idempotent on backend):contentReference[oaicite:1]{index=1}
+                    await fetch(`${FILES_API_URL}/auth/social-signup`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            user_id: sub,
+                            email: user.email,
+                            name: `${givenName} ${familyName}`,
+                        }),
+                    });
+
+                    return true;
                 }
 
+                // Credentials flow: nothing special here
                 return true;
-
-            } catch (error) {
-                console.error("Error in signIn callback:", error);
+            } catch (err) {
+                console.error("Error in signIn callback:", err);
                 return false;
             }
         },
 
-        async jwt({ token, user, account }) {
+        async jwt({ token, user }) {
+            // First pass (right after signIn) we have user; resolve sub once
             if (user?.email) {
-                const cognitoUserId = await getCognitoUserId(user.email);
-                if (cognitoUserId) {
-                    token.sub = cognitoUserId;
-                    token.userId = cognitoUserId;
+                const sub = await getCognitoSubByEmail(user.email);
+                if (sub) {
+                    token.sub = sub;
+                    token.userId = sub;
                 }
                 token.email = user.email;
                 token.name = user.name;
@@ -251,8 +258,8 @@ const handler = NextAuth({
                 session.user.id = token.sub as string;
             }
 
-            // Generate fresh JWT for each session
-            const accessToken = jwt.sign(
+            // sign a short-lived app token (same as you had)
+            session.accessToken = jwt.sign(
                 {
                     sub: token.sub,
                     name: token.name,
@@ -261,29 +268,26 @@ const handler = NextAuth({
                     exp: token.exp as number,
                 },
                 process.env.NEXTAUTH_SECRET!,
-                { algorithm: 'HS256' }
+                { algorithm: "HS256" }
             );
-
-            session.accessToken = accessToken;
 
             return session;
         },
     },
 
     pages: {
-        signIn: '/login',
-        error: '/login',
+        signIn: "/login",
+        error: "/login",
     },
 
-    // Production security settings
     cookies: {
         sessionToken: {
             name: `__Secure-next-auth.session-token`,
             options: {
                 httpOnly: true,
-                sameSite: 'lax',
-                path: '/',
-                secure: true, // Always use secure cookies in production
+                sameSite: "lax",
+                path: "/",
+                secure: true,
             },
         },
     },

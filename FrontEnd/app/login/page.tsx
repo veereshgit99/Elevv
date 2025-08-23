@@ -67,6 +67,36 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams();
+  const [showConfirmed, setShowConfirmed] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("confirmed") === "1") {
+      setShowConfirmed(true);
+
+      // Clear query param
+      const url = new URL(window.location.href);
+      url.searchParams.delete("confirmed");
+      window.history.replaceState({}, "", url.toString());
+
+      // Auto-hide
+      const t = setTimeout(() => setShowConfirmed(false), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("deleted") === "1") {
+      setShowDeleted(true);
+
+      const url = new URL(window.location.href);
+      url.searchParams.delete("deleted");
+      window.history.replaceState({}, "", url.toString());
+
+      const t = setTimeout(() => setShowDeleted(false), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // If user is authenticated, redirect to dashboard
@@ -133,6 +163,20 @@ export default function LoginPage() {
           <Logo variant="light" size="md" showText={true} className="font-bold text-xl" />
         </div>
       </header>
+
+      {/* ✅ Success message after account confirmation */}
+      {showConfirmed && (
+        <div className="px-4 py-3 text-sm text-black-800 text-center">
+          Your account has been confirmed. Please sign in.
+        </div>
+      )}
+
+      {showDeleted && (
+        <div className="px-4 py-3 text-sm text-black-800 text-center">
+          Your account was deleted. You can sign in again anytime.
+        </div>
+      )}
+
 
       {/* Main */}
       <div className="flex items-start justify-center min-h-[80vh] px-4 pt-16">
