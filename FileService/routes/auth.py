@@ -115,7 +115,23 @@ async def login_user(request: UserLoginRequest):
                 'SECRET_HASH': get_secret_hash(request.email),
             }
         )
-        return response['AuthenticationResult']
+        
+    # --- THIS IS THE FIX ---
+        # Step 2: Get the user's details to find their unique ID ('sub')
+        access_token = response['AuthenticationResult']['AccessToken']
+        user_info = cognito_client.get_user(AccessToken=access_token)
+        
+        user_id = next((attr['Value'] for attr in user_info['UserAttributes'] if attr['Name'] == 'sub'), None)
+
+        if not user_id:
+            raise HTTPException(status_code=500, detail="Could not retrieve user ID after login.")
+
+        # Step 3: Return both the tokens AND the user_id
+        return {
+            "AuthenticationResult": response['AuthenticationResult'],
+            "UserId": user_id
+        }
+        # --- END OF FIX ---
     except cognito_client.exceptions.UserNotConfirmedException:
         raise HTTPException(
             status_code=401,

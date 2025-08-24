@@ -173,7 +173,7 @@ export default function LoginPage() {
 
       {showDeleted && (
         <div className="px-4 py-3 text-sm text-black-800 text-center">
-          Your account was deleted. You can sign in again anytime.
+          Your account was deleted. You can sign up again anytime.
         </div>
       )}
 

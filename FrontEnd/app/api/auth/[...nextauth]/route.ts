@@ -143,13 +143,15 @@ const handler = NextAuth({
                     throw new Error(data.detail || "Authentication failed");
                 }
 
-                if (data.IdToken) {
+                // --- THIS IS THE FIX ---
+                // Use the UserId from the backend as the user's ID
+                if (data.AuthenticationResult && data.UserId) {
                     return {
-                        id: credentials.email,
-                        name: "User",
+                        id: data.UserId, // Use the real Cognito User ID
                         email: credentials.email,
                     };
                 }
+                // --- END OF FIX ---
                 return null;
             },
         }),
