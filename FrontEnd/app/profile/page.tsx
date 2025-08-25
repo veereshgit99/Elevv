@@ -161,7 +161,6 @@ export default function ProfilePage() {
 
       // Make sure we have the access token
       if (!session?.accessToken) {
-        console.error('No access token available')
         return
       }
 
@@ -216,7 +215,6 @@ export default function ProfilePage() {
         setResumes(transformedResumes)
 
       } catch (error) {
-        console.error("Failed to load profile data:", error)
 
         // Fallback to session data if API fails
         if (session.user) {
@@ -268,7 +266,6 @@ export default function ProfilePage() {
 
           setAnalysisHistory(transformedAnalyses)
         } catch (error) {
-          console.error("Failed to load analyses:", error)
         } finally {
           setIsLoadingAnalyses(false)
         }
@@ -348,7 +345,6 @@ export default function ProfilePage() {
     }
 
     if (!session?.accessToken) {
-      console.error('No access token available')
       return
     }
 
@@ -368,7 +364,6 @@ export default function ProfilePage() {
       }))
       setResumes(transformedResumes)
     } catch (error) {
-      console.error("Failed to delete resume:", error)
     } finally {
       setIsRefreshingResumes(false) // Hide loading
     }
@@ -377,7 +372,6 @@ export default function ProfilePage() {
   // Update handleMakePrimary to show loading
   const handleMakePrimary = async (resumeId: string) => {
     if (!session?.accessToken) {
-      console.error('No access token available')
       return
     }
 
@@ -392,7 +386,6 @@ export default function ProfilePage() {
         isPrimary: resume.id === resumeId
       })))
     } catch (error) {
-      console.error("Failed to update primary resume:", error)
     } finally {
       setIsRefreshingResumes(false) // Hide loading
     }
@@ -411,7 +404,6 @@ export default function ProfilePage() {
   const handleSaveEdit = async () => {
     if (editingResume && editForm.name.trim() && editForm.jobTitle.trim()) {
       if (!session?.accessToken) {
-        console.error('No access token available')
         return
       }
 
@@ -436,7 +428,6 @@ export default function ProfilePage() {
         setIsEditModalOpen(false)
 
       } catch (error) {
-        console.error("Failed to update resume:", error)
       } finally {
         setIsRefreshingResumes(false) // Hide loading
       }
@@ -478,7 +469,6 @@ export default function ProfilePage() {
 
       try {
         if (!session?.accessToken) {
-          console.error('No access token available');
           setIsSaving(false);
           return;
         }
@@ -497,7 +487,6 @@ export default function ProfilePage() {
         setPersonalData(editPanelData);
 
       } catch (error) {
-        console.error("Failed to update profile:", error);
         // Optionally, show an error message to the user
       } finally {
         setIsSaving(false); // Stop the loading state
@@ -1429,13 +1418,11 @@ export default function ProfilePage() {
                                   setResumes(transformedResumes)
                                 }
                               } catch (error) {
-                                console.error("Failed to refresh resumes:", error)
                               } finally {
                                 setIsRefreshingResumes(false) // Hide loading
                               }
                             }}
                             onUploadError={(error) => {
-                              console.error("Upload error:", error)
                               setIsRefreshingResumes(false) // Hide loading on error too
                             }}
                           />

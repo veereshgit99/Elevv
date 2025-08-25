@@ -44,7 +44,6 @@ class ResumeOptimizerAgent(BaseAgent):
             self.llm_model = genai.GenerativeModel("gemini-2.5-pro")
         else:
             self.llm_model = None
-        self.logger.info("LLM-based ResumeOptimizerAgent initialized with model: Gemini 2.5 Pro")
 
     async def process(self, context: DocumentContext) -> AgentResult:
         """
@@ -159,7 +158,7 @@ class ResumeOptimizerAgent(BaseAgent):
             # Make the LLM API call
             response = await self.llm_model.generate_content_async(
                 [system_prompt, user_prompt],
-                generation_config={"response_mime_type": "application/json", "temperature": 0.4},
+                generation_config={"response_mime_type": "application/json", "temperature": 0.0},
                 safety_settings=GEMINI_SAFETY_SETTINGS
             )
             
@@ -200,7 +199,7 @@ class ResumeOptimizerAgent(BaseAgent):
                     "match_after_enhancement": llm_output.get("match_after_enhancement", None),
                     "llm_model_used": "gemini-2.5-pro"
                 },
-                confidence=overall_confidence,
+                confidence=1.0,
                 processing_time=0.0 # Will be updated by _execute_with_timing
             )
             

@@ -46,7 +46,6 @@ class DocumentAnalysisOrchestrator:
         # Initialize S3 client for downloading
         self.s3_client = boto3.client("s3")
         self.logger = logging.getLogger(f"{__name__}.Orchestrator")
-        self.logger.info("DocumentAnalysisOrchestrator initialized.")
 
     def _initialize_agents(self):
         """Initializes all available agents."""
@@ -62,7 +61,6 @@ class DocumentAnalysisOrchestrator:
         Extracts plain text from file content (bytes) based on its MIME type.
         Currently supports PDF.
         """
-        self.logger.info(f"Extracting text from content with MIME type: {mime_type}")
         if "pdf" in mime_type:
             try:
                 # Open the PDF from the in-memory bytes
@@ -88,7 +86,6 @@ class DocumentAnalysisOrchestrator:
         """
         file_service_url = f"{FILES_API_URL}/users/{user_id}/resume/{resume_id}/s3-link"
         try:
-            self.logger.info(f"Fetching resume details for user {user_id}, resume {resume_id}")
             
             # Add the Authorization header
             headers = {
@@ -115,8 +112,6 @@ class DocumentAnalysisOrchestrator:
         Downloads the resume content from S3 given its bucket and key.
         """
         try:
-            # The line that split the path has been removed, as we now get the bucket and key directly.
-            self.logger.info(f"Downloading resume from S3: bucket={bucket_name}, key={key}")
             response = self.s3_client.get_object(Bucket=bucket_name, Key=key)
             return response['Body'].read()
         except ClientError as e:
@@ -140,7 +135,6 @@ class DocumentAnalysisOrchestrator:
         """
         Main orchestration method that now fetches the resume internally.
         """
-        self.logger.info(f"Starting orchestration for user {user_id}")
         final_results = {}
         
         # --- PHASE 1: Resume Processing ---
@@ -206,7 +200,6 @@ class DocumentAnalysisOrchestrator:
         
         final_results["resume_classification"] = resume_context.previous_results[AgentType.CLASSIFIER].data
         final_results["resume_entities"] = resume_context.previous_results[AgentType.ENTITY_EXTRACTOR].data
-        self.logger.info(f"Resume {resume_file_id} processed: {final_results['resume_classification']['primary_classification']}")
         
         final_results["jd_classification"] = jd_context.previous_results[AgentType.CLASSIFIER].data
         
@@ -253,7 +246,6 @@ class DocumentAnalysisOrchestrator:
         """
         Runs only the resume optimization agent.
         """
-        self.logger.info("Starting on-demand resume optimization")
         
         # --- FIXED: Include full content for the Resume Optimizer ---
         resume_context = DocumentContext(
@@ -296,7 +288,6 @@ class DocumentAnalysisOrchestrator:
         if not agent:
             raise ValueError(f"Agent of type {agent_type.value} not found.")
         
-        self.logger.info(f"Running agent: {agent_type.value} for file {context.file_id}")
         result = await agent._execute_with_timing(context)
         
         # --- NEW: Add a debugging check here ---
@@ -364,7 +355,6 @@ class DocumentAnalysisOrchestrator:
         # --- NEW: Step 2: Use the LayoutAgent to intelligently split the document ---
         layout_result = await self._run_agent(AgentType.LAYOUT_ANALYZER, context)
         sections = layout_result.data.get("sections", {"full_content": content})
-        self.logger.info(f"Document split into {len(sections)} sections for parallel processing.")
 
         # --- Step 3: Run entity extraction on each section in parallel ---
         tasks = []

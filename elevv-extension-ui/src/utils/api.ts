@@ -18,9 +18,6 @@ export interface Resume {
  * @returns A promise that resolves to the list of resumes.
  */
 export async function fetchResumes(token: string): Promise<Resume[]> {
-    console.log('Fetching resumes with token:', token?.substring(0, 20) + '...');
-    console.log('API URL:', `${FILES_API_URL}/resumes`);
-
     const response = await fetch(`${FILES_API_URL}/resumes`, {
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -28,17 +25,12 @@ export async function fetchResumes(token: string): Promise<Resume[]> {
         },
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-
     if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error Response:', errorText);
         throw new Error(`Failed to fetch resumes from the server. Status: ${response.status}, Error: ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('Resumes data:', data);
     return data;
 }
 

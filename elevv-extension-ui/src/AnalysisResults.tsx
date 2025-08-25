@@ -54,17 +54,13 @@ export function AnalysisResults({
                     // Check if enhancement data is valid
                     if (enhancementData.suggestions && enhancementData.suggestions.length > 0) {
                         setHasValidEnhancements(true)
-                        console.log(`Found valid enhancement results for analysis_id: ${analysisId}`)
                     } else {
                         setHasValidEnhancements(false)
-                        console.log(`Invalid enhancement data for analysis_id: ${analysisId}`)
                     }
                 } else {
                     setHasValidEnhancements(false)
-                    console.log(`No enhancement results found for analysis_id: ${analysisId}`)
                 }
             } catch (error) {
-                console.error('Error checking for existing enhancements:', error)
                 setHasValidEnhancements(false)
             }
         }

@@ -84,7 +84,6 @@ export default function ChromeExtensionPopup() {
         // Get cached data first - this should be instant
         chrome.runtime.sendMessage({ type: 'GET_AUTH_STATUS' }, (response) => {
           if (chrome.runtime.lastError) {
-            console.error('Auth check error:', chrome.runtime.lastError.message);
             setIsAuthenticated(false);
             setUser(null);
             setIsCheckingAuth(false);
@@ -96,17 +95,11 @@ export default function ChromeExtensionPopup() {
             setUser(response);
             setIsAuthenticated(true);
             setIsCheckingAuth(false);
-            console.log('User authenticated from cache:', response);
-            console.log('Available user properties:', Object.keys(response));
-            console.log('Full user object:', JSON.stringify(response, null, 2));
-            console.log('AccessToken field exists:', 'accessToken' in response);
-            console.log('Other token fields:', Object.keys(response).filter(key => key.toLowerCase().includes('token')));
 
             // Background refresh to ensure data is fresh (silent update)
             setTimeout(() => {
               chrome.runtime.sendMessage({ type: 'REFRESH_AUTH_STATUS' }, (freshResponse) => {
                 if (chrome.runtime.lastError) {
-                  console.log('Background refresh failed - keeping cached data');
                   return;
                 }
 
@@ -114,24 +107,19 @@ export default function ChromeExtensionPopup() {
                   // Silently update with fresh data if different
                   if (JSON.stringify(freshResponse) !== JSON.stringify(response)) {
                     setUser(freshResponse);
-                    console.log('User data refreshed silently:', freshResponse);
                   }
                 } else {
                   // User logged out - update UI
                   setIsAuthenticated(false);
                   setUser(null);
-                  console.log('User logged out, updating UI');
                 }
               });
             }, 100); // Small delay to ensure UI renders first
           } else {
-            // No cached user - check fresh (this will be rare)
-            console.log('No cached user found, checking fresh auth...');
             chrome.runtime.sendMessage({ type: 'REFRESH_AUTH_STATUS' }, (freshResponse) => {
               if (freshResponse && Object.keys(freshResponse).length > 0) {
                 setUser(freshResponse);
                 setIsAuthenticated(true);
-                console.log('Fresh login detected:', freshResponse);
               } else {
                 setIsAuthenticated(false);
                 setUser(null);
@@ -144,8 +132,6 @@ export default function ChromeExtensionPopup() {
         // Disconnect the port when the component unmounts
         return () => port.disconnect();
       } else {
-        // Fallback for development environment
-        console.log('Running in development mode - skipping auth check');
         setIsAuthenticated(true);
         setUser({
           id: 'dev-user',
@@ -156,7 +142,6 @@ export default function ChromeExtensionPopup() {
         setIsCheckingAuth(false);
       }
     } catch (error) {
-      console.error('Authentication check failed:', error);
       setIsAuthenticated(false);
       setUser(null);
       setIsCheckingAuth(false);
@@ -170,7 +155,7 @@ export default function ChromeExtensionPopup() {
     const loadUserResumes = async () => {
       try {
         const token = user.accessToken || (user as any).access_token || (user as any).token || (user as any).jwt;
-        if (!token) { console.error('No access token found for user.'); return; }
+        if (!token) { return; }
         if (token === 'dev-mock-token-12345') {
           const mockResumes: Resume[] = [{ resume_id: 'dev-resume-1', file_name: 'John_Doe_Resume.pdf', is_primary: true }, { resume_id: 'dev-resume-2', file_name: 'John_Doe_Technical_Resume.pdf', is_primary: false }];
           setUserResumes(mockResumes);
@@ -184,7 +169,6 @@ export default function ChromeExtensionPopup() {
           setSelectedResume(primaryResume.resume_id);
         }
       } catch (error) {
-        console.error("Failed to fetch resumes:", error);
       }
     };
 
@@ -197,7 +181,6 @@ export default function ChromeExtensionPopup() {
           if (tabs[0]?.id) {
             chrome.tabs.sendMessage(tabs[0].id, { action: "parseJob" }, (response) => {
               if (chrome.runtime.lastError) {
-                console.log("Could not establish connection.");
                 setLoadingStep('done');
                 return;
               }
@@ -254,7 +237,6 @@ export default function ChromeExtensionPopup() {
       }
 
       if (message?.type === "JOB_DATA_UPDATED") {
-        console.log("Received updated job data:", message.payload);
         const { jobTitle, companyName, jobDescription } = message.payload || {};
         setJobTitle(jobTitle || "");
         setCompanyName(companyName || "");
@@ -308,7 +290,6 @@ export default function ChromeExtensionPopup() {
   };  // --- UPDATED handleAnalyze function to call ONLY analysis API ---
   const handleAnalyze = async () => {
     if (!user?.accessToken || !selectedResume) {
-      console.error('Authentication error or no resume selected.');
       return;
     }
 
@@ -324,7 +305,6 @@ export default function ChromeExtensionPopup() {
 
       // Check if this is development mode
       if (user.accessToken === 'dev-mock-token-12345') {
-        console.log('Development mode: Using mock analysis data');
 
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -359,13 +339,10 @@ export default function ChromeExtensionPopup() {
           },
         });
 
-        console.log('Mock analysis data set successfully');
         setCurrentView('results');
         return;
       }
 
-      // Step 1: Get analysis results only (production mode)
-      console.log('Starting job analysis...');
       const analysisResult = await startJobAnalysis(user.accessToken, analysisRequestData);
 
       // Map analysis data for the results view
@@ -378,11 +355,9 @@ export default function ChromeExtensionPopup() {
         rawData: analysisResult, // Store for enhancement generation
       });
 
-      console.log('Analysis completed successfully');
       setCurrentView('results');
 
     } catch (error) {
-      console.error("Analysis API failed:", error);
       // TODO: Add error state handling for user feedback
     } finally {
       setIsAnalyzing(false);
@@ -394,7 +369,6 @@ export default function ChromeExtensionPopup() {
   // --- NEW: Handle viewing existing enhancements ---
   const handleViewEnhancements = () => {
     if (!analysisData.analysisId) {
-      console.error('No analysis ID available for enhancement retrieval');
       handleTailorResume();
       return;
     }
@@ -408,7 +382,6 @@ export default function ChromeExtensionPopup() {
         setEnhancementsData(parsedEnhancements);
         setCurrentView('enhancements');
       } catch (error) {
-        console.error('Failed to parse stored enhancement results:', error);
         // Fallback to generate new enhancements
         handleTailorResume();
       }
@@ -420,7 +393,6 @@ export default function ChromeExtensionPopup() {
 
   const handleTailorResume = async () => {
     if (!user?.accessToken || !analysisData.rawData) {
-      console.error('No analysis data available for enhancement generation');
       return;
     }
 
@@ -429,8 +401,6 @@ export default function ChromeExtensionPopup() {
     try {
       // Check if this is development mode
       if (user.accessToken === 'dev-mock-token-12345') {
-        console.log('Development mode: Using mock enhancement data');
-
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -480,13 +450,10 @@ export default function ChromeExtensionPopup() {
           ]
         }));
 
-        console.log('Mock enhancement data set successfully');
         setCurrentView('enhancements');
         return;
       }
 
-      // Production mode - call the enhancement API
-      console.log('Getting enhancement suggestions...');
       const enhancementResult = await optimizeResume(user.accessToken, analysisData.rawData);
 
       // Map enhancement data for the enhancements view  
@@ -497,11 +464,9 @@ export default function ChromeExtensionPopup() {
       const enhancementKey = `enhancements_${analysisData.analysisId}`;
       sessionStorage.setItem(enhancementKey, JSON.stringify(mappedEnhancementData));
 
-      console.log('Enhancement generation completed successfully');
       setCurrentView('enhancements');
 
     } catch (error) {
-      console.error("Enhancement API failed:", error);
       // TODO: Add error state handling for user feedback
     } finally {
       setIsGeneratingEnhancements(false);
@@ -523,7 +488,6 @@ export default function ChromeExtensionPopup() {
     // Send the REFRESH message to force a new check
     chrome.runtime.sendMessage({ type: 'REFRESH_AUTH_STATUS' }, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('Auth refresh error:', chrome.runtime.lastError.message);
         setIsAuthenticated(false);
         setUser(null);
       } else if (response && Object.keys(response).length > 0) {

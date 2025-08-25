@@ -134,7 +134,9 @@ class DocumentClassifierAgent(BaseAgent):
                           "confidence": 0.15,
                           "reasoning": "Input content was empty or too short.",
                           "file_type": getattr(context, "file_type", None),
-                          "llm_model_used": "gemini-2.5-flash-lite"}
+                          "llm_model_used": "gemini-2.5-flash-lite"},
+                    confidence=1,
+                    processing_time=0.0
                 )
 
             system_prompt = (

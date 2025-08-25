@@ -14,14 +14,11 @@ async function checkAuthStatus() {
             };
             // Save the user session to persistent storage
             await chrome.storage.local.set({ user: user });
-            console.log('Auth status updated and saved to storage. User is:', user.email);
         } else {
             // Remove the user from storage on logout
             await chrome.storage.local.remove('user');
-            console.log('Auth status updated. User logged out, session removed from storage.');
         }
     } catch (error) {
-        console.error('Error checking auth status:', error);
         // Ensure user is cleared from storage on error
         await chrome.storage.local.remove('user');
     }
@@ -60,7 +57,6 @@ chrome.action.onClicked.addListener((tab) => {
 // Listen for when the side panel is connected (opened)
 chrome.runtime.onConnect.addListener(port => {
     if (port.name === 'sidepanel') {
-        console.log('Side panel opened, refreshing auth status...');
         checkAuthStatus();
     }
 });
@@ -68,7 +64,6 @@ chrome.runtime.onConnect.addListener(port => {
 // Refresh auth when user activity is detected on your website
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (tab.url && tab.url.startsWith('https://elevv.net') && changeInfo.status === 'complete') {
-        console.log('Website activity detected, refreshing auth status...');
         checkAuthStatus();
     }
 });

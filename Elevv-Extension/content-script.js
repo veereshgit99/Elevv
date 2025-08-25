@@ -48,7 +48,6 @@ class JobParser {
           }
         }
       } catch (error) {
-        console.warn(`Selector failed: ${selector}`, error);
         continue;
       }
     }
@@ -245,7 +244,6 @@ function handleUrlChange() {
 const observer = new MutationObserver((mutations) => {
   if (location.href !== lastUrl) {
     lastUrl = location.href;
-    console.log("URL changed to:", lastUrl);
     handleUrlChange();
   }
 });

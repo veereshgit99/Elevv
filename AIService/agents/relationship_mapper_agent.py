@@ -169,8 +169,6 @@ class RelationshipMapperAgent(BaseAgent):
         else:
             self.models = None
             self.task_models = None
-            
-        self.logger.info("Multi-model RelationshipMapperAgent initialized")
 
     async def _call_gemini_model(self, model_name: str, prompt: str) -> Any:
         """Call Gemini models"""
@@ -300,7 +298,7 @@ class RelationshipMapperAgent(BaseAgent):
 
 
     async def _map_experience(self, resume_entities: Dict, jd_entities: Dict) -> List[Dict]:
-        
+
         prompt = (
             "Match the candidate's REAL work experience to JD responsibilities.\n"
             "\nRULES:\n"
@@ -326,8 +324,8 @@ class RelationshipMapperAgent(BaseAgent):
         prompt = (
             "Identify critical skill or experience gaps where the resume shows no direct evidence for a mandatory job requirement.\n\n"
             f"IMPORTANT: Be extremely concise. Use short phrases, not full sentences.\n"
-            f"Resume Entities:\n{json.dumps(resume_entities)}\n\n"
-            f"Job Description Entities:\n{json.dumps(jd_entities)}\n\n"
+            f"Resume:\n{json.dumps(resume_entities)}\n\n"
+            f"Job Description:\n{json.dumps(jd_entities)}\n\n"
             "Return ONLY a JSON array of objects, each with keys: 'jd_requirement', 'type' ('skill_gap' or 'experience_gap'), and 'reasoning'. "
             "If no major gaps are found, return []."
         )
@@ -372,10 +370,8 @@ class RelationshipMapperAgent(BaseAgent):
                 self._identify_gaps(resume_entities, jd_entities),
                 self._identify_strong_points(resume_entities, jd_entities)
             ]
-
-            self.logger.info("Starting parallel multi-model processing...")
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             # Handle results and exceptions
             matched_skills, matched_experience, identified_gaps, strong_points = [], [], [], []
             
@@ -405,8 +401,6 @@ class RelationshipMapperAgent(BaseAgent):
                 "strong_points_in_resume": strong_points if isinstance(strong_points, list) else []
             }
 
-
-            self.logger.info("Multi-model processing completed successfully")
             return AgentResult(
                 agent_type=self.agent_type,
                 success=True,

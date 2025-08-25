@@ -89,6 +89,6 @@ class BaseAgent(ABC):
                 success=False,
                 data={},
                 confidence=0.0,
-                processing_time=time.time() - start_time,
+                processing_time=0.0,
                 error=str(e)
             )

@@ -69,10 +69,8 @@ export default function AnalysisResultsPage() {
           // Fetch user profile with token
           const profileData = await fetchUserProfile(token)
           setUserProfile(profileData)
-          console.log("User profile fetched:", profileData)
 
         } catch (error) {
-          console.error("Failed to fetch dashboard data:", error)
           setError("Failed to load user data. Please try refreshing the page.")
         } finally {
           setIsLoadingData(false)
@@ -127,7 +125,6 @@ export default function AnalysisResultsPage() {
 
     try {
       if (!analysisData) {
-        console.error('No analysis data available')
         return
       }
       const optimizationResult = await optimizeResume(analysisData)
@@ -135,7 +132,6 @@ export default function AnalysisResultsPage() {
       sessionStorage.setItem('enhancement_results', JSON.stringify(optimizationResult))
       router.push('/enhancements')
     } catch (error) {
-      console.error('Failed to generate enhancements:', error)
       // Show error message
     } finally {
       setIsAnalyzing(false)

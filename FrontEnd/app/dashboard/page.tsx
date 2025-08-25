@@ -208,7 +208,6 @@ export default function DashboardPage() {
             setSelectedResume(primaryResume.resume_id)
           }
         } catch (error) {
-          console.error("Failed to fetch dashboard data:", error)
           setError("Failed to load user data. Please try refreshing the page.")
         } finally {
           setIsLoadingData(false)
@@ -241,19 +240,10 @@ export default function DashboardPage() {
       // Store the results
       storeAnalysisResults(analysisData)
 
-      // Log for debugging
-      console.log('Analysis completed:', {
-        matchPercentage: analysisData.overall_match_percentage,
-        resumeId: analysisData.resume_id,
-        gaps: analysisData.relationship_map.relationship_map.identified_gaps_in_resume.length,
-        matchedSkills: analysisData.relationship_map.relationship_map.matched_skills.length
-      })
-
       // Navigate to results page - don't reset isAnalyzing here to prevent button flash
       router.push('/analysis-results')
 
     } catch (error) {
-      console.error('Analysis failed:', error)
       setError(error instanceof Error ? error.message : 'Analysis failed. Please try again.')
       setIsAnalyzing(false) // Only reset on error
     }
@@ -482,7 +472,6 @@ export default function DashboardPage() {
                           }
 
                         } catch (error) {
-                          console.error("Failed to refresh resumes:", error);
                           setError("Failed to refresh resume list.");
                         } finally {
                           setIsLoadingData(false); // Stop the skeleton loader
@@ -491,7 +480,6 @@ export default function DashboardPage() {
                       // --- END OF FIX ---
                     }}
                     onUploadError={(error) => {
-                      console.error("Upload error:", error)
                       // You could show a toast notification here
                     }}
                   />

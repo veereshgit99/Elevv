@@ -87,10 +87,8 @@ export default function EnhancementsPage() {
           // Fetch user profile with token
           const profileData = await fetchUserProfile(token)
           setUserProfile(profileData)
-          console.log("User profile fetched:", profileData)
 
         } catch (error) {
-          console.error("Failed to fetch dashboard data:", error)
           setError("Failed to load user data. Please try refreshing the page.")
         } finally {
           setIsLoadingData(false)
@@ -114,7 +112,6 @@ export default function EnhancementsPage() {
         router.push('/analysis-results')
 
       } catch (err) {
-        console.error('Failed to load enhancements:', err)
         setError('Failed to load enhancement suggestions.')
         setIsLoading(false)
       }
@@ -133,7 +130,6 @@ export default function EnhancementsPage() {
       setCopiedText(`${index}`)
       setTimeout(() => setCopiedText(null), 2000)
     } catch (err) {
-      console.error("Failed to copy text: ", err)
     }
   }
 

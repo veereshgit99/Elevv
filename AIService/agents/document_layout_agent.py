@@ -70,7 +70,6 @@ class DocumentLayoutAgent(BaseAgent):
             self.llm_model = genai.GenerativeModel(MODEL_NAME)
         else:
             self.llm_model = None
-        self.logger.info(f"DocumentLayoutAgent initialized with model: {MODEL_NAME}")
 
     async def _call_llm(self, system_prompt: str, user_prompt: str, retries: int = 2):
         """Call Gemini with small exponential backoff to ride out sporadic 500s."""

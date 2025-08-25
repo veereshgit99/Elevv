@@ -23,8 +23,6 @@ export async function POST(request: Request) {
         });
 
         if (error) {
-            // Also log the specific error from the Resend response
-            console.error("Resend API Error:", error);
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
@@ -32,10 +30,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Email sent successfully!', data });
 
     } catch (error) {
-        // --- THIS IS THE CRUCIAL CHANGE ---
-        // Log the entire error object to see the full details
-        console.error("Caught an exception:", JSON.stringify(error, null, 2));
-
         return NextResponse.json({ error: 'An unexpected error occurred.' }, { status: 500 });
     }
 }

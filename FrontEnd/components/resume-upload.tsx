@@ -72,7 +72,6 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
 
                 // Read body for debugging and throw
                 const bodyText = await res.text();
-                console.error("S3 Response:", bodyText);
                 if (res.status >= 500) {
                     throw new Error(`S3 5xx (${res.status})`);
                 }
@@ -116,12 +115,6 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
             // Step 1: Get presigned URL using the API function
             setUploadProgress(10)
 
-            console.log('Getting upload URL for:', {
-                filename: selectedFile.name,
-                contentType: selectedFile.type,
-                jobTitle: jobTitle.trim()
-            })
-
             const token = session.accessToken as string
             const uploadData = await getResumeUploadUrl(
                 token,
@@ -140,8 +133,6 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
             setUploadProgress(100)
             setUploadStatus('success')
 
-            console.log('Resume uploaded successfully with ID:', resume_id)
-
             // Reset after success
             setTimeout(() => {
                 setSelectedFile(null)
@@ -155,7 +146,6 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
             }, 2000)
 
         } catch (error) {
-            console.error('Upload error:', error);
             setUploadStatus('error');
             if (error instanceof Error && /S3 5xx/.test(error.message)) {
                 setErrorMessage("S3 was busy for a moment. Please try again.");

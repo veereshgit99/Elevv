@@ -94,7 +94,6 @@ class EntityExtractorAgent(BaseAgent):
             self.llm_model = genai.GenerativeModel("gemini-2.5-flash-lite")
         else:
             self.llm_model = None
-        self.logger.info("LLM-based EntityExtractorAgent initialized with model: gemini-2.5-flash-lite")
 
     async def _call_llm(self, system_prompt: str, user_prompt: str, retries: int = 2):
         """Call Gemini with a couple of short retries to ride out 500s."""
@@ -227,7 +226,7 @@ class EntityExtractorAgent(BaseAgent):
                     "document_classification": None,
                     "llm_model_used": "gemini-2.5-flash-lite"
                 },
-                confidence=0.0,
+                confidence=1.0,
                 processing_time=0.0
             )
 

@@ -59,7 +59,6 @@ class JobMatchingAgent(BaseAgent):
             self.models = None
             self.task_models = None
             
-        self.logger.info("Optimized JobMatchingAgent initialized")
 
     def _normalize_response_data(self, data: Any) -> Union[List, Dict, float, str]:
         """Ensure data is in expected format"""
@@ -152,19 +151,28 @@ class JobMatchingAgent(BaseAgent):
             self.logger.error(f"Unknown model assignment for task: {task_name}")
             return {}
 
-    async def _calculate_match_score(self, relationship_map: Dict) -> float:
+    async def _calculate_match_score(self, resume_content, jd_content, relationship_map: Dict) -> float:
         """Calculate match percentage using fast model"""
-        
+
         prompt = (
-            "You are a quantitative analyst. Your ONLY task is to calculate a match percentage (0-100) based on the provided relationship map. "
-            "Follow these principles strictly:\n"
-            "- Prioritize 'matched_experience_to_responsibilities' most heavily.\n"
-            "- Increase the score for strong skill matches with evidence.\n"
-            "- Decrease the score significantly for 'identified_gaps_in_resume'.\n\n"
-            "- Deduct strongly for 'experience_gaps' than 'skill_gaps'.\n"
+            "You are a senior hiring manager with a quantitative, data-driven approach to talent analysis. Your task is to calculate a realistic job match percentage (0–100).\n\n"
+            "Inputs:\n"
+            "1) Resume Content (partial, up to 5000 chars)\n"
+            "2) Job Description Content (partial, up to 5000 chars)\n"
+            "3) Relationship Map (skills, experience, gaps, matches)\n\n"
+            "Scoring rules:\n"
+            "- **Special Rule for Simple JDs:** If the Job Description is very sparse (e.g., contains only 1-2 requirements) and the candidate meets all of them with no gaps identified in the relationship map, the score should be very high (90+) to reflect a perfect match for the limited criteria provided.\n"
+            "- Prioritize 'matched_experience_to_responsibilities'.\n"
+            "- Reward strong skill matches with clear resume evidence.\n"
+            "- Penalize 'identified_gaps_in_resume', with heavier deductions for experience gaps.\n"
+            "- Apply a small deduction if resume wording is weak or misaligned with the JD.\n"
+            "- Always combine evidence from both the relationship map AND the raw texts (JD + Resume).\n\n"
+            f"--- Resume Content ---\n{resume_content[:5000]}\n\n"
+            f"--- Job Description ---\n{jd_content[:5000]}\n\n"
             f"--- Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
             "Return ONLY a JSON object with a single key: 'match_percentage'."
         )
+
 
         result = await self._dispatch_to_model("calculate_match_score", prompt)
         return result.get("match_percentage", 0.0) if isinstance(result, dict) else 0.0
@@ -188,15 +196,16 @@ class JobMatchingAgent(BaseAgent):
             raise RuntimeError("API keys not configured for job matching.")
 
         try:
+            resume_content = context.content # The original resume content
+            jd_content = context.metadata.get('job_description', {}).get('content', 'Job Description content not available.')
+            
             relationship_map = context.previous_results[AgentType.RELATIONSHIP_MAPPER].data.get("relationship_map", {})
             if not relationship_map:
                 raise ValueError("Missing relationship map for job matching.")
-
-            self.logger.info("Starting parallel job matching analysis...")
             
             # Execute the two required tasks in parallel
             tasks = [
-                self._calculate_match_score(relationship_map),
+                self._calculate_match_score(resume_content, jd_content, relationship_map),
                 self._generate_strength_summary(relationship_map)
             ]
 
@@ -223,8 +232,6 @@ class JobMatchingAgent(BaseAgent):
                 "strength_summary": strength_summary
             }
             # --- END OF CORRECTION ---
-
-            self.logger.info("Parallel job matching analysis completed successfully")
             
             return AgentResult(
                 agent_type=self.agent_type,

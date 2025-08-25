@@ -14,13 +14,11 @@ export function storeAnalysisResults(results: AnalysisResponse): void {
         localStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(results))
         localStorage.setItem(ANALYSIS_TIMESTAMP_KEY, Date.now().toString())
     } catch (error) {
-        console.error('Failed to store analysis results:', error)
         // Fallback to sessionStorage if localStorage is full
         try {
             sessionStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(results))
             sessionStorage.setItem(ANALYSIS_TIMESTAMP_KEY, Date.now().toString())
         } catch (sessionError) {
-            console.error('Failed to store in sessionStorage:', sessionError)
         }
     }
 }
@@ -44,7 +42,6 @@ export function getStoredAnalysisResults(): AnalysisResponse | null {
 
         return null
     } catch (error) {
-        console.error('Failed to retrieve analysis results:', error)
         return null
     }
 }

@@ -255,7 +255,6 @@ const handler = NextAuth({
                 // Credentials flow: nothing special here
                 return true;
             } catch (err) {
-                console.error("Error in signIn callback:", err);
                 return false;
             }
         },

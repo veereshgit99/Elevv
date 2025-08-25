@@ -56,7 +56,6 @@ export default function AppHeader() {
                     const profile = await fetchUserProfile(session.accessToken as string)
                     setUserProfile(profile)
                 } catch (error) {
-                    console.error("Failed to fetch user profile for header:", error)
                 }
             }
         }
@@ -90,7 +89,6 @@ export default function AppHeader() {
             await new Promise((r) => setTimeout(r, 100));
             router.replace("/login?deleted=1");
         } catch (error) {
-            console.error("Error deleting account:", error);
             alert("Failed to delete account. Please try again.");
             setIsDeletingAccount(false);
         }
