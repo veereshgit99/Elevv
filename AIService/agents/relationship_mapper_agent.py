@@ -320,10 +320,14 @@ class RelationshipMapperAgent(BaseAgent):
         return result if isinstance(result, list) else []
 
     async def _identify_gaps(self, resume_entities: Dict, jd_entities: Dict) -> List[Dict]:
-        
+        # Print the resume and JD entities for debugging
+        print("Resume Entities:", json.dumps(resume_entities, indent=2))
+        print("JD Entities:", json.dumps(jd_entities, indent=2))
+
         prompt = (
             "Identify critical skill or experience gaps where the resume shows no direct evidence for a mandatory job requirement.\n\n"
-            f"IMPORTANT: Be extremely concise. Use short phrases, not full sentences.\n"
+            "Be extremely concise. Use short phrases, not full sentences.\n"
+            f"IMPORTANT: Only consider actual job requirements (Responsibilities or Qualifications). Ignore company background, mission, or domain descriptions.\n"
             f"Resume:\n{json.dumps(resume_entities)}\n\n"
             f"Job Description:\n{json.dumps(jd_entities)}\n\n"
             "Return ONLY a JSON array of objects, each with keys: 'jd_requirement', 'type' ('skill_gap' or 'experience_gap'), and 'reasoning'. "
