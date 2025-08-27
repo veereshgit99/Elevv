@@ -1,7 +1,7 @@
 # AIService/agents/orchestrator.py
 
 import logging
-import os
+import os, docx
 import uuid, json
 import fitz # PyMuPDF for PDF text extraction
 import asyncio # For async operations - parallel processing
@@ -55,15 +55,14 @@ class DocumentAnalysisOrchestrator:
         self.agents[AgentType.RELATIONSHIP_MAPPER] = RelationshipMapperAgent()
         self.agents[AgentType.JOB_MATCHER] = JobMatchingAgent()
         self.agents[AgentType.RESUME_OPTIMIZER] = ResumeOptimizerAgent()
-        
+
     def _extract_text_from_content(self, file_content: bytes, mime_type: str) -> str:
         """
         Extracts plain text from file content (bytes) based on its MIME type.
-        Currently supports PDF.
+        Supports PDF and DOCX.
         """
         if "pdf" in mime_type:
             try:
-                # Open the PDF from the in-memory bytes
                 pdf_document = fitz.open(stream=io.BytesIO(file_content), filetype="pdf")
                 text = "".join(page.get_text() for page in pdf_document)
                 pdf_document.close()
@@ -71,14 +70,24 @@ class DocumentAnalysisOrchestrator:
             except Exception as e:
                 self.logger.error(f"Failed to extract text from PDF: {e}")
                 raise ValueError("Could not extract text from the provided PDF file.")
+
+        elif "wordprocessingml" in mime_type or mime_type.endswith("msword") or mime_type.endswith("vnd.openxmlformats-officedocument.wordprocessingml.document"):
+            try:
+                doc = docx.Document(io.BytesIO(file_content))
+                text = "\n".join([para.text for para in doc.paragraphs])
+                return text
+            except Exception as e:
+                self.logger.error(f"Failed to extract text from DOCX: {e}")
+                raise ValueError("Could not extract text from the provided DOCX file.")
+
         else:
-            # For now, assume other types are plain text. You can add more handlers here.
-            # (e.g., for DOCX files using python-docx)
+            # Try assuming it's plain UTF-8 text
             try:
                 return file_content.decode('utf-8')
             except UnicodeDecodeError:
-                self.logger.warning("Could not decode content as UTF-8. Returning as is.")
+                self.logger.warning("Could not decode content as UTF-8. Returning raw str().")
                 return str(file_content)
+
 
     async def _get_resume_details(self, user_id: str, resume_id: str, auth_token: str) -> Dict[str, Any]:
         """

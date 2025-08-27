@@ -57,6 +57,32 @@ async function getCognitoSubWithRetry(
     return null; // Failed after all retries
 }
 
+async function getCognitoUserByEmail(email: string): Promise<{ sub: string; name: string } | null> {
+    try {
+        const command = new AdminGetUserCommand({
+            UserPoolId: process.env.COGNITO_USER_POOL_ID!,
+            Username: email,
+        });
+        const res = await cognitoClient.send(command);
+        const sub = res.UserAttributes?.find((a) => a.Name === "sub")?.Value;
+        const givenName = res.UserAttributes?.find((a) => a.Name === "given_name")?.Value;
+        const familyName = res.UserAttributes?.find((a) => a.Name === "family_name")?.Value;
+
+        if (sub) {
+            return {
+                sub,
+                name: `${givenName || ''} ${familyName || ''}`.trim(),
+            };
+        }
+        return null;
+    } catch (error) {
+        if ((error as Error).name === "UserNotFoundException") {
+            return null;
+        }
+        throw error;
+    }
+}
+
 // replace the existing randomStrongPassword in app/api/auth/[...nextauth]/route.ts
 function randomStrongPassword(length = 32) {
     const lowers = "abcdefghijklmnopqrstuvwxyz";
@@ -143,15 +169,18 @@ const handler = NextAuth({
                     throw new Error(data.detail || "Authentication failed");
                 }
 
-                // --- THIS IS THE FIX ---
-                // Use the UserId from the backend as the user's ID
-                if (data.AuthenticationResult && data.UserId) {
-                    return {
-                        id: data.UserId, // Use the real Cognito User ID
-                        email: credentials.email,
-                    };
+                // On successful login, fetch the full user profile from Cognito
+                if (data.AuthenticationResult) {
+                    const cognitoUser = await getCognitoUserByEmail(credentials.email);
+                    if (cognitoUser) {
+                        return {
+                            id: cognitoUser.sub, // The real, unique user ID
+                            name: cognitoUser.name, // The user's full name
+                            email: credentials.email,
+                        };
+                    }
                 }
-                // --- END OF FIX ---
+
                 return null;
             },
         }),

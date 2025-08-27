@@ -1,4 +1,20 @@
 // Content script to parse job information from various job sites
+
+function isJobPage() {
+  const url = window.location.href;
+
+  // As requested, this logic now considers a page a valid job page on LinkedIn
+
+  const isLinkedInJobPage =
+    url.includes("linkedin.com/jobs/search") ||
+    url.includes("linkedin.com/jobs/collections") ||
+    url.includes("linkedin.com/jobs/view");
+
+  const isIndeedPage = url.includes("indeed.com");
+
+  return isLinkedInJobPage || isIndeedPage;
+}
+
 class JobParser {
   constructor() {
     this.parsers = {
@@ -12,30 +28,6 @@ class JobParser {
    * @param {string[]} selectors - An array of CSS selectors to try.
    * @returns {string|null} - The text content of the first matching element, or null.
    */
-
-  async _trySelectorsWithRetry(selectors, maxRetries = 3, delay = 1000) {
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const result = this._trySelectors(selectors);
-      if (result) return result;
-
-      // Wait for dynamic content to load
-      if (attempt < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-    return null;
-  }
-
-  _trySelectorsWithDelay(selectors, delay = 1000) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const result = this._trySelectors(selectors);
-        resolve(result);
-      }, delay);
-    });
-  }
-
-
 
   _trySelectors(selectors) {
     for (const selector of selectors) {
@@ -58,7 +50,8 @@ class JobParser {
   parseCurrentPage() {
     const hostname = window.location.hostname.replace("www.", "");
     const parser = this.parsers[hostname];
-    return parser ? parser() : this.parseGeneric();
+    return parser ? parser() : { jobTitle: "", companyName: "", jobDescription: "" };
+
   }
 
   // In your content-script.js file
@@ -216,49 +209,72 @@ class JobParser {
 
 }
 
-// Listen for messages from popup
-window.chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "parseJob") {
-    const parser = new JobParser();
-    const jobData = parser.parseCurrentPage();
-    sendResponse(jobData);
-  }
-});
-
 // --- THIS IS THE NEW LOGIC TO ADD AT THE BOTTOM ---
-
-let lastUrl = location.href;
 const parser = new JobParser();
 
-// Function to run the parser and send data if the URL has changed
-function handleUrlChange() {
-  // A short delay to ensure the new page content has loaded
-  setTimeout(() => {
-    const jobData = parser.parseCurrentPage();
-    // Send the new data to the extension's UI
-    chrome.runtime.sendMessage({ type: "JOB_DATA_UPDATED", payload: jobData });
-  }, 500); // 500ms delay
+function smartObserveAndParse(timeout = 7000) {
+  return new Promise((resolve) => {
+    // This function attempts a full parse and checks the quality of the data.
+    const attemptParse = () => {
+      if (!isJobPage()) return null;
+      const data = parser.parseCurrentPage();
+      // A "successful" parse requires a title AND a description of reasonable length.
+      if (data.jobTitle && data.jobDescription && data.jobDescription.length > 100) {
+        return data;
+      }
+      return null; // The data is not complete yet.
+    };
+
+    // First, check if the content is already there on initial call.
+    const initialData = attemptParse();
+    if (initialData) {
+      resolve(initialData);
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+      const data = attemptParse();
+      if (data) {
+        // We have a complete parse, so we're done.
+        clearTimeout(timer);
+        observer.disconnect();
+        resolve(data);
+      }
+    });
+
+    // Set a timeout to stop waiting and return whatever we have.
+    const timer = setTimeout(() => {
+      observer.disconnect();
+      console.warn("Elevv: Timed out waiting for full job content. Returning best effort.");
+      resolve(parser.parseCurrentPage()); // Return one last attempt
+    }, timeout);
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
 }
 
-// Set up a MutationObserver to watch for changes in the page body
-const observer = new MutationObserver((mutations) => {
-  if (location.href !== lastUrl) {
-    lastUrl = location.href;
-    handleUrlChange();
-  }
-});
-
-// Start observing the body for changes
-observer.observe(document.body, {
-  childList: true,
-  subtree: true,
-});
-
-// Listen for the initial request from the popup
+// --- Main message listener (popup/background can request a parse) ---
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "parseJob") {
-    const jobData = parser.parseCurrentPage();
-    sendResponse(jobData);
+    if (!isJobPage()) {
+      // Not a job page → return empty but don't send PARSE_FAILED
+      sendResponse({});
+      return true;
+    }
+
+    smartObserveAndParse().then((jobData) => {
+      if (!jobData || !jobData.jobTitle || !jobData.jobDescription) {
+        // Only mark as failed if we ARE on a job page but parsing didn’t succeed
+        chrome.runtime.sendMessage({ type: "PARSE_FAILED" }, () => {
+          if (chrome.runtime.lastError) {
+            // no popup listening, safe to ignore
+          }
+        });
+      }
+      sendResponse(jobData || {}); // always return something
+    });
+    return true; // Keep message channel open for async response
   }
 });
+
 

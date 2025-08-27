@@ -1,13 +1,14 @@
 {
     "manifest_version": 3,
     "name": "Elevv — AI Powered Resume Analysis & Tailored Feedback",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "One-click AI resume analyzer with instant, tailored feedback for smarter job applications.",
     "permissions": [
         "activeTab",
         "storage",
         "sidePanel",
-        "declarativeContent"
+        "declarativeContent",
+        "alarms"
     ],
     "host_permissions": [
         "https://elevv.net/*",

@@ -61,9 +61,68 @@ chrome.runtime.onConnect.addListener(port => {
     }
 });
 
-// Refresh auth when user activity is detected on your website
+// background.js
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (tab.url && tab.url.startsWith('https://elevv.net') && changeInfo.status === 'complete') {
+    // We only want to act once the page is fully loaded.
+    if (changeInfo.status === 'complete' && tab.url) {
+
+        // Keep your existing logic to refresh auth on your main site.
+        if (tab.url.startsWith('https://elevv.net')) {
+            checkAuthStatus();
+        }
+
+        // --- ADD THIS NEW LOGIC ---
+        // Check if the user navigated to a supported job site.
+        const isSupported =
+            tab.url.includes("linkedin.com/jobs") ||
+            tab.url.includes("indeed.com");
+
+        if (isSupported) {
+            // Send the same message as onActivated to trigger a UI refresh.
+            chrome.runtime.sendMessage({ type: 'SUPPORTED_SITE_ACTIVATED' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    // This is expected if the UI is not open. We can safely ignore it.
+                }
+            });
+        }
+        // --- END OF NEW LOGIC ---
+    }
+});
+
+// background.js
+
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    try {
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        const currentUrl = tab.url || "";
+
+        const isSupported =
+            currentUrl.includes("linkedin.com/jobs") ||
+            currentUrl.includes("indeed.com");
+
+        const message = isSupported ?
+            { type: 'SUPPORTED_SITE_ACTIVATED' } :
+            { type: 'UNSUPPORTED_SITE_ACTIVATED' };
+
+        // Send the message with proper error handling
+        chrome.runtime.sendMessage(message, (response) => {
+            if (chrome.runtime.lastError) {
+                // This error is expected if the UI is closed. 
+                // By catching it here, we prevent the "Uncaught" error 
+                // from appearing in the console. We can safely ignore it.
+            }
+        });
+
+    } catch (error) {
+        // This will catch other errors, like if chrome.tabs.get() fails.
+        console.warn(`Elevv background error: ${error.message}`);
+    }
+});
+
+// This will run when the 'auth-refresh' alarm we create goes off
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'auth-refresh') {
         checkAuthStatus();
     }
 });
@@ -71,6 +130,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 // Perform initial setup and checks
 chrome.runtime.onInstalled.addListener(() => {
     checkAuthStatus(); // Initial auth check on install
+
+    // Create an alarm to refresh the auth status every minute
+    chrome.alarms.create('auth-refresh', { periodInMinutes: 5 });
 
     // Set rules to enable the icon only on specific sites
     chrome.declarativeContent.onPageChanged.removeRules(undefined, () => {

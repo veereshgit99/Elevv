@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Loader2, FileText, ExternalLink } from "lucide-react"
+import { Loader2, FileText, ExternalLink, AlertTriangle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { AnalysisResults } from "./AnalysisResults" // Your new results component
 import { EnhancementsPage } from "./EnhancementsPage" // Your new enhancements component
@@ -74,6 +74,29 @@ export default function ChromeExtensionPopup() {
     }>;
   } | null>(null);
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // When the user switches from non-supported sites to supported
+  const [showRefreshNote, setShowRefreshNote] = useState(false);
+
+  // ADD THIS NEW useEffect BLOCK - When the user switches from non-supported sites to supported
+  useEffect(() => {
+    const messageListener = (message: any) => {
+      if (message.type === 'SUPPORTED_SITE_ACTIVATED') {
+        // When a tab switch happens, update the trigger
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+
+    if (chrome.runtime?.onMessage) {
+      chrome.runtime.onMessage.addListener(messageListener);
+    }
+
+    return () => {
+      if (chrome.runtime?.onMessage) {
+        chrome.runtime.onMessage.removeListener(messageListener);
+      }
+    };
+  }, []); // This runs only once to set up the listener
+
   // --- AUTHENTICATION CHECK ---
   useEffect(() => {
     try {
@@ -117,6 +140,9 @@ export default function ChromeExtensionPopup() {
             }, 100); // Small delay to ensure UI renders first
           } else {
             chrome.runtime.sendMessage({ type: 'REFRESH_AUTH_STATUS' }, (freshResponse) => {
+              if (chrome.runtime.lastError) {
+                return;
+              }
               if (freshResponse && Object.keys(freshResponse).length > 0) {
                 setUser(freshResponse);
                 setIsAuthenticated(true);
@@ -154,64 +180,96 @@ export default function ChromeExtensionPopup() {
 
     const loadUserResumes = async () => {
       try {
-        const token = user.accessToken || (user as any).access_token || (user as any).token || (user as any).jwt;
-        if (!token) { return; }
-        if (token === 'dev-mock-token-12345') {
-          const mockResumes: Resume[] = [{ resume_id: 'dev-resume-1', file_name: 'John_Doe_Resume.pdf', is_primary: true }, { resume_id: 'dev-resume-2', file_name: 'John_Doe_Technical_Resume.pdf', is_primary: false }];
+        const token =
+          user.accessToken ||
+          (user as any).access_token ||
+          (user as any).token ||
+          (user as any).jwt;
+
+        if (!token) return;
+
+        // Dev mock mode
+        if (token === "dev-mock-token-12345") {
+          const mockResumes: Resume[] = [
+            {
+              resume_id: "dev-resume-1",
+              file_name: "John_Doe_Resume.pdf",
+              is_primary: true,
+            },
+            {
+              resume_id: "dev-resume-2",
+              file_name: "John_Doe_Technical_Resume.pdf",
+              is_primary: false,
+            },
+          ];
           setUserResumes(mockResumes);
-          setSelectedResume(mockResumes.find(r => r.is_primary)?.resume_id || '');
+          setSelectedResume(
+            mockResumes.find((r) => r.is_primary)?.resume_id || ""
+          );
           return;
         }
+
         const resumesData = await fetchResumes(token);
         setUserResumes(resumesData);
-        const primaryResume = resumesData.find(r => r.is_primary);
+
+        const primaryResume = resumesData.find((r) => r.is_primary);
         if (primaryResume) {
           setSelectedResume(primaryResume.resume_id);
         }
       } catch (error) {
+        console.error("[Elevv] Failed to load resumes:", error);
       }
     };
 
     // --- Start the sequential loading process ---
-    setLoadingStep('readingJob'); // Set initial step
+    setLoadingStep("readingJob"); // Set initial step
 
     const fetchJobAndResumes = () => {
-      if (chrome.tabs && chrome.tabs.query) {
+      if (chrome?.tabs?.query) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs[0]?.id) {
-            chrome.tabs.sendMessage(tabs[0].id, { action: "parseJob" }, (response) => {
+          if (tabs.length === 0 || !tabs[0]?.id) {
+            setLoadingStep("done");
+            return;
+          }
+
+          chrome.tabs.sendMessage(
+            tabs[0].id,
+            { action: "parseJob" },
+            (response) => {
               if (chrome.runtime.lastError) {
-                setLoadingStep('done');
+                setLoadingStep("done");
                 return;
               }
+              if (isAnalyzing) return;
+
               if (response) {
                 setJobTitle(response.jobTitle || "");
                 setCompanyName(response.companyName || "");
                 setJobDescription(response.jobDescription || "");
               }
-              setLoadingStep('loadingProfile');
+
+              setLoadingStep("loadingProfile");
               loadUserResumes().finally(() => {
-                setLoadingStep('done');
+                setLoadingStep("done");
               });
-            });
-          } else {
-            setLoadingStep('done');
-          }
+            }
+          );
         });
       } else {
+        // Fallback for local testing
         setJobTitle("Senior Software Engineer");
         setCompanyName("Google");
         setJobDescription("This is a sample job description for local testing.");
-        setLoadingStep('loadingProfile');
+        setLoadingStep("loadingProfile");
         loadUserResumes().finally(() => {
-          setLoadingStep('done');
+          setLoadingStep("done");
         });
       }
     };
 
     fetchJobAndResumes();
+  }, [isAuthenticated, isCheckingAuth, user?.id, refreshTrigger]);
 
-  }, [isAuthenticated, isCheckingAuth, user?.id]);
 
   // --- NEW: Check for existing enhancement results ---
   useEffect(() => {
@@ -223,38 +281,34 @@ export default function ChromeExtensionPopup() {
     checkExistingEnhancements();
   }, [currentView]) // Check when view changes
 
-  // --- Listen for live job data updates from content script/background ---
+  // --- NEW: Track parse failures separately ---
   useEffect(() => {
     const messageListener = (
       message: any,
       _sender: chrome.runtime.MessageSender,
       _sendResponse: (response?: any) => void
     ) => {
-
-      // 1. If an analysis is running, ignore all updates.
-      if (isAnalyzing) {
-        return;
-      }
-
-      if (message?.type === "JOB_DATA_UPDATED") {
-        const { jobTitle, companyName, jobDescription } = message.payload || {};
-        setJobTitle(jobTitle || "");
-        setCompanyName(companyName || "");
-        setJobDescription(jobDescription || "");
+      if (message?.type === "PARSE_FAILED") {
+        // Show refresh note if parse failed
+        setShowRefreshNote(true);
+        // Reset job info
+        setJobTitle("");
+        setCompanyName("");
+        setJobDescription("");
       }
     };
 
-    // Guard for development environment
-    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
+    if (typeof chrome !== "undefined" && chrome.runtime?.onMessage?.addListener) {
       chrome.runtime.onMessage.addListener(messageListener);
     }
 
     return () => {
-      if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.removeListener) {
+      if (typeof chrome !== "undefined" && chrome.runtime?.onMessage?.removeListener) {
         chrome.runtime.onMessage.removeListener(messageListener);
       }
     };
-  }, [isAnalyzing]); // Run once when component mounts
+  }, []);
+
 
   // --- HELPER FUNCTION: Map backend response to extension UI format ---
   const mapEnhancementData = (optimizationResponse: OptimizationResponse) => {
@@ -490,6 +544,7 @@ export default function ChromeExtensionPopup() {
       if (chrome.runtime.lastError) {
         setIsAuthenticated(false);
         setUser(null);
+        return;
       } else if (response && Object.keys(response).length > 0) {
         setUser(response);
         setIsAuthenticated(true);
@@ -503,26 +558,36 @@ export default function ChromeExtensionPopup() {
 
   // --- RENDER LOGIC ---
 
-  // Show loading spinner while checking authentication
+  // Show skeleton while checking authentication
   if (isCheckingAuth) {
     return (
       <div className="app-container">
         <header className="app-header">
-          <div className="logo">
-            <Logo className="logo-icon" />
-            <span>Elevv</span>
+          <div className="logo flex items-center space-x-2">
+            <Logo className="logo-icon animate-pulse" />
+            <span className="font-semibold text-gray-700">Elevv</span>
           </div>
-          <h1 className="header-subtitle">Authenticating...</h1>
+          <h1 className="header-subtitle text-gray-500">Authenticating...</h1>
         </header>
-        <main className="app-content">
-          <div className="loader-container">
-            <Loader2 className="loader-spinner" />
-            <p>Checking authentication status...</p>
+
+        <main className="app-content p-4 space-y-6 animate-pulse">
+          {/* Fake dropdown skeleton */}
+          <div className="h-10 bg-gray-200 rounded-md w-1/2"></div>
+
+          {/* Fake button skeleton */}
+          <div className="h-10 bg-gray-200 rounded-md w-32"></div>
+
+          {/* Fake results area skeleton */}
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
           </div>
         </main>
       </div>
     );
   }
+
 
   // Show login prompt if not authenticated
   if (!isAuthenticated) {
@@ -660,13 +725,39 @@ export default function ChromeExtensionPopup() {
               {/* NEW: Dynamic Loading Indicator */}
               {/* UPDATED: Dynamic Loading Indicator with Single Message */}
               {loadingStep !== 'done' && (
-                <div className="loader-container" style={{ paddingTop: '1rem' }}>
-                  <Loader2 className="loader-spinner" />
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                    Getting your workspace ready...
-                  </p>
+                <div className="animate-pulse space-y-4 p-4">
+                  {/* Header skeleton */}
+                  <div className="h-6 bg-gray-200 rounded w-2/3"></div>
+
+                  {/* Subheader skeleton */}
+                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+
+                  {/* Content block skeleton */}
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+                  </div>
+
+                  {/* Button skeleton */}
+                  <div className="h-10 bg-gray-200 rounded-lg w-32"></div>
                 </div>
               )}
+
+              <AnimatePresence>
+                {showRefreshNote && (
+                  <motion.div
+                    className="refresh-note" // You'll need to style this
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <AlertTriangle size={16} className="note-icon" />
+                    <p>Couldn't load this job. Please <strong>refresh the page</strong> and reopen the extension.</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
             </motion.div>
           )}
         </AnimatePresence>
