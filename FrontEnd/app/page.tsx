@@ -30,6 +30,9 @@ export default function Home() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Logo variant="light" size="lg" showText={true} className="font-bold text-xl" />
           <nav className="hidden md:flex items-center gap-6">
+            <Link href="/how-it-works" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+              How it works
+            </Link>
             <Link href="/features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
               Features
             </Link>
@@ -194,7 +197,7 @@ export default function Home() {
         <section className="container mx-auto px-4 py-16 text-center">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Beat the Odds. Skip the Line.
+              Ready to Stand Out?
             </h2>
             <p className="mt-4 text-lg text-gray-600">
               Your shortcut from applying to interviewing
