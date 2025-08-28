@@ -42,11 +42,11 @@ export default function HowItWorksPage() {
                             muted
                             preload="metadata"
                         >
-                            <source src="/elevv_extension_blurred.mp4" type="video/mp4" />
+                            <source src="/elevv_extension_blurred_fixed.mp4" type="video/mp4" />
                             Your browser does not support the video tag.
                         </video>
                     </div>
-                    <p className="mt-2 text-sm text-gray-500">Demo: Elevv chrome extension in action — from scanning a job posting to getting your match score and tailored resume suggestions.</p>
+                    <p className="mt-2 text-sm text-gray-500">Elevv chrome extension in action — from scanning a job posting to getting your match score and tailored resume suggestions</p>
                 </section>
 
                 <hr className="border-gray-200" />
