@@ -93,7 +93,7 @@ export default function HowItWorksPage() {
                         </span>
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">See Your Match</h2>
                         <p className="text-lg text-gray-600">
-                            Click the “Analyze Now” button to start comparing your resume with the job description. In seconds, Elevv shows you a clear match score, your top strengths, and any gaps that need attention.
+                            Click <strong>“Analyze Now”</strong> to start comparing your resume with the job description. In seconds, Elevv shows you a clear match score, your top strengths, and any gaps that need attention.
                         </p>
                     </div>
 
