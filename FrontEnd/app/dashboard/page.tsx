@@ -177,46 +177,47 @@ export default function DashboardPage() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
-  // Redirect unauthenticated users to login
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login")
-    }
-  }, [status, router])
+  // -------------------------------
+  // NEW: central loadResumes function
+  // -------------------------------
+  const loadResumes = async (token: string) => {
+    setIsLoadingData(true)
+    setError(null)
 
-  // In dashboard/page.tsx
+    try {
+      const resumesData = await fetchResumes(token)
+      setUserResumes(resumesData)
+
+      const primaryResume = resumesData.find((r: Resume) => r.is_primary)
+      if (primaryResume) {
+        setSelectedResume(primaryResume.resume_id)
+      }
+    } catch (err) {
+      setError("Failed to refresh resume list.")
+    } finally {
+      setIsLoadingData(false)
+    }
+  }
+
+  // Fetch profile + resumes on mount
   useEffect(() => {
     const fetchData = async () => {
-      // Make sure we have both authenticated status AND the token
       if (status === "authenticated" && session?.accessToken) {
-        setIsLoadingData(true)
-        setError(null)
-
         try {
-          // Use the token directly from the session
           const token = session.accessToken as string
-
-          // Use the newer functions that accept token
           const profileData = await fetchUserProfile(token)
           setUserProfile(profileData)
 
-          const resumesData = await fetchResumes(token)
-          setUserResumes(resumesData)
-
-          const primaryResume = resumesData.find((r: Resume) => r.is_primary)
-          if (primaryResume) {
-            setSelectedResume(primaryResume.resume_id)
-          }
+          await loadResumes(token) // use the shared function
         } catch (error) {
           setError("Failed to load user data. Please try refreshing the page.")
-        } finally {
           setIsLoadingData(false)
         }
       }
     }
 
     fetchData()
-  }, [status, session]) // Depend on both status and session
+  }, [status, session])
 
   const handleAnalyze = async () => {
     if (!jobTitle || !companyName || !jobDescription || !selectedResume) {
@@ -455,34 +456,15 @@ export default function DashboardPage() {
                   <ResumeUpload
                     onUploadSuccess={async () => {
                       setShowUploadModal(false)
-                      // --- THIS IS THE FIX ---
-                      setIsLoadingData(true); // 1. Trigger the skeleton loader
-
                       if (session?.accessToken) {
-                        try {
-                          // 2. Fetch the new list of resumes
-                          const resumesData = await fetchResumes(session.accessToken as string);
-                          setUserResumes(resumesData);
-
-                          // 3. Find the primary resume (which will be the new one if it's the first)
-                          //    and set it as the selected value in the dropdown.
-                          const primaryResume = resumesData.find((r: Resume) => r.is_primary);
-                          if (primaryResume) {
-                            setSelectedResume(primaryResume.resume_id);
-                          }
-
-                        } catch (error) {
-                          setError("Failed to refresh resume list.");
-                        } finally {
-                          setIsLoadingData(false); // Stop the skeleton loader
-                        }
+                        await loadResumes(session.accessToken as string)
                       }
-                      // --- END OF FIX ---
                     }}
                     onUploadError={(error) => {
-                      // You could show a toast notification here
+                      setError("Resume upload failed. Please try again.")
                     }}
                   />
+
                 </div>
               </DialogContent>
             </Dialog>
