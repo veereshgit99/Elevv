@@ -133,7 +133,10 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
             setUploadProgress(100)
             setUploadStatus('success')
 
-            // Reset after success
+            // Call success callback immediately
+            onUploadSuccess?.()
+
+            // Reset form after a brief delay to show success state
             setTimeout(() => {
                 setSelectedFile(null)
                 setJobTitle('')
@@ -142,8 +145,7 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
                 if (fileInputRef.current) {
                     fileInputRef.current.value = ''
                 }
-                onUploadSuccess?.()
-            }, 2000)
+            }, 1000) // Reduced delay just for UI reset
 
         } catch (error) {
             setUploadStatus('error');
