@@ -9,7 +9,7 @@ import { getResumeUploadUrl } from '@/utils/api'  // Import the API function
 import { useSession } from 'next-auth/react'
 
 interface ResumeUploadProps {
-    onUploadSuccess?: () => void
+    onUploadSuccess?: (resumeId?: string) => void
     onUploadError?: (error: string) => void
 }
 
@@ -142,7 +142,7 @@ export function ResumeUpload({ onUploadSuccess, onUploadError }: ResumeUploadPro
                 if (fileInputRef.current) {
                     fileInputRef.current.value = ''
                 }
-                onUploadSuccess?.()
+                onUploadSuccess?.(resume_id)
             }, 2000)
 
         } catch (error) {

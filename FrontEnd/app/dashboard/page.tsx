@@ -180,12 +180,25 @@ export default function DashboardPage() {
   // -------------------------------
   // OPTIMIZED: central loadResumes function with smart retry logic
   // -------------------------------
-  const loadResumes = async (token: string, retryCount = 0, isAfterUpload = false) => {
+  const loadResumes = async (token: string, retryCount = 0, isAfterUpload = false, expectedResumeId?: string) => {
     setIsLoadingData(true)
     setError(null)
 
     try {
       const resumesData = await fetchResumes(token)
+
+      // If we're after an upload and expecting a specific resume, check if it's there
+      if (isAfterUpload && expectedResumeId) {
+        const newResume = resumesData.find((r: Resume) => r.resume_id === expectedResumeId)
+        if (!newResume && retryCount < 5) {
+          setTimeout(() => loadResumes(token, retryCount + 1, isAfterUpload, expectedResumeId), 2000)
+          return
+        }
+        if (newResume) {
+        } else {
+        }
+      }
+
       setUserResumes(resumesData)
 
       const primaryResume = resumesData.find((r: Resume) => r.is_primary)
@@ -194,9 +207,8 @@ export default function DashboardPage() {
       }
     } catch (err) {
       // Only retry after uploads, not on normal page loads
-      if (isAfterUpload && retryCount < 2) {
-        console.log(`Resume fetch after upload failed, retrying... (${retryCount + 1}/2)`)
-        setTimeout(() => loadResumes(token, retryCount + 1, isAfterUpload), 800) // Shorter delay
+      if (isAfterUpload && retryCount < 5) {
+        setTimeout(() => loadResumes(token, retryCount + 1, isAfterUpload, expectedResumeId), 2000)
         return
       }
       setError("Failed to refresh resume list.")
@@ -460,16 +472,12 @@ export default function DashboardPage() {
                 </DialogHeader>
                 <div className="py-4">
                   <ResumeUpload
-                    onUploadSuccess={async () => {
-                      // Add small delay to ensure backend has processed the upload
-                      console.log("Upload successful, refreshing resume list...")
+                    onUploadSuccess={async (resumeId?: string) => {
                       if (session?.accessToken) {
-                        await loadResumes(session.accessToken as string, 0, true) // Mark as after-upload
+                        await loadResumes(session.accessToken as string, 0, true, resumeId)
                       }
                       // Close modal after refresh completes
-                      setTimeout(() => {
-                        setShowUploadModal(false)
-                      }, 300) // Reduced delay
+                      setShowUploadModal(false)
                     }}
                     onUploadError={(error) => {
                       setError("Resume upload failed. Please try again.")
