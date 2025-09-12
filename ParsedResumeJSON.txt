@@ -1,0 +1,195 @@
+{
+  "contactInfo": {
+    "name": "Veeresh Koliwad",
+    "email": "veereshkoliwad99@gmail.com",
+    "phone": "602-451-5421",
+    "links": [
+      {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/veereshkoliwad"
+      },
+      {
+        "label": "GitHub",
+        "url": "github.com/veereshgit99"
+      }
+    ]
+  },
+  "summary": "Software Engineer with 3+ years of experience, currently building Elevv, an AI-powered career intelligence platform using a sophisticated multi-agent architecture. Previously led ML-driven automation and built microservices that cut order processing time by 90%. Passionate about system design, performance tuning, and real-world ML applications.",
+  "skills": {
+    "Languages": [
+      "Python",
+      "C/C++",
+      "Java (Intermediate)",
+      "SQL",
+      "JavaScript",
+      "HTML/CSS"
+    ],
+    "Machine Learning": [
+      "NLP",
+      "Computer Vision",
+      "LLMs",
+      "Recommendation Systems"
+    ],
+    "Tools": [
+      "Docker",
+      "Kubernetes",
+      "React",
+      "Kafka",
+      "Elastic Search",
+      "Redis",
+      "Git"
+    ],
+    "Cloud & Databases": [
+      "AWS",
+      "SAP Cloud Platform",
+      "PostgreSQL",
+      "MongoDB"
+    ],
+    "Methodologies": [
+      "REST APIs",
+      "Microservices",
+      "Distributed Systems",
+      "Agile",
+      "CI/CD"
+    ]
+  },
+  "experience": [
+    {
+      "role": "Associate Software Developer",
+      "company": "SAP LABS",
+      "location": "Bangalore, India",
+      "start": {
+        "month": "Jul",
+        "year": "2021"
+      },
+      "end": {
+        "month": "Dec",
+        "year": "2023"
+      },
+      "bullets": [
+        "Built a purchase order microservice for SAP ERP to automate manual workflows, reducing processing time by 90% for 5K+ monthly orders.",
+        "Migrated legacy applications to SAP Cloud, cutting infrastructure costs by 20% and improving scalability.",
+        "Optimized API response time by 30% using Redis caching, improving overall user engagement by 20%.",
+        "Led development of a bug prediction tool with a 4-member team, reducing support tickets by 25%."   
+      ]
+    },
+    {
+      "role": "Research Assistant",
+      "company": "Arizona State University",
+      "location": "Tempe, AZ",
+      "start": {
+        "month": "Jan",
+        "year": "2025"
+      },
+      "end": {
+        "month": "Present",
+        "year": ""
+      },
+      "bullets": [
+        "Evaluated MiniLLM on benchmark datasets to explore trade-offs in LLM compression.",
+        "Reduced inference latency by 45% using LayerDrop and pruning techniques, making compressed LLMs more practical for deployment."
+      ]
+    },
+    {
+      "role": "Software Development Intern",
+      "company": "SAP LABS",
+      "location": "Bangalore, India",
+      "start": {
+        "month": "Feb",
+        "year": "2021"
+      },
+      "end": {
+        "month": "Jul",
+        "year": "2021"
+      },
+      "bullets": [
+        "Developed a Jira workflow gadget using JavaScript and HTML, used by 10+ teams to simplify ticket tracking.",
+        "Built and deployed full-stack features using React and MongoDB on AWS, for SAP\u2019s Bydesign module."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Elevv, AI Resume Builder",
+      "technologies": "Python, FastAPI, Next.js, AWS, LLMs",
+      "start": {
+        "month": "Jun",
+        "year": "2025"
+      },
+      "end": {
+        "month": "Present",
+        "year": ""
+      },
+      "bullets": [
+        "Currently engineering a full-stack, multi-agent AI system to provide deep analysis of resumes against job descriptions, featuring a secure, decoupled microservices architecture.",
+        "Implementing a sophisticated orchestration layer to manage a series of specialized AI agents that perform tasks from entity extraction to intelligent resume enhancement."
+      ]
+    },
+    {
+      "name": "Football Analysis System",
+      "technologies": "Python, YOLOv8, OpenCV, KMeans, Optical Flow",
+      "start": {
+        "month": "Jun",
+        "year": "2024"
+      },
+      "end": {
+        "month": "Aug",
+        "year": "2024"
+      },
+      "bullets": [
+        "Built a real-time player/ball detection system using YOLOv8, achieving 95% accuracy on Bundesliga datasets.",
+        "Implemented KMeans clustering for team identification and optical flow for tracking player movements."
+      ]
+    },
+    {
+      "name": "RAG Chatbot",
+      "technologies": "LangChain, Hugging Face, ChromaDB, Vector Search",
+      "start": {
+        "month": "Jan",
+        "year": "2025"
+      },
+      "end": {
+        "month": "",
+        "year": ""
+      },
+      "bullets": [
+        "Developed a context-aware chatbot using Retrieval-Augmented Generation (RAG) to integrate real-time data with LLMs.",
+        "Optimized response accuracy by implementing vector search and data chunking in ChromaDB."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "school": "Arizona State University",
+      "degree": "Master\u2019s in Computer Science",
+      "location": "Tempe, AZ",
+      "start": {
+        "month": "Jan",
+        "year": "2024"
+      },
+      "end": {
+        "month": "Dec",
+        "year": "2025"
+      },
+      "coursework": "",
+      "gpa": ""
+    },
+    {
+      "school": "RV College of Engineering",
+      "degree": "Bachelor\u2019s in Computer Science",
+      "location": "Bangalore, India",
+      "start": {
+        "month": "Aug",
+        "year": "2017"
+      },
+      "end": {
+        "month": "May",
+        "year": "2021"
+      },
+      "coursework": "",
+      "gpa": ""
+    }
+  ],
+  "publications": [],
+  "achievements": []
+}

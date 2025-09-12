@@ -1,0 +1,51 @@
+[
+  {
+    "type": "rephrase",
+    "target_section": "Summary",
+    "original_text_snippet": "Software Engineer with 3+ years of experience, currently building Elevv, an AI-powered career intelligence platform using a sophisticated multi-agent architecture. Previously led ML-driven automation and built microservices that cut order processing time by 90%. Passionate about system design, performance tuning, and real-world ML applications.",
+    "suggested_text": "Software Engineer with 3+ years of experience specializing in building and scaling resilient, high-performance distributed systems. Proven expertise in microservices architecture, cloud infrastructure, and ML-driven automation to enhance system reliability and efficiency. Passionate about SRE principles, performance tuning, and ensuring high availability.",
+    "reasoning": "The original summary is developer-focused. This revision reframes your profile using SRE-centric language ('resilient', 'high-performance', 'system reliability', 'SRE principles', 'high availability') that directly aligns with the job's core responsibilities like 'Maximize system uptime, availability and stability'. This immediately positions you as an infrastructure-minded candidate.",
+    "priority": "critical"
+  },
+  {
+    "type": "add",
+    "target_section": "Experience",
+    "original_text_snippet": "SAP LABS Experience Section",
+    "suggested_text": "Managed and deployed microservices using Docker and Kubernetes (K8s), leveraging Kafka for asynchronous communication and Elastic Search for logging and monitoring, ensuring high availability and performance.",
+    "reasoning": "The job description lists 'Kubernetes, ElasticSearch, Message Queue' as preferred qualifications. Your skills section includes these, but they are absent from your experience. This new bullet point retroactively applies those skills to your SAP role, demonstrating practical application of the exact technologies TikTok desires. This is a crucial addition to showcase direct, hands-on experience.",
+    "priority": "critical"
+  },
+  {
+    "type": "rephrase",
+    "target_section": "Experience",
+    "original_text_snippet": "Led development of a bug prediction tool with a 4-member team, reducing support tickets by 25%.",
+    "suggested_text": "Initiated and led a 4-member team to develop an ML-based bug prediction tool, creating a proactive monitoring system that automated issue detection and reduced reactive support tickets by 25%.",
+    "reasoning": "This rephrasing directly addresses the JD's emphasis on 'monitoring' and 'automation to streamline processes'. By framing the tool as a 'proactive monitoring system' that 'automated issue detection', you align a past project with core SRE responsibilities, demonstrating an SRE mindset of preventing issues rather than just fixing them.",
+    "priority": "high"
+  },
+  {
+    "type": "rephrase",
+    "target_section": "Experience",
+    "original_text_snippet": "Migrated legacy applications to SAP Cloud, cutting infrastructure costs by 20% and improving scalability.",
+    "suggested_text": "Led the migration of legacy monolithic applications to a scalable microservices architecture on SAP Cloud, improving system resilience, enhancing scalability for peak loads, and cutting infrastructure costs by 20%.",
+    "reasoning": "The suggested text adds technical depth ('monolithic applications') and incorporates key SRE concepts like 'system resilience' and 'scalability for peak loads'. This connects your experience directly to SRE responsibilities such as capacity planning and ensuring stability, which are central to the role.",
+    "priority": "high"
+  },
+  {
+    "type": "quantify",
+    "target_section": "Experience",
+    "original_text_snippet": "Built a purchase order microservice for SAP ERP to automate manual workflows, reducing processing time by 90% for 5K+ monthly orders.",
+    "suggested_text": "Engineered and deployed a critical purchase order microservice, automating workflows to process over 5K monthly orders with 99.9%+ uptime, which reduced manual processing time by 90% and minimized operational errors.",
+    "reasoning": "While the original is good, adding an uptime metric (e.g., '99.9%+ uptime') directly addresses the primary SRE goal of maximizing 'system uptime, availability and stability'. This metric is a standard and powerful indicator of success in any SRE or infrastructure role.",
+    "priority": "high",
+    "quantification_prompt": "What was the target or measured uptime/availability SLA/SLO for the purchase order microservice you built? (e.g., 99.9%, 99.95%)"
+  },
+  {
+    "type": "add",
+    "target_section": "Technical Skills",
+    "original_text_snippet": "Methodologies: REST APIs, Microservices, Distributed Systems, Agile, CI/CD",  
+    "suggested_text": "SRE & DevOps: Linux/Unix Systems, Shell Scripting, Networking (TCP/IP), Monitoring & Alerting, CI/CD, Git",
+    "reasoning": "The job description lists 'Linux Operating Systems, Networking, Monitoring, Shell scripting' as minimum qualifications. Your resume implies these skills but does not state them explicitly. Adding this dedicated line ensures your resume passes automated screenings and clearly signals to recruiters that you meet the baseline requirements for the role.",
+    "priority": "medium"
+  }
+]

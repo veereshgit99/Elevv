@@ -178,9 +178,9 @@ export default function DashboardPage() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   // -------------------------------
-  // NEW: central loadResumes function
+  // OPTIMIZED: central loadResumes function with smart retry logic
   // -------------------------------
-  const loadResumes = async (token: string) => {
+  const loadResumes = async (token: string, retryCount = 0, isAfterUpload = false) => {
     setIsLoadingData(true)
     setError(null)
 
@@ -193,6 +193,12 @@ export default function DashboardPage() {
         setSelectedResume(primaryResume.resume_id)
       }
     } catch (err) {
+      // Only retry after uploads, not on normal page loads
+      if (isAfterUpload && retryCount < 2) {
+        console.log(`Resume fetch after upload failed, retrying... (${retryCount + 1}/2)`)
+        setTimeout(() => loadResumes(token, retryCount + 1, isAfterUpload), 800) // Shorter delay
+        return
+      }
       setError("Failed to refresh resume list.")
     } finally {
       setIsLoadingData(false)
@@ -455,10 +461,15 @@ export default function DashboardPage() {
                 <div className="py-4">
                   <ResumeUpload
                     onUploadSuccess={async () => {
-                      setShowUploadModal(false)
+                      // Add small delay to ensure backend has processed the upload
+                      console.log("Upload successful, refreshing resume list...")
                       if (session?.accessToken) {
-                        await loadResumes(session.accessToken as string)
+                        await loadResumes(session.accessToken as string, 0, true) // Mark as after-upload
                       }
+                      // Close modal after refresh completes
+                      setTimeout(() => {
+                        setShowUploadModal(false)
+                      }, 300) // Reduced delay
                     }}
                     onUploadError={(error) => {
                       setError("Resume upload failed. Please try again.")
