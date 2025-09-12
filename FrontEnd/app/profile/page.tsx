@@ -115,6 +115,7 @@ export default function ProfilePage() {
   const [resumes, setResumes] = useState<any[]>([])
   const [isLoadingResumes, setIsLoadingResumes] = useState(false)
   const [isRefreshingResumes, setIsRefreshingResumes] = useState(false) // For upload refresh
+  const [error, setError] = useState<string | null>(null) // Add error state
 
   // Education form data
   const [educationData, setEducationData] = useState<any[]>([])
@@ -312,6 +313,54 @@ export default function ProfilePage() {
     if (diffInDays < 7) return `${diffInDays} days ago`
     if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
     return `${Math.floor(diffInDays / 30)} months ago`
+  }
+
+  // -------------------------------
+  // RETRY LOGIC: central loadResumes function with smart retry logic
+  // -------------------------------
+  const loadResumes = async (token: string, retryCount = 0, isAfterUpload = false, expectedResumeId?: string): Promise<boolean> => {
+    setIsRefreshingResumes(true)
+    setError(null)
+
+    try {
+      const resumesData = await fetchResumes(token)
+
+      // If we're after an upload and expecting a specific resume, check if it's there
+      if (isAfterUpload && expectedResumeId) {
+        const newResume = resumesData.find((r: any) => r.resume_id === expectedResumeId)
+        if (!newResume && retryCount < 5) {
+          setTimeout(() => loadResumes(token, retryCount + 1, isAfterUpload, expectedResumeId), 2000)
+          return false
+        }
+        if (!newResume) {
+          // Resume not found after all retries
+          setIsRefreshingResumes(false)
+          return false
+        }
+      }
+
+      // Transform the resume data
+      const transformedResumes = resumesData.map((resume: any) => ({
+        id: resume.resume_id,
+        name: resume.name || resume.file_name,
+        jobTitle: resume.job_title || "Software Engineer",
+        created: formatDate(resume.created_at),
+        isPrimary: resume.is_primary || false
+      }))
+      setResumes(transformedResumes)
+
+      setIsRefreshingResumes(false)
+      return true
+    } catch (err) {
+      // Only retry after uploads, not on normal page loads
+      if (isAfterUpload && retryCount < 5) {
+        setTimeout(() => loadResumes(token, retryCount + 1, isAfterUpload, expectedResumeId), 2000)
+        return false
+      }
+      setError("Failed to refresh resume list.")
+      setIsRefreshingResumes(false)
+      return false
+    }
   }
 
   // Helper functions for user data
@@ -1216,7 +1265,12 @@ export default function ProfilePage() {
                       </CardHeader>
                     </Card>
 
-
+                    {/* Error Message */}
+                    {error && (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                        {error}
+                      </div>
+                    )}
 
                     {/* --- UPDATED: Conditional Rendering --- */}
                     {/* If resumes are loading or refreshing, show the skeleton */}
@@ -1300,33 +1354,52 @@ export default function ProfilePage() {
                                       <div className="flex items-center space-x-2">
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="p-1 hover:bg-gray-100 rounded">
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="p-1 hover:bg-gray-100 rounded"
+                                            >
                                               <MoreHorizontal className="w-4 h-4 text-gray-400" />
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent align="end">
+                                            {/* Edit Resume */}
                                             <DropdownMenuItem
-                                              onClick={() => handleEditResume(resume.id)}
+                                              onSelect={(e) => {
+                                                e.preventDefault();
+                                                handleEditResume(resume.id);
+                                              }}
                                               className="flex items-center space-x-2"
                                             >
                                               <Edit className="w-4 h-4" />
                                               <span>Edit</span>
                                             </DropdownMenuItem>
 
+                                            {/* Make Primary (hidden if already primary) */}
                                             {!resume.isPrimary && (
                                               <DropdownMenuItem
-                                                onClick={() => handleMakePrimary(resume.id)}
+                                                onSelect={(e) => {
+                                                  e.preventDefault();
+                                                  handleMakePrimary(resume.id);
+                                                }}
                                                 className="flex items-center space-x-2"
                                               >
                                                 <Star className="w-4 h-4" />
                                                 <span>Make Primary</span>
                                               </DropdownMenuItem>
                                             )}
+
+                                            {/* Delete Resume */}
                                             <DropdownMenuItem
-                                              onClick={() => resume.isPrimary ? null : handleDeleteResume(resume.id)}
+                                              onSelect={(e) => {
+                                                e.preventDefault();
+                                                if (!resume.isPrimary) {
+                                                  handleDeleteResume(resume.id);
+                                                }
+                                              }}
                                               className={`flex items-center space-x-2 ${resume.isPrimary
-                                                ? 'text-gray-400 cursor-not-allowed'
-                                                : 'text-red-600 hover:text-red-700'
+                                                  ? 'text-gray-400 cursor-not-allowed'
+                                                  : 'text-red-600 hover:text-red-700'
                                                 }`}
                                               disabled={resume.isPrimary}
                                             >
@@ -1340,6 +1413,7 @@ export default function ProfilePage() {
                                             </DropdownMenuItem>
                                           </DropdownMenuContent>
                                         </DropdownMenu>
+
                                       </div>
                                     </td>
                                   </tr>
@@ -1394,32 +1468,23 @@ export default function ProfilePage() {
 
                     {/* Upload Resume Modal */}
                     <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-                      <DialogContent className="sm:max-w-[600px]">
+                      <DialogContent className="sm:max-w-[600px] [&>button]:hidden">
                         <DialogHeader>
                           <DialogTitle>Upload New Resume</DialogTitle>
                         </DialogHeader>
                         <div className="py-4">
                           <ResumeUpload
-                            onUploadSuccess={async () => {
+                            onUploadSuccess={async (resumeId?: string) => {
+                              // Set loading state immediately to show skeleton
+                              setIsRefreshingResumes(true)
+                              // Close modal right away to show loading state
                               setShowUploadModal(false)
-                              setIsRefreshingResumes(true) // Show loading while refreshing
 
-                              try {
-                                if (session?.accessToken) {
-                                  const token = session.accessToken as string
-                                  const resumesData = await fetchResumes(token)
-                                  const transformedResumes = resumesData.map((resume: any, index: number) => ({
-                                    id: resume.resume_id,
-                                    name: resume.name || resume.file_name,
-                                    jobTitle: resume.job_title || "Software Engineer",
-                                    created: formatDate(resume.created_at),
-                                    isPrimary: resume.is_primary || false
-                                  }))
-                                  setResumes(transformedResumes)
+                              if (session?.accessToken) {
+                                const success = await loadResumes(session.accessToken as string, 0, true, resumeId)
+                                if (!success && resumeId) {
+                                  setError("Upload succeeded, but resume is still processing. Please refresh in a few seconds.")
                                 }
-                              } catch (error) {
-                              } finally {
-                                setIsRefreshingResumes(false) // Hide loading
                               }
                             }}
                             onUploadError={(error) => {

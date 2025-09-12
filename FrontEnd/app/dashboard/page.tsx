@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Upload, BarChart3, User, MessageSquare, LogOut, ChevronDown, Clock, FileText, Zap, Target, Building } from "lucide-react"
+import { Upload, BarChart3, User, MessageSquare, LogOut, ChevronDown, Clock, FileText, Zap, Target, Building, Info, StickyNote } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -176,11 +176,12 @@ export default function DashboardPage() {
   // Add this with your other state declarations
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [resumeProcessingNote, setResumeProcessingNote] = useState<string | null>(null)
 
   // -------------------------------
   // OPTIMIZED: central loadResumes function with smart retry logic
   // -------------------------------
-  const loadResumes = async (token: string, retryCount = 0, isAfterUpload = false, expectedResumeId?: string) => {
+  const loadResumes = async (token: string, retryCount = 0, isAfterUpload = false, expectedResumeId?: string): Promise<boolean> => {
     setIsLoadingData(true)
     setError(null)
 
@@ -192,10 +193,14 @@ export default function DashboardPage() {
         const newResume = resumesData.find((r: Resume) => r.resume_id === expectedResumeId)
         if (!newResume && retryCount < 5) {
           setTimeout(() => loadResumes(token, retryCount + 1, isAfterUpload, expectedResumeId), 2000)
-          return
+          return false
         }
         if (newResume) {
+          setResumeProcessingNote(null) // Clear any previous notes
         } else {
+          // Resume not found after all retries
+          setIsLoadingData(false)
+          return false
         }
       }
 
@@ -205,15 +210,18 @@ export default function DashboardPage() {
       if (primaryResume) {
         setSelectedResume(primaryResume.resume_id)
       }
+
+      setIsLoadingData(false)
+      return true
     } catch (err) {
       // Only retry after uploads, not on normal page loads
       if (isAfterUpload && retryCount < 5) {
         setTimeout(() => loadResumes(token, retryCount + 1, isAfterUpload, expectedResumeId), 2000)
-        return
+        return false
       }
       setError("Failed to refresh resume list.")
-    } finally {
       setIsLoadingData(false)
+      return false
     }
   }
 
@@ -399,6 +407,14 @@ export default function DashboardPage() {
 
                 {/* Resume Selection */}
                 <div className="space-y-3">
+                  {/* Processing note if upload succeeded but resume not visible */}
+                  {resumeProcessingNote && (
+                    <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-100 px-3 py-2 rounded-md mb-3">
+                      <StickyNote className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <span>{resumeProcessingNote}</span>
+                    </div>
+
+                  )}
                   <label className="text-sm font-medium text-gray-700">Analyze using this resume:</label>
                   {userResumes.length > 0 ? (
                     <Select value={selectedResume} onValueChange={setSelectedResume}>
@@ -466,18 +482,24 @@ export default function DashboardPage() {
 
             {/* Upload Resume Modal */}
             <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-              <DialogContent className="sm:max-w-[600px]">
+              <DialogContent className="sm:max-w-[600px] [&>button]:hidden">
                 <DialogHeader>
                   <DialogTitle>Upload Your Resume</DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
                   <ResumeUpload
                     onUploadSuccess={async (resumeId?: string) => {
-                      if (session?.accessToken) {
-                        await loadResumes(session.accessToken as string, 0, true, resumeId)
-                      }
-                      // Close modal after refresh completes
+                      // Set loading state immediately to show skeleton
+                      setIsLoadingData(true)
+                      // Close modal right away to show loading skeleton
                       setShowUploadModal(false)
+
+                      if (session?.accessToken) {
+                        const success = await loadResumes(session.accessToken as string, 0, true, resumeId)
+                        if (!success && resumeId) {
+                          setResumeProcessingNote("Your resume was uploaded and is being processed. It may take a few more seconds to appear — please refresh if you don’t see it yet")
+                        }
+                      }
                     }}
                     onUploadError={(error) => {
                       setError("Resume upload failed. Please try again.")
