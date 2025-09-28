@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -8,6 +8,43 @@ import { Chrome, BarChart3, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Logo from "@/components/Logo"
 import Footer from "@/components/Footer"
+
+// Dynamic Feature Cycling Component
+function DynamicFeatureList() {
+  const features = [
+    "In-depth analysis",
+    "Tailored suggestions",
+    "Download ATS-friendly resumes"
+  ]
+
+  const [currentFeature, setCurrentFeature] = useState(0)
+  const [isVisible, setIsVisible] = useState(true)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsVisible(false) // Start fade out
+
+      setTimeout(() => {
+        setCurrentFeature((prev) => (prev + 1) % features.length)
+        setIsVisible(true) // Fade back in
+      }, 300) // Half second fade out before changing text
+
+    }, 2500) // Change every 2.5 seconds
+
+    return () => clearInterval(interval)
+  }, [features.length])
+
+  return (
+    <div className="mt-4 text-center h-8 flex items-center justify-center">
+      <span
+        className={`inline-block text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-full border border-blue-200 shadow-sm transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'
+          }`}
+      >
+        ✨ {features[currentFeature]}
+      </span>
+    </div>
+  )
+}
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -52,7 +89,7 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section (Notion-Inspired) */}
-        <section className="container mx-auto px-4 pt-24 pb-16 text-center">
+        <section className="container mx-auto px-4 pt-12 pb-16 text-center">
           <div className="max-w-3xl mx-auto mb-8">
             <h1 className="font-bold leading-tight text-white">
               <div className="flex flex-col items-center">
@@ -87,11 +124,16 @@ export default function Home() {
                   Add to Chrome
                 </Button>
               </a>
-              <div className="mb-8" />
             </div>
+
+            {/* Dynamic cycling feature list */}
+            <DynamicFeatureList />
+
+            <div className="mb-8" />
 
           </div>
         </section>
+
 
         {/* --- RESTYLED FEATURE SECTIONS --- */}
 
@@ -114,7 +156,7 @@ export default function Home() {
               <div className="space-y-6 order-1 lg:order-2">
                 <div className="text-black-600 text-sm font-medium tracking-wide">Chrome Extension — Works on LinkedIn & Indeed</div>
                 <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
-                  Insights at the speed of a click.
+                  Insights at the speed of a click
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed">
                   Our extension instantly reads the job description, compares it with your resume, and delivers clear, targeted suggestions right when you need them.
@@ -142,10 +184,10 @@ export default function Home() {
               <div className="space-y-6">
                 <div className="text-black-600 text-sm font-medium tracking-wide">AI Resume</div>
                 <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
-                  In-depth analysis and tailored feedback.
+                  Tailored feedback & ATS-ready resumes
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Your resume isn’t just scanned — it’s understood. Our multi-agent AI breaks down the role, pinpoints your match score, and gives clear, tailored actions to help you stand out.
+                  Our AI breaks down the role, pinpoints your match score, and gives you clear, tailored actions along with an ATS-friendly resume you can download.
                 </p>
               </div>
               <div className="relative">
@@ -171,7 +213,7 @@ export default function Home() {
               <div className="space-y-6 order-1 lg:order-2">
                 <div className="text-black-600 text-sm font-medium tracking-wide">Bridging the Gaps</div>
                 <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
-                  Filling the gaps that matter.
+                  Filling the gaps that matter
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed">
                   Missing a skill? Get tailored project ideas to close the gap and showcase your initiative.

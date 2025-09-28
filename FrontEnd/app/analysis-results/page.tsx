@@ -128,8 +128,12 @@ export default function AnalysisResultsPage() {
         return
       }
       const optimizationResult = await optimizeResume(analysisData)
-      // Store in session storage
-      sessionStorage.setItem('enhancement_results', JSON.stringify(optimizationResult))
+      // Store enhancement results with analysis_id included for multi-tab safety
+      const enhancementDataWithId = {
+        ...optimizationResult,
+        analysis_id: analysisData.analysis_id
+      }
+      sessionStorage.setItem('enhancement_results', JSON.stringify(enhancementDataWithId))
       router.push('/enhancements')
     } catch (error) {
       // Show error message

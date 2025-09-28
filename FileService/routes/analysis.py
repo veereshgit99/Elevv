@@ -89,7 +89,7 @@ async def update_analysis(
         try:
             existing_item = table.get_item(
                 Key={
-                    'analysis_id': analysis_id  # Partition key
+                    'analysis_id': analysis_id
                 }
             )
             
@@ -124,22 +124,16 @@ async def update_analysis(
         # Remove trailing comma and space
         update_expression = update_expression.rstrip(", ")
         
-        # Prepare update arguments
-        update_args = {
-            'Key': {
+        # Update the item using high-level resource API
+        response = table.update_item(
+            Key={
                 'analysis_id': analysis_id
             },
-            'UpdateExpression': update_expression,
-            'ExpressionAttributeValues': expression_attribute_values,
-            'ReturnValues': 'ALL_NEW'
-        }
-        
-        # Add ExpressionAttributeNames only if needed
-        if expression_attribute_names:
-            update_args['ExpressionAttributeNames'] = expression_attribute_names
-        
-        # Update the item using high-level resource API
-        response = table.update_item(**update_args)
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_attribute_values,
+            ReturnValues='ALL_NEW',
+            **({'ExpressionAttributeNames': expression_attribute_names} if expression_attribute_names else {})
+        )
         
         return {
             "message": "Analysis updated successfully", 

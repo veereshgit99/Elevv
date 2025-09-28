@@ -2,14 +2,16 @@
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional, Dict, Any, Union
 from jose import jwt, JWTError
-from services.analysis_storage import store_analysis_complete
+from services.analysis_storage import store_analysis_complete, get_resume_parsed_json, get_full_analysis
+from services.document_generator import auto_apply_suggestions, generate_word_document
 import logging
 import os
 import uuid
+import io
 from services.analysis_storage import update_analysis_with_enhancement
 import asyncio
 
@@ -173,6 +175,7 @@ async def optimize_resume(
                         user_id=user_id,
                         analysis_id=request.analysis_id,
                         match_after_enhancement=int(match_after_enhancement),
+                        enhancement_suggestions=optimization_results.get("enhancement_suggestions", []),
                         auth_token=token
                     )
                     logger.info(f"✅ Updated analysis {request.analysis_id} with enhanced match score: {match_after_enhancement}%")
@@ -192,3 +195,82 @@ async def optimize_resume(
     except Exception as e:
         logger.error(f"Error during resume optimization for user {user_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@app.post("/download-enhanced-resume")
+async def download_enhanced_resume(
+    analysis_id: str,
+    user_id: str = Depends(get_current_user_id),
+    token: str = Depends(oauth2_scheme)
+):
+    """
+    Generate and download enhanced Word resume with applied AI suggestions.
+    
+    This endpoint:
+    1. Fetches enhancement suggestions from the analysis record
+    2. Fetches the original resume parsed JSON
+    3. Applies the suggestions to enhance the resume
+    4. Generates a professional Word document
+    5. Returns it as a downloadable file
+    """
+    logger.info(f"Received download request for analysis_id: {analysis_id}, user_id: {user_id}")
+    
+    try:
+        # 1. Get complete analysis data (includes both suggestions and resume_id)
+        logger.info(f"Fetching complete analysis data for analysis: {analysis_id}")
+        analysis_data = await get_full_analysis(user_id, analysis_id, token)
+        
+        # Extract enhancement suggestions
+        enhancement_suggestions = analysis_data.get("enhancement_suggestions", [])
+        if not enhancement_suggestions:
+            raise HTTPException(
+                status_code=404, 
+                detail="No enhancement suggestions found for this analysis"
+            )
+        
+        # Extract resume_id
+        resume_id = analysis_data.get("resume_id")
+        if not resume_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Resume ID not found in analysis record"
+            )
+        
+        logger.info(f"Found {len(enhancement_suggestions)} enhancement suggestions for resume {resume_id}")
+        
+        # 2. Get original resume parsed JSON
+        logger.info(f"Fetching parsed resume JSON for resume: {resume_id}")
+        resume_json = await get_resume_parsed_json(user_id, resume_id, token)
+        
+        # 3. Apply enhancement suggestions to resume
+        logger.info("Applying enhancement suggestions to resume...")
+        enhanced_resume = auto_apply_suggestions(resume_json, enhancement_suggestions)
+        
+        # 4. Generate Word document
+        logger.info("Generating Word document...")
+        doc_bytes = generate_word_document(enhanced_resume)
+        
+        # 5. Create filename with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"enhanced_resume_{timestamp}.docx"
+        
+        logger.info(f"Successfully generated enhanced resume document: {filename}")
+        
+        # 6. Return as downloadable file
+        return StreamingResponse(
+            io.BytesIO(doc_bytes),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Length": str(len(doc_bytes))
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating enhanced resume for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"Failed to generate enhanced resume: {str(e)}"
+        )

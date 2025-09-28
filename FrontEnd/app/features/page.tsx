@@ -16,7 +16,7 @@ function FeatureCard({
     description: string
 }) {
     return (
-        <div className="flex flex-col items-center text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div className="h-full flex flex-col items-center text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
             <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-6">
                 <Icon className="w-8 h-8" />
             </div>
@@ -58,26 +58,34 @@ export default function FeaturesPage() {
 
                 {/* Features Grid */}
                 <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    <FeatureCard
-                        icon={Bot}
-                        title="In-Depth AI Analysis"
-                        description="Our multi-agent AI reads your resume and the job description like a recruiter, delivering a clear match score so you know exactly where you stand."
-                    />
-                    <FeatureCard
-                        icon={BarChart3}
-                        title="Contextual Enhancements"
-                        description="AI suggestions that go beyond rephrasing. Quantify your impact, align with company values, and speak the recruiter’s language."
-                    />
-                    <FeatureCard
-                        icon={Target}
-                        title="Strategic Gap Filling"
-                        description="Missing a skill? Get tailored project ideas to fill the gap and turn weaknesses into proof of skill and initiative."
-                    />
-                    <FeatureCard
-                        icon={Zap}
-                        title="Seamless Integration"
-                        description="Analyze jobs directly from LinkedIn and Indeed with our Chrome extension. Get insights without ever leaving the page or breaking your workflow."
-                    />
+                    <div className="h-full">
+                        <FeatureCard
+                            icon={Bot}
+                            title="In-Depth AI Analysis"
+                            description="Our multi-agent AI reads your resume and the job description like a recruiter, delivering a clear match score so you know exactly where you stand."
+                        />
+                    </div>
+                    <div className="h-full">
+                        <FeatureCard
+                            icon={BarChart3}
+                            title="Contextual Enhancements"
+                            description="Go beyond rephrasing. Get contextual edits, quantified impact, and tailored project ideas that fill skill gaps and align your resume with recruiter expectations."
+                        />
+                    </div>
+                    <div className="h-full">
+                        <FeatureCard
+                            icon={Target}
+                            title="ATS-Friendly Resumes"
+                            description="Turn feedback into action. Instantly generate and download a polished, ATS-ready resume that stands out in both automated systems and recruiter reviews."
+                        />
+                    </div>
+                    <div className="h-full">
+                        <FeatureCard
+                            icon={Zap}
+                            title="Seamless Integration"
+                            description="Analyze jobs directly from LinkedIn and Indeed with our Chrome extension. Get insights without ever leaving the page or breaking your workflow."
+                        />
+                    </div>
                 </section>
 
                 {/* Final Call to Action */}

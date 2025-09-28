@@ -102,9 +102,20 @@ export default function HowItWorksPage() {
                         <span className="inline-block px-3 py-1 text-sm font-semibold text-blue-600 bg-blue-100 rounded-full mb-4">
                             Step 4
                         </span>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Tailor & Apply</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Get Tailored Suggestions</h2>
                         <p className="text-lg text-gray-600">
                             Click <strong>“Tailor Your Resume”</strong> to get AI-powered suggestions: reword bullet points, add missing skills, and highlight achievements.
+                        </p>
+                    </div>
+
+                    {/* Step 5 */}
+                    <div>
+                        <span className="inline-block px-3 py-1 text-sm font-semibold text-blue-600 bg-blue-100 rounded-full mb-4">
+                            Step 5
+                        </span>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Download Your Resume</h2>
+                        <p className="text-lg text-gray-600">
+                            Click <strong>“Download Your Resume”</strong> to get your optimized, ATS-friendly resume instantly.
                             <i><strong> Apply with confidence!</strong></i>
                         </p>
                     </div>

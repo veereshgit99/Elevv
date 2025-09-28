@@ -90,12 +90,18 @@ async def get_analysis_by_id(user_id: str, analysis_id: str) -> Optional[Dict[st
     try:
         response = table.get_item(
             Key={
-                'PK': f"USER#{user_id}",
-                'SK': f"ANALYSIS#{analysis_id}"
-            }
+            'analysis_id': analysis_id
+        }
         )
         
-        return response.get('Item')
+        item = response.get('Item')
+        
+        # Verify the analysis belongs to the user
+        if item and item.get('user_id') != user_id:
+            logger.warning(f"Access denied: Analysis {analysis_id} does not belong to user {user_id}")
+            return None
+        
+        return item
         
     except ClientError as e:
         logger.error(f"Error fetching analysis: {e}")

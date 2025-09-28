@@ -99,3 +99,14 @@ body {
   /* Let Chrome know default is light theme */
   min-height: 100%;
 }
+
+/*
+  This is a CSS override to ensure that no parent element
+  interferes with the 'position: fixed' behavior of the
+  feedback widget.
+*/
+body,
+html {
+  transform: none !important;
+  perspective: none !important;
+}

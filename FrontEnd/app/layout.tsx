@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AnalysisNavigationProvider } from "@/components/analysis-navigation-context"
 import Providers from "@/components/Providers";
 import ConditionalHeader from "../components/ConditionalHeader";
+import ConditionalFeedbackWidget from "../components/ConditionalFeedbackWidget";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -47,6 +48,7 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
             <AnalysisNavigationProvider>
               <ConditionalHeader />
+              <ConditionalFeedbackWidget />
               <Suspense fallback={<Loading />}>
                 {children}
               </Suspense>

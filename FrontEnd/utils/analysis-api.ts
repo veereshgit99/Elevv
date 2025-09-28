@@ -156,6 +156,65 @@ export async function optimizeResume(analysisData: AnalysisResponse) {
     return response.json()
 }
 
+// Download enhanced resume function
+export async function downloadEnhancedResume(analysisId: string): Promise<Blob> {
+    const response = await authenticatedFetch(`${AI_API_URL}/download-enhanced-resume?analysis_id=${encodeURIComponent(analysisId)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+
+    if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`Download failed: ${error}`)
+    }
+
+    // Return the file blob
+    return response.blob()
+}
+
+// Submit feedback for a specific analysis
+export async function submitAnalysisFeedback(analysisId: string, feedback: { liked: boolean; comment?: string }): Promise<void> {
+    const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL
+
+    const response = await authenticatedFetch(`${FILES_API_URL}/analyses/${analysisId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+            feedback_liked: feedback.liked,
+            feedback_timestamp: new Date().toISOString()
+        }),
+    })
+
+    if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`Failed to submit feedback: ${error}`)
+    }
+}
+
+// Check if feedback already exists for an analysis
+export async function checkAnalysisFeedback(analysisId: string): Promise<boolean> {
+    const FILES_API_URL = process.env.NEXT_PUBLIC_FILES_API_URL
+
+    try {
+        const response = await authenticatedFetch(`${FILES_API_URL}/analyses/${analysisId}`, {
+            method: 'GET',
+        })
+
+        if (!response.ok) {
+            return false // If we can't fetch, assume no feedback given
+        }
+
+        const analysisData = await response.json()
+
+        // Check if feedback_liked field exists (not null/undefined)
+        return analysisData.feedback_liked !== null && analysisData.feedback_liked !== undefined
+    } catch (error) {
+        console.error('Error checking feedback status:', error)
+        return false // If error occurs, assume no feedback given
+    }
+}
+
 // Export all types for use in other components
 export type {
     AnalysisRequest,

@@ -45,6 +45,44 @@ async def list_my_resumes(user_id: str = Depends(get_current_user_id)):
     resumes = await get_resumes_for_user(user_id)
     return resumes
 
+@router.get("/resumes/{resume_id}/parsed-json", tags=["Resumes"])
+async def get_resume_parsed_json(
+    resume_id: str,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Get the parsed JSON for a specific resume.
+    Returns the parsed_json field from the resume record.
+    """
+    try:
+        # Get resume metadata to verify ownership and get parsed_json
+        resume_data = await get_resume_metadata(user_id, resume_id)
+        
+        if not resume_data:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        
+        # Verify the resume belongs to the user
+        if resume_data.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Check if resume has been parsed
+        parsed_json = resume_data.get("parsed_json")
+        if not parsed_json:
+            raise HTTPException(status_code=404, detail="Resume has not been parsed yet")
+        
+        # Return the parsed JSON (parse it if it's stored as string)
+        if isinstance(parsed_json, str):
+            import json
+            return json.loads(parsed_json)
+        else:
+            return parsed_json
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving parsed JSON for resume {resume_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 class ResumeUploadRequest(BaseModel):
     filename: str
     content_type: str

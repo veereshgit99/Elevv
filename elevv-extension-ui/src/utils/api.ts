@@ -124,3 +124,82 @@ export async function optimizeResume(token: string, analysisData: any): Promise<
     }
     return response.json();
 }
+
+/**
+ * Downloads enhanced resume for a given analysis ID.
+ * @param token The user's JWT access token.
+ * @param analysisId The analysis ID to download enhanced resume for.
+ * @returns A promise that resolves to a file blob.
+ */
+export async function downloadEnhancedResume(token: string, analysisId: string): Promise<Blob> {
+    const response = await fetch(`${AI_API_URL}/download-enhanced-resume?analysis_id=${encodeURIComponent(analysisId)}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Download failed: ${errorText}`);
+    }
+
+    return response.blob();
+}
+
+/**
+ * Submit feedback for a specific analysis
+ * @param token The user's JWT access token.
+ * @param analysisId The analysis ID to submit feedback for.
+ * @param feedback The feedback data containing liked status and optional comment.
+ * @returns A promise that resolves when feedback is submitted successfully.
+ */
+export async function submitAnalysisFeedback(token: string, analysisId: string, feedback: { liked: boolean; comment?: string }): Promise<void> {
+    const response = await fetch(`${FILES_API_URL}/analyses/${analysisId}`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            feedback_liked: feedback.liked,
+            feedback_timestamp: new Date().toISOString()
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to submit feedback: ${error}`);
+    }
+}
+
+/**
+ * Check if feedback already exists for an analysis
+ * @param token The user's JWT access token.
+ * @param analysisId The analysis ID to check feedback for.
+ * @returns A promise that resolves to true if feedback already exists, false otherwise.
+ */
+export async function checkAnalysisFeedback(token: string, analysisId: string): Promise<boolean> {
+    try {
+        const response = await fetch(`${FILES_API_URL}/analyses/${analysisId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            return false; // If we can't fetch, assume no feedback given
+        }
+
+        const analysisData = await response.json();
+
+        // Check if feedback_liked field exists (not null/undefined)
+        return analysisData.feedback_liked !== null && analysisData.feedback_liked !== undefined;
+    } catch (error) {
+        console.error('Error checking feedback status:', error);
+        return false; // If error occurs, assume no feedback given
+    }
+}

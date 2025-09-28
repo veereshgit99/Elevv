@@ -45,10 +45,12 @@ interface OptimizationResponse {
   overall_feedback: string
   match_after_enhancement: number // Estimated match score after implementing suggestions
   llm_model_used: string
+  analysis_id?: string // Optional for backward compatibility, added for multi-tab safety
 }
 
 // User Profile Interface
 import { fetchUserProfile } from "@/utils/api"
+import { downloadEnhancedResume } from "@/utils/analysis-api"
 interface UserProfile {
   user_id: string
   email: string
@@ -65,6 +67,9 @@ export default function EnhancementsPage() {
   const [error, setError] = useState<string | null>(null)
   const [enhancementData, setEnhancementData] = useState<OptimizationResponse | null>(null)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [analysisId, setAnalysisId] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   // Redirect unauthenticated users to login
   useEffect(() => {
@@ -102,13 +107,22 @@ export default function EnhancementsPage() {
       try {
         // Check if we already have enhancement data in session storage
         const storedEnhancements = sessionStorage.getItem('enhancement_results')
+
         if (storedEnhancements) {
-          setEnhancementData(JSON.parse(storedEnhancements))
-          setIsLoading(false)
-          return
+          const enhancementData = JSON.parse(storedEnhancements)
+
+          // Extract analysis_id from enhancement data (Option 1 approach)
+          const analysisId = enhancementData.analysis_id
+
+          if (analysisId) {
+            setEnhancementData(enhancementData)
+            setAnalysisId(analysisId)
+            setIsLoading(false)
+            return
+          }
         }
 
-        // If no stored enhancements, redirect to analysis results
+        // If no stored enhancements or analysis ID, redirect to analysis results
         router.push('/analysis-results')
 
       } catch (err) {
@@ -185,6 +199,47 @@ export default function EnhancementsPage() {
     return '#ef4444' // red
   }
 
+  const handleDownload = async () => {
+    if (!analysisId) {
+      setDownloadError("Missing analysis ID for download.")
+      return
+    }
+
+    setIsDownloading(true)
+    setDownloadError(null)
+
+    try {
+      const blob = await downloadEnhancedResume(analysisId)
+
+      // Generate professional filename with user's name and date
+      const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+      const userName = userProfile?.name || session?.user?.name
+      const safeName = userName ? userName.replace(/[^a-zA-Z0-9]/g, '_') : null
+      const filename = safeName
+        ? `${safeName}_Elevv_Resume_${today}.docx`
+        : `Elevv_Resume_${today}.docx`
+
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(blob)
+
+      // Create a temporary link element to trigger the download
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+
+      // Clean up the temporary link and URL
+      a.remove()
+      window.URL.revokeObjectURL(url)
+
+    } catch (err: any) {
+      setDownloadError(err.message || "An unexpected error occurred.")
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   // Loading state for authentication
   // Loading state for enhancement data
   if (isLoading || isLoadingData) {
@@ -244,8 +299,10 @@ export default function EnhancementsPage() {
     )
   }
 
+  // Replace your entire return statement in the EnhancementsPage component with this:
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
       {status === "unauthenticated" ? (
         <div /> // Safe placeholder while redirecting
       ) : (
@@ -277,7 +334,6 @@ export default function EnhancementsPage() {
             {/* Strategic Summary at Top */}
             <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-2xl p-6 border border-gray-200 mb-8">
               <div className="flex items-start space-x-6">
-
                 {/* Score Circle with Label Below */}
                 <div className="flex flex-col items-center">
                   <div className="relative">
@@ -317,7 +373,25 @@ export default function EnhancementsPage() {
                 {/* Summary Text */}
                 <div className="flex-1">
                   <h2 className="text-xl font-bold text-gray-900 mb-2">Strategic Summary</h2>
-                  <p className="text-base text-gray-700 leading-relaxed">{enhancementData.overall_feedback}</p>
+                  <p className="text-base text-gray-700 leading-relaxed mb-6">{enhancementData.overall_feedback}</p>
+                  <Button
+                    onClick={handleDownload}
+                    disabled={isDownloading || !analysisId}
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    {isDownloading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Your Resume
+                      </>
+                    )}
+                  </Button>
+                  {downloadError && <p className="text-red-500 text-sm mt-2">{downloadError}</p>}
                 </div>
               </div>
             </div>

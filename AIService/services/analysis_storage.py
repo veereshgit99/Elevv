@@ -131,10 +131,11 @@ async def update_analysis_with_enhancement(
     user_id: str,
     analysis_id: str,
     match_after_enhancement: int,
+    enhancement_suggestions: list,
     auth_token: str
 ) -> Dict[str, Any]:
     """
-    Update analysis record with the enhanced match score
+    Update analysis record with the enhanced match score and suggestions
     """
     try:
         import httpx
@@ -152,6 +153,7 @@ async def update_analysis_with_enhancement(
             # Update the analysis record in DynamoDB
             update_data = {
                 "match_after_enhancement": match_after_enhancement,
+                "enhancement_suggestions": enhancement_suggestions,
                 "enhancement_generated_at": datetime.utcnow().isoformat(),
                 "enhancement_status": "completed"  # Track enhancement status
             }
@@ -191,4 +193,97 @@ async def update_analysis_with_enhancement(
         raise
     except Exception as e:
         logger.error(f"Error updating analysis with enhancement: {e}")
+        raise
+
+async def get_resume_parsed_json(
+    user_id: str,
+    resume_id: str,
+    auth_token: str
+) -> Dict[str, Any]:
+    """
+    Get the parsed JSON from resume record via FileService API
+    """
+    try:
+        import httpx
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            headers = {
+                "Authorization": f"Bearer {auth_token}",
+                "Content-Type": "application/json"
+            }
+
+            response = await client.get(
+                f"{FILES_API_URL}/resumes/{resume_id}/parsed-json",
+                headers=headers
+            )
+
+            if response.status_code == 404:
+                logger.error(f"Resume {resume_id} or parsed JSON not found for user {user_id}")
+                raise Exception(f"Resume {resume_id} not found or not yet parsed")
+            elif response.status_code == 403:
+                logger.error(f"Access denied for resume {resume_id}")
+                raise Exception("Access denied to resume")
+            elif response.status_code != 200:
+                logger.error(f"Failed to get resume parsed JSON: {response.status_code} - {response.text}")
+                raise Exception(f"Failed to get resume parsed JSON (HTTP {response.status_code})")
+
+            parsed_json = response.json()
+            logger.info(f"Successfully retrieved parsed resume JSON for {resume_id}")
+            return parsed_json
+
+    except httpx.TimeoutException:
+        logger.error(f"Timeout retrieving resume {resume_id}")
+        raise Exception("Request timeout while retrieving resume")
+    except httpx.RequestError as e:
+        logger.error(f"Network error retrieving resume {resume_id}: {e}")
+        raise Exception("Network error while retrieving resume")
+    except Exception as e:
+        logger.error(f"Error retrieving resume parsed JSON: {e}")
+        raise
+
+async def get_full_analysis(
+    user_id: str,
+    analysis_id: str,
+    auth_token: str
+) -> Dict[str, Any]:
+    """
+    Get the complete analysis record via FileService API.
+    This returns both enhancement_suggestions and resume_id in a single call.
+    """
+    try:
+        import httpx
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            headers = {
+                "Authorization": f"Bearer {auth_token}",
+                "Content-Type": "application/json"
+            }
+
+            response = await client.get(
+                f"{FILES_API_URL}/analyses/{analysis_id}",
+                headers=headers
+            )
+
+            if response.status_code == 404:
+                logger.error(f"Analysis {analysis_id} not found for user {user_id}")
+                raise Exception(f"Analysis {analysis_id} not found")
+            elif response.status_code == 403:
+                logger.error(f"Access denied for analysis {analysis_id}")
+                raise Exception("Access denied to analysis")
+            elif response.status_code != 200:
+                logger.error(f"Failed to get analysis: {response.status_code} - {response.text}")
+                raise Exception(f"Failed to get analysis (HTTP {response.status_code})")
+
+            analysis_data = response.json()
+            logger.info(f"Successfully retrieved full analysis {analysis_id}")
+            return analysis_data
+
+    except httpx.TimeoutException:
+        logger.error(f"Timeout retrieving analysis {analysis_id}")
+        raise Exception("Request timeout while retrieving analysis")
+    except httpx.RequestError as e:
+        logger.error(f"Network error retrieving analysis {analysis_id}: {e}")
+        raise Exception("Network error while retrieving analysis")
+    except Exception as e:
+        logger.error(f"Error retrieving full analysis: {e}")
         raise

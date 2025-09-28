@@ -48,6 +48,58 @@ body {
   flex-shrink: 0;
 }
 
+/* Download Button - separate from tailor-button */
+.download-button {
+  background-color: var(--accent);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  /* Space between icon and text */
+  min-width: 140px;
+  height: 42px;
+  margin-left: -0.5rem;
+  /* Move slightly to the left */
+}
+
+.download-button:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.download-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.download-button.loading {
+  cursor: not-allowed;
+}
+
+.download-button.loading:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.download-button .spinner {
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+}
+
+.download-button .loading-text {
+  margin-left: 0.5rem;
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -1098,4 +1150,63 @@ select {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Feedback Widget Styles */
+.feedback-widget {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--accent);
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 4px 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2147483647;
+  transition: background-color 0.3s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.feedback-widget:has(.feedback-thank-you) {
+  background-color: #fff;
+}
+
+.feedback-prompt {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.feedback-thank-you {
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feedback-button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  border-radius: 4px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feedback-button:hover {
+  transform: scale(1.3);
+}
+
+.feedback-button:active {
+  transform: scale(1.1);
 }

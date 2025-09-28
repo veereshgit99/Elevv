@@ -1,6 +1,6 @@
 import fitz  # PyMuPDF
 import json
-import os
+import io, docx
 from dotenv import load_dotenv
 
 # NEW: Import the Google AI library
@@ -18,11 +18,38 @@ except KeyError:
 
 
 # -------- STEP 1: Extract text from PDF (No changes here) --------
-def extract_text_from_pdf(file_path):
-    doc = fitz.open(file_path)
-    text = "\n".join(page.get_text("text") for page in doc)
-    doc.close()
-    return text
+def _extract_text_from_content(self, file_content: bytes, mime_type: str) -> str:
+        """
+        Extracts plain text from file content (bytes) based on its MIME type.
+        Supports PDF and DOCX.
+        """
+        if "pdf" in mime_type:
+            try:
+                pdf_document = fitz.open(stream=io.BytesIO(file_content), filetype="pdf")
+                text = "".join(page.get_text() for page in pdf_document)
+                pdf_document.close()
+                return text
+            except Exception as e:
+                self.logger.error(f"Failed to extract text from PDF: {e}")
+                raise ValueError("Could not extract text from the provided PDF file.")
+
+        elif "wordprocessingml" in mime_type or mime_type.endswith("msword") or mime_type.endswith("vnd.openxmlformats-officedocument.wordprocessingml.document"):
+            try:
+                doc = docx.Document(io.BytesIO(file_content))
+                text = "\n".join([para.text for para in doc.paragraphs])
+                return text
+            except Exception as e:
+                self.logger.error(f"Failed to extract text from DOCX: {e}")
+                raise ValueError("Could not extract text from the provided DOCX file.")
+
+        else:
+            # Try assuming it's plain UTF-8 text
+            try:
+                return file_content.decode('utf-8')
+            except UnicodeDecodeError:
+                self.logger.warning("Could not decode content as UTF-8. Returning raw str().")
+                return str(file_content)
+
 
 # -------- STEP 2: Call LLM to parse resume --------
 def parse_resume_with_llm(resume_text):
@@ -129,7 +156,7 @@ def parse_resume_with_llm(resume_text):
 # -------- STEP 3: Test run (No changes here) --------
 if __name__ == "__main__":
     # Option A: Parse from PDF
-    resume_text = extract_text_from_pdf("Veeresh_Resume.pdf")
+    resume_text = _extract_text_from_content("Veeresh_Resume.pdf")
 
     parsed_json = parse_resume_with_llm(resume_text)
 

@@ -72,6 +72,7 @@ export default function ChromeExtensionPopup() {
       suggestedText: string;
       rationale: string;
     }>;
+    analysisId?: string; // Add analysisId to the type
   } | null>(null);
 
   const [refreshTrigger, setRefreshTrigger] = useState(0); // When the user switches from non-supported sites to supported
@@ -490,7 +491,8 @@ export default function ChromeExtensionPopup() {
               suggestedText: 'Led cross-functional team of 4 developers, mentored 2 junior engineers, and delivered projects 15% ahead of schedule',
               rationale: 'Highlighting leadership and mentoring experience is crucial for senior roles and shows your growth potential.'
             }
-          ]
+          ],
+          analysisId: analysisData.analysisId
         });
 
         // Store mock enhancement results in sessionStorage with analysis_id
@@ -501,7 +503,8 @@ export default function ChromeExtensionPopup() {
           suggestions: [
             { id: '1', context: 'Summary', priority: 'Critical' as const, type: 'rephrase' as const, currentText: 'Software Engineer with 2.5+ years of experience, currently building a full-stack, AI-powered career intelligence platform using a sophisticated multi-agent architecture. Led ML-driven automation, and built microservices that cut order processing time by 90%.', suggestedText: 'Software Engineer with 2.5+ years of experience building and scaling enterprise-grade microservices for a leading ERP provider (SAP). Proven expertise in full-stack development, distributed systems, and enhancing application reliability. Drove a 90% reduction in order processing time and improved system monitoring, directly impacting customer success.', rationale: 'The current summary leads with a personal project. This revision immediately highlights your most relevant experience (SAP enterprise software), which is a direct parallel to Microsoft Dynamics. It incorporates keywords from the job description like "scaling", "enterprise-grade", "reliability", and "customer success" to create immediate alignment with the recruiter\'s needs.' },
             { id: '2', context: 'Technical Skills', priority: 'High' as const, type: 'add' as const, currentText: '', suggestedText: 'ML Infrastructure: Model deployment, evaluation pipelines, large-scale data processing', rationale: 'Adding explicit ML infrastructure keywords directly matches the job requirements and showcases your relevant experience in a way that will be immediately recognized by both automated screening systems and human recruiters.' }
-          ]
+          ],
+          analysisId: analysisData.analysisId
         }));
 
         setCurrentView('enhancements');
@@ -512,11 +515,18 @@ export default function ChromeExtensionPopup() {
 
       // Map enhancement data for the enhancements view  
       const mappedEnhancementData = mapEnhancementData(enhancementResult);
-      setEnhancementsData(mappedEnhancementData);
+
+      // Add analysisId to enhancement data for download functionality
+      const enhancementDataWithId = {
+        ...mappedEnhancementData,
+        analysisId: analysisData.analysisId
+      };
+
+      setEnhancementsData(enhancementDataWithId);
 
       // Store enhancement results in sessionStorage with analysis_id
       const enhancementKey = `enhancements_${analysisData.analysisId}`;
-      sessionStorage.setItem(enhancementKey, JSON.stringify(mappedEnhancementData));
+      sessionStorage.setItem(enhancementKey, JSON.stringify(enhancementDataWithId));
 
       setCurrentView('enhancements');
 
@@ -685,6 +695,8 @@ export default function ChromeExtensionPopup() {
             <EnhancementsPage
               onBack={handleBackToResults}
               data={enhancementsData}
+              userToken={user?.accessToken}
+              userName={user?.name}
             />
           ) : (
             <motion.div
@@ -767,7 +779,7 @@ export default function ChromeExtensionPopup() {
         <footer className="app-footer">
           <motion.button
             onClick={handleAnalyze}
-            disabled={loadingStep !== 'done' || isAnalyzing || !selectedResume}
+            disabled={loadingStep !== 'done' || isAnalyzing || !selectedResume || !jobTitle.trim() || !jobDescription.trim()}
             whileTap={{ scale: 0.98 }}
             className={`analyze-button ${isAnalyzing ? 'analyzing' : ''}`}
           >

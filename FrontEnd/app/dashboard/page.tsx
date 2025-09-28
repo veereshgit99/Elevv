@@ -157,6 +157,70 @@ function FloatingTextarea({
   )
 }
 
+// Cycling Badge Component
+function CyclingBadge() {
+  const [currentText, setCurrentText] = useState(0)
+  const [isVisible, setIsVisible] = useState(true)
+
+  const texts = [0, 1] // Just using indices now since we handle display in JSX
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsVisible(false) // Start fade out
+
+      setTimeout(() => {
+        setCurrentText((prev) => (prev + 1) % texts.length)
+        setIsVisible(true) // Fade back in
+      }, 200) // Quick fade out before changing text
+
+    }, 2000) // Change every 2 seconds
+
+    return () => clearInterval(interval)
+  }, [texts.length])
+
+  return (
+    <div className="relative inline-flex items-center">
+      {/* Cloud shape - irregular bumpy outline */}
+      <div className="bg-sky-100 text-gray-700 shadow-lg relative transform transition-all duration-200 hover:scale-105 hover:shadow-xl w-[120px] h-[60px] flex items-center justify-center rounded-3xl">
+        {/* Main cloud bumps - creating the irregular cloud outline */}
+        <div className="absolute -top-4 left-6 w-10 h-10 bg-sky-100 rounded-full"></div>
+        <div className="absolute -top-5 left-14 w-12 h-12 bg-sky-100 rounded-full"></div>
+        <div className="absolute -top-4 right-8 w-9 h-9 bg-sky-100 rounded-full"></div>
+        <div className="absolute -top-3 right-2 w-8 h-8 bg-sky-100 rounded-full"></div>
+
+        <div className="absolute -bottom-4 left-4 w-9 h-9 bg-sky-100 rounded-full"></div>
+        <div className="absolute -bottom-5 left-12 w-11 h-11 bg-sky-100 rounded-full"></div>
+        <div className="absolute -bottom-4 right-6 w-10 h-10 bg-sky-100 rounded-full"></div>
+
+        <div className="absolute -left-4 top-2 w-8 h-8 bg-sky-100 rounded-full"></div>
+        <div className="absolute -left-3 top-8 w-7 h-7 bg-sky-100 rounded-full"></div>
+        <div className="absolute -right-4 top-4 w-8 h-8 bg-sky-100 rounded-full"></div>
+        <div className="absolute -right-3 top-10 w-7 h-7 bg-sky-100 rounded-full"></div>
+
+        {/* Small detail bumps for more cloud-like appearance */}
+        <div className="absolute -top-2 left-2 w-6 h-6 bg-sky-100 rounded-full"></div>
+        <div className="absolute -bottom-2 right-2 w-6 h-6 bg-sky-100 rounded-full"></div>
+
+        {/* Text content - fixed layout */}
+        <div
+          className={`relative z-10 transition-opacity duration-200 text-center leading-tight ${isVisible ? 'opacity-100' : 'opacity-0'
+            }`}
+        >
+          {currentText === 0 ? (
+            <span className="text-xl font-bold">🎉NEW</span>
+          ) : (
+            <div className="text-sm font-semibold">
+              <div>Download</div>
+              <div>ATS-friendly</div>
+              <div>resumes</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const [jobTitle, setJobTitle] = useState("")
@@ -246,7 +310,7 @@ export default function DashboardPage() {
   }, [status, session])
 
   const handleAnalyze = async () => {
-    if (!jobTitle || !companyName || !jobDescription || !selectedResume) {
+    if (!jobTitle || !jobDescription || !selectedResume) {
       setError('Please fill in all required fields')
       return
     }
@@ -337,10 +401,13 @@ export default function DashboardPage() {
           {/* Main Content */}
           <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Welcome Section */}
-            <div className="mb-8">
+            <div className="mb-8 flex justify-between items-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Welcome, {userProfile?.name?.split(' ')[0] || 'there'}! 👋
               </h1>
+
+              {/* Cycling Badge */}
+              <CyclingBadge />
             </div>
 
             {/* Error Message */}
@@ -383,7 +450,7 @@ export default function DashboardPage() {
                 {/* Company Name */}
                 <FloatingInput
                   id="company-name"
-                  label="Company Name *"
+                  label="Company Name"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="e.g. Google, Microsoft, Airbnb"
@@ -453,10 +520,10 @@ export default function DashboardPage() {
                 {/* Analyze Button - Blue */}
                 <Button
                   onClick={handleAnalyze}
-                  disabled={!jobTitle || !companyName || !jobDescription.trim() || !selectedResume || isAnalyzing}
+                  disabled={!jobTitle.trim() || !jobDescription.trim() || !selectedResume || isAnalyzing}
                   className={`w-full h-12 rounded-2xl text-white font-medium transition-all ${isAnalyzing
                     ? 'bg-blue-500 cursor-not-allowed'
-                    : !jobTitle || !companyName || !jobDescription.trim() || !selectedResume
+                    : !jobTitle.trim() || !jobDescription.trim() || !selectedResume
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-blue-500 hover:bg-blue-650'
                     }`}

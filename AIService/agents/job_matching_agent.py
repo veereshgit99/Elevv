@@ -155,23 +155,31 @@ class JobMatchingAgent(BaseAgent):
         """Calculate match percentage using fast model"""
 
         prompt = (
-            "You are a senior hiring manager with a quantitative, data-driven approach to talent analysis. Your task is to calculate a realistic job match percentage (0–100).\n\n"
+            "You are a senior hiring manager with a quantitative, data-driven approach to talent analysis. "
+            "Your task is to calculate a realistic job match percentage (0–100).\n\n"
+
             "Inputs:\n"
             "1) Resume Content (partial, up to 5000 chars)\n"
             "2) Job Description Content (partial, up to 5000 chars)\n"
             "3) Relationship Map (skills, experience, gaps, matches)\n\n"
+
             "Scoring rules:\n"
-            "- **Special Rule for Simple JDs:** If the Job Description is very sparse (e.g., contains only 1-2 requirements) and the candidate meets all of them with no gaps identified in the relationship map, the score should be very high (90+) to reflect a perfect match for the limited criteria provided.\n"
-            "- Prioritize 'matched_experience_to_responsibilities'.\n"
-            "- Reward strong skill matches with clear resume evidence.\n"
-            "- Penalize 'identified_gaps_in_resume', with heavier deductions for experience gaps.\n"
-            "- Apply a small deduction if resume wording is weak or misaligned with the JD.\n"
-            "- Always combine evidence from both the relationship map AND the raw texts (JD + Resume).\n\n"
+            "- Special rule for simple JDs: If the Job Description is very sparse (e.g., only 1–2 requirements) "
+            "and the candidate meets all of them with no gaps, the score should be very high (90+).\n"
+            "- Be strict about mandatory qualifications and core requirements—missing these should sharply reduce the score.\n"
+            "- Deduct more for missing required experiences than for missing skills, and more for missing skills than for general responsibilities.\n"
+            "- Give credit only when the resume provides explicit evidence, not inference.\n"
+            "- Treat minimum qualifications as critical and preferred ones as secondary.\n"
+            "- Always combine evidence from both the relationship map and the raw texts (JD + Resume).\n\n"
+
             f"--- Resume Content ---\n{resume_content[:5000]}\n\n"
             f"--- Job Description ---\n{jd_content[:5000]}\n\n"
             f"--- Relationship Map ---\n{json.dumps(relationship_map, indent=2)}\n\n"
-            "Return ONLY a JSON object with a single key: 'match_percentage'."
+
+            "Return a valid JSON object with exactly one key 'match_percentage' as an integer from 0 to 100. "
+            "No text before or after."
         )
+
 
 
         result = await self._dispatch_to_model("calculate_match_score", prompt)
