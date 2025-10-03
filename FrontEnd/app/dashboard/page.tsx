@@ -410,25 +410,6 @@ export default function DashboardPage() {
               <CyclingBadge />
             </div>
 
-            {/* Maintenance Notice */}
-            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center">
-                    <span className="text-amber-800 text-sm font-bold">!</span>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-amber-800">
-                    Maintenance Notice
-                  </h3>
-                  <p className="text-sm text-amber-700 mt-1">
-                    We are currently undergoing some maintenance and will be back ASAP. Thank you for your patience! 🔧
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* Error Message */}
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
@@ -486,7 +467,7 @@ export default function DashboardPage() {
 
                 {/* Character count */}
                 <div className="text-right">
-                  <span className={`text-xs ${characterCount > maxCharacters * 0.9 ? "text-red-500" : "text-gray-500"}`}>
+                  <span className={`text-xs ${characterCount > maxCharacters ? "text-red-500" : "text-gray-500"}`}>
                     {characterCount}/{maxCharacters}
                   </span>
                 </div>
@@ -539,8 +520,13 @@ export default function DashboardPage() {
                 {/* Analyze Button - Blue */}
                 <Button
                   onClick={handleAnalyze}
-                  disabled={true}
-                  className={`w-full h-12 rounded-2xl text-white font-medium transition-all bg-gray-200 text-gray-500 cursor-not-allowed`}
+                  disabled={!jobTitle.trim() || !jobDescription.trim() || !selectedResume || isAnalyzing}
+                  className={`w-full h-12 rounded-2xl text-white font-medium transition-all ${isAnalyzing
+                    ? 'bg-blue-500 cursor-not-allowed'
+                    : !jobTitle.trim() || !jobDescription.trim() || !selectedResume
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-500 hover:bg-blue-650'
+                    }`}
                 >
                   {isAnalyzing ? (
                     <>

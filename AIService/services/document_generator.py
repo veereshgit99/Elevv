@@ -481,26 +481,6 @@ def generate_word_document(resume_data: Dict[str, Any]) -> bytes:
                 # Add minimal space after entry - only 2pt (reduced from 4pt)
                 if proj != resume_data["projects"][-1]:
                     doc.paragraphs[-1].paragraph_format.space_after = Pt(2)
-                    
-        # ---------- Publications ----------
-        if resume_data.get("publications"):
-            add_section(doc, "Publications")
-            for publication in resume_data["publications"]:
-                bullet = doc.add_paragraph(publication.strip(), style="List Bullet")
-                bullet.paragraph_format.left_indent = Inches(0.45)
-                bullet.paragraph_format.right_indent = Inches(0.15)
-                bullet.paragraph_format.first_line_indent = Inches(-0.15)
-                bullet.paragraph_format.space_after = Pt(0)
-
-        # ---------- Achievements ----------
-        if resume_data.get("achievements"):
-            add_section(doc, "Achievements")
-            for achievement in resume_data["achievements"]:
-                bullet = doc.add_paragraph(achievement.strip(), style="List Bullet")
-                bullet.paragraph_format.left_indent = Inches(0.45)
-                bullet.paragraph_format.right_indent = Inches(0.15)
-                bullet.paragraph_format.first_line_indent = Inches(-0.15)
-                bullet.paragraph_format.space_after = Pt(0)
 
         # ---------- Technical Skills ----------
         if resume_data.get("skills"):
@@ -529,6 +509,26 @@ def generate_word_document(resume_data: Dict[str, Any]) -> bytes:
                         run.bold = True
                     else:
                         skills_para.add_run(part)
+                        
+        # ---------- Publications ----------
+        if resume_data.get("publications"):
+            add_section(doc, "Publications")
+            for publication in resume_data["publications"]:
+                bullet = doc.add_paragraph(publication.strip(), style="List Bullet")
+                bullet.paragraph_format.left_indent = Inches(0.45)
+                bullet.paragraph_format.right_indent = Inches(0.15)
+                bullet.paragraph_format.first_line_indent = Inches(-0.15)
+                bullet.paragraph_format.space_after = Pt(0)
+
+        # ---------- Achievements ----------
+        if resume_data.get("achievements"):
+            add_section(doc, "Achievements")
+            for achievement in resume_data["achievements"]:
+                bullet = doc.add_paragraph(achievement.strip(), style="List Bullet")
+                bullet.paragraph_format.left_indent = Inches(0.45)
+                bullet.paragraph_format.right_indent = Inches(0.15)
+                bullet.paragraph_format.first_line_indent = Inches(-0.15)
+                bullet.paragraph_format.space_after = Pt(0)
         
         # Save document to BytesIO
         doc_bytes = io.BytesIO()
