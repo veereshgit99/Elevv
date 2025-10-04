@@ -289,6 +289,13 @@ export default function DashboardPage() {
     }
   }
 
+  // Redirect unauthorized users
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push('/login')
+    }
+  }, [status, router])
+
   // Fetch profile + resumes on mount
   useEffect(() => {
     const fetchData = async () => {
