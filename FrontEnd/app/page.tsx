@@ -175,7 +175,7 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="relative order-2 lg:order-1">
                 {/* This is the new, corrected code */}
-                <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
+                <div className="relative rounded-xl overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.25)] border border-gray-200 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.35)] hover:-translate-y-2">
                   <div className="aspect-[4/3] bg-white">
                     <img
                       src="/Images/OneClickAnalysis.png"
@@ -229,7 +229,7 @@ export default function Home() {
               </div>
               <div className="relative">
                 {/* This is the new, corrected code */}
-                <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
+                <div className="relative rounded-xl overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.25)] border border-gray-200 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.35)] hover:-translate-y-2">
                   <div className="aspect-[4/3] bg-white">
                     <img
                       src="/Images/Analysis.png"
@@ -260,7 +260,7 @@ export default function Home() {
               </div>
               <div className="relative">
                 {/* This is the new, corrected code */}
-                <div className="relative rounded-xl overflow-hidden shadow-xl border border-gray-200">
+                <div className="relative rounded-xl overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.25)] border border-gray-200 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.35)] hover:-translate-y-2">
                   <div className="aspect-[4/3] bg-white">
                     <img
                       src="/Images/BridgingGaps.png"
