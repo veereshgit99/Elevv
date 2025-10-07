@@ -4,10 +4,39 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Chrome, BarChart3, ArrowRight } from "lucide-react"
+import { Chrome as ChromeIcon, Shield, Sparkles, CheckCircle2, Zap, Star, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Logo from "@/components/Logo"
 import Footer from "@/components/Footer"
+
+// Typing Animation Component
+function TypingAnimation() {
+  const fullText = "more than just keywords"
+  const [displayedText, setDisplayedText] = useState("")
+  const [isComplete, setIsComplete] = useState(false)
+
+  useEffect(() => {
+    let currentIndex = 0
+    const typingInterval = setInterval(() => {
+      if (currentIndex <= fullText.length) {
+        setDisplayedText(fullText.slice(0, currentIndex))
+        currentIndex++
+      } else {
+        setIsComplete(true)
+        clearInterval(typingInterval)
+      }
+    }, 80) // Speed of typing (80ms per character)
+
+    return () => clearInterval(typingInterval)
+  }, [])
+
+  return (
+    <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent inline-flex items-center">
+      {displayedText}
+      <span className={`inline-block w-0.5 h-[0.9em] bg-blue-600 ml-1 ${!isComplete ? 'animate-pulse' : 'opacity-0'}`} />
+    </span>
+  )
+}
 
 // Dynamic Feature Cycling Component
 function DynamicFeatureList() {
@@ -89,50 +118,53 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section (Notion-Inspired) */}
-        <section className="container mx-auto px-4 pt-12 pb-16 text-center">
-          <div className="max-w-3xl mx-auto mb-8">
-            <h1 className="font-bold leading-tight text-white">
-              <div className="flex flex-col items-center">
-                <div className="text-lg md:text-xl lg:text-4xl font-bold leading-tight text-gray-900">
-                  The AI That Understands a Resume Is
-                </div>
-                <div className="text-4xl md:text-5xl lg:text-5xl font-bold leading-tight text-gray-900 whitespace-nowrap -ml-6 md:-ml-2">
-                  MORE THAN JUST KEYWORDS
-                </div>
-              </div>
-            </h1>
-            <p className="mt-6 text-lg font-bold text-gray-600 leading-relaxed">
-              The AI that gets your resume
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/signup">
-                <Button size="lg" className="bg-blue-500 hover:bg-blue-600 h-12 px-8 text-base">
-                  Get Elevv free
-                </Button>
-              </Link>
-              <a
-                href="https://chromewebstore.google.com/detail/elevv/hdlkdocilmllfboionmjpekkjjfpdfjm"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto"
-              >
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 px-8 text-base bg-white hover:bg-gray-300 text-black border border-black shadow-sm transition-colors duration-150 font-semibold"
+        <section className="relative overflow-hidden">
+          {/* soft blue gradient glows */}
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full bg-blue-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-40 -left-20 h-[28rem] w-[28rem] rounded-full bg-blue-300/10 blur-3xl" />
+
+          <div className="container mx-auto px-4 pt-16 pb-12 text-center">
+            <div className="mx-auto max-w-3xl space-y-6">
+
+              <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight text-gray-900 md:text-5xl lg:text-6xl mb-8">
+                The AI that understands your resume is{" "}
+                <span className="block min-h-[1.2em] mt-2">
+                  <TypingAnimation />
+                </span>
+              </h1>
+
+              {/* primary actions */}
+              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row mt-8">
+                <Link href="/signup">
+                  <Button size="lg" className="h-12 px-7 bg-blue-500 hover:bg-blue-600">
+                    Get Elevv free
+                  </Button>
+                </Link>
+
+                <a
+                  href="https://chromewebstore.google.com/detail/elevv/hdlkdocilmllfboionmjpekkjjfpdfjm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto"
                 >
-                  Add to Chrome
-                </Button>
-              </a>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-12 px-7 border-gray-900 text-gray-900 hover:bg-gray-100"
+                  >
+                    <ChromeIcon className="mr-2 h-4 w-4" />
+                    Add to Chrome
+                  </Button>
+                </a>
+              </div>
+
+              <div className="mt-4">
+                <DynamicFeatureList />
+              </div>
             </div>
-
-            {/* Dynamic cycling feature list */}
-            <DynamicFeatureList />
-
-            <div className="mb-8" />
-
           </div>
         </section>
+
 
 
         {/* --- RESTYLED FEATURE SECTIONS --- */}
@@ -154,7 +186,10 @@ export default function Home() {
                 </div>
               </div>
               <div className="space-y-6 order-1 lg:order-2">
-                <div className="text-black-600 text-sm font-medium tracking-wide">Chrome Extension — Works on LinkedIn & Indeed</div>
+                <div className="flex items-center gap-2 text-gray-700 text-base font-medium">
+                  <ChromeIcon className="w-5 h-5 text-gray-700" />
+                  <span>Chrome Extension - Works on LinkedIn & Indeed</span>
+                </div>
                 <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
                   Insights at the speed of a click
                 </h2>
@@ -182,7 +217,9 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-6">
-                <div className="text-black-600 text-sm font-medium tracking-wide">AI Resume</div>
+                <div className="text-gray-700 text-base font-medium">
+                  📝 AI Resume Builder
+                </div>
                 <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
                   Tailored feedback & ATS-ready resumes
                 </h2>
@@ -211,7 +248,9 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-6 order-1 lg:order-2">
-                <div className="text-black-600 text-sm font-medium tracking-wide">Bridging the Gaps</div>
+                <div className="text-gray-700 text-base font-medium">
+                  🔗 Bridging the Gaps
+                </div>
                 <h2 className="text-3xl lg:text-4xl font-bold leading-tight">
                   Filling the gaps that matter
                 </h2>
