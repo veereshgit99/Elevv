@@ -123,8 +123,8 @@ export default function HowItWorksPage() {
 
                 {/* Final CTA */}
                 <section className="text-center py-16 sm:py-24">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Stand Out?</h2>
-                    <p className="text-gray-600 mb-8">Your shortcut from applying to interviewing.</p>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Built to help you stand out</h2>
+                    <p className="text-gray-600 mb-8">The AI that gets your resume</p>
                     <Link href="/signup">
                         <Button size="lg" className="bg-blue-500 hover:bg-blue-600 h-12 px-8 text-base">
                             Start your free analysis

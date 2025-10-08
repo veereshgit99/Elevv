@@ -90,8 +90,8 @@ export default function FeaturesPage() {
 
                 {/* Final Call to Action */}
                 <section className="text-center mt-16 sm:mt-24">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Elevate Your Career?</h2>
-                    <p className="text-gray-600 mb-8">Your shortcut from applying to interviewing</p>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Built to help you stand out</h2>
+                    <p className="text-gray-600 mb-8">The AI that gets your resume</p>
                     <Link href="/signup">
                         <Button size="lg" className="bg-blue-500 hover:bg-blue-600 h-12 px-8 text-base">
                             Create Your Free Account

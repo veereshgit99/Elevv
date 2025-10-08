@@ -278,10 +278,10 @@ export default function Home() {
         <section className="container mx-auto px-4 py-16 text-center">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Ready to Stand Out?
+              Built to help you stand out
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Your shortcut from applying to interviewing
+              The AI that gets your resume
             </p>
             <div className="mt-8">
               <Link href="/signup">
