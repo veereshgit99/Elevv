@@ -1,2 +1,2 @@
 # Elevv
-LLM powered Cloud Storage
+AI-powered resume analysis & tailored feedback
